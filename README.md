@@ -1,7 +1,7 @@
 
-  # High-Fidelity Clickable Prototype
+ # MyConnect
 
-  This is a code bundle for High-Fidelity Clickable Prototype. The original project is available at https://www.figma.com/design/ssLWylRDB3IolIb45Oa5H1/High-Fidelity-Clickable-Prototype.
+A customer self-service ISP portal built with React, Vite and Firebase.
 
   ## Running the code
 
