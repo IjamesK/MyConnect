@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { Wifi, Eye, EyeOff, Lock, Mail } from "lucide-react";
-import { auth } from "../../../lib/firebase";
+import { auth } from "MyCOnnect/src/lib/firebase";
 
 export function LoginScreen() {
   const navigate = useNavigate();
