@@ -41,15 +41,32 @@ export function Layout({ children, title, showBack = false, backTo, notification
         {/* Top bar */}
         <div className="sticky top-0 z-20 bg-white border-b border-[#E2E8F0] px-4 h-14 flex items-center justify-between shrink-0">
           {showBack ? (
-            <button
-              onClick={handleBack}
-              className="flex items-center gap-1.5 text-[#0057B8] text-sm font-medium"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m15 18-6-6 6-6" />
-              </svg>
-              {title || "Back"}
-            </button>
+        <div className="flex items-center gap-1">
+  <button
+    type="button"
+    onClick={() => navigate("/notifications")}
+    className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9]"
+    title="Notifications"
+  >
+    <Bell size={18} className="text-[#475569]" />
+
+    {notificationCount > 0 && (
+      <span className="absolute top-1 right-1 w-4 h-4 bg-[#DC2626] rounded-full text-white text-[10px] flex items-center justify-center font-medium">
+        {notificationCount}
+      </span>
+    )}
+  </button>
+
+  <button
+    type="button"
+    onClick={handleLogout}
+    className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9]"
+    title="Logout"
+  >
+    <LogOut size={17} className="text-[#64748B]" />
+  </button>
+</div>
+      
           ) : (
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-[#0057B8] flex items-center justify-center">
