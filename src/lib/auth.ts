@@ -29,6 +29,10 @@ export type CustomerProfile = {
 
   routerModel: string;
   routerSerial: string;
+
+  staffId?: string;
+  department?: string;
+  position?: string;
 };
 
 export async function signIn(email: string, password: string) {
