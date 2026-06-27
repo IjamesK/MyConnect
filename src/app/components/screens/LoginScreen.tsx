@@ -28,11 +28,18 @@ export function LoginScreen() {
       setLoading(true);
 
       const profile = await signIn(email.trim(), password);
-      
+
       localStorage.setItem("customerProfile", JSON.stringify(profile));
-      
-      navigate("/dashboard", { replace: true });
-      
+
+        const role = profile.role?.toLowerCase().trim();
+        
+        if (role === "staff" || role === "admin") {
+          navigate("/staff", { replace: true });
+          return;
+        }
+        
+        navigate("/dashboard", { replace: true });
+
     } catch (err) {
       console.error(err);
 
