@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router";
-import { Home, Activity, Headphones, User, Bell } from "lucide-react";
+import { Home, Activity, Headphones, User, Bell, LogOut } from "lucide-react";
+import { signOut } from "../../../lib/auth";
 
 interface LayoutProps {
   children: ReactNode;
@@ -20,6 +21,14 @@ const navItems = [
 export function Layout({ children, title, showBack = false, backTo, notificationCount = 3 }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const handleLogout = async () => {
+  try {
+    await signOut();
+    navigate("/", { replace: true });
+  } catch (error) {
+    console.error("Logout failed:", error);
+  }
+};
 
   const handleBack = () => {
     if (backTo) navigate(backTo);
