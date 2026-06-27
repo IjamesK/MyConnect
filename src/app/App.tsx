@@ -1,3 +1,4 @@
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import { LoginScreen } from "./components/screens/LoginScreen";
 import { CustomerDashboard } from "./components/screens/CustomerDashboard";
@@ -23,17 +24,104 @@ export default function App() {
         <Route path="/" element={<LoginScreen />} />
 
         {/* Customer portal */}
-        <Route path="/dashboard" element={<CustomerDashboard />} />
-        <Route path="/service-status" element={<ServiceStatus />} />
-        <Route path="/outage/:id" element={<OutageDetails />} />
-        <Route path="/troubleshoot" element={<Troubleshooter />} />
-        <Route path="/troubleshoot/zte" element={<ZTEDiagnostic />} />
-        <Route path="/troubleshoot/result" element={<DiagnosisResult />} />
-        <Route path="/subscription" element={<SubscriptionPage />} />
-        <Route path="/renewal" element={<RenewalInstructions />} />
-        <Route path="/report-issue" element={<ReportIssue />} />
-        <Route path="/ticket/:id" element={<TicketTracking />} />
-        <Route path="/notifications" element={<NotificationsCenter />} />
+<Route
+  path="/dashboard"
+  element={
+    <ProtectedRoute allowedRoles={["customer", "admin"]}>
+      <CustomerDashboard />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/service-status"
+  element={
+    <ProtectedRoute allowedRoles={["customer", "admin"]}>
+      <ServiceStatus />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/outage/:id"
+  element={
+    <ProtectedRoute allowedRoles={["customer", "admin"]}>
+      <OutageDetails />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/troubleshoot"
+  element={
+    <ProtectedRoute allowedRoles={["customer", "admin"]}>
+      <Troubleshooter />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/troubleshoot/zte"
+  element={
+    <ProtectedRoute allowedRoles={["customer", "admin"]}>
+      <ZTEDiagnostic />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/troubleshoot/result"
+  element={
+    <ProtectedRoute allowedRoles={["customer", "admin"]}>
+      <DiagnosisResult />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/subscription"
+  element={
+    <ProtectedRoute allowedRoles={["customer", "admin"]}>
+      <SubscriptionPage />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/renewal"
+  element={
+    <ProtectedRoute allowedRoles={["customer", "admin"]}>
+      <RenewalInstructions />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/report-issue"
+  element={
+    <ProtectedRoute allowedRoles={["customer", "admin"]}>
+      <ReportIssue />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/ticket/:id"
+  element={
+    <ProtectedRoute allowedRoles={["customer", "admin"]}>
+      <TicketTracking />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/notifications"
+  element={
+    <ProtectedRoute allowedRoles={["customer", "admin"]}>
+      <NotificationsCenter />
+    </ProtectedRoute>
+  }
+/>
 
         {/* Staff portal */}
         <Route path="/staff" element={<StaffDashboard />} />
