@@ -33,37 +33,37 @@ export function Layout({
   title,
   showBack = false,
   backTo,
-  notificationCount,
+  tionCount,
 }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [liveNotificationCount, setLiveNotificationCount] = useState(0);
+  const [livetionCount, setLivetionCount] = useState(0);
 
 useEffect(() => {
   const savedProfile = localStorage.getItem("customerProfile");
 
   if (!savedProfile) {
-    setLiveNotificationCount(0);
+    setLivetionCount(0);
     return;
   }
 
   try {
     const profile = JSON.parse(savedProfile) as CustomerProfile;
 
-    const unsubscribe = listenToUnreadNotificationCount(
+    const unsubscribe = listenToUnreadtionCount(
       profile.uid,
-      setLiveNotificationCount
+      setLivetionCount
     );
 
     return () => unsubscribe();
   } catch (error) {
-    console.error("Failed to load notification count:", error);
-    setLiveNotificationCount(0);
+    console.error("Failed to load tion count:", error);
+    setLivetionCount(0);
   }
 }, []);
 
-const displayedNotificationCount =
-  notificationCount ?? liveNotificationCount;
+const displayedtionCount =
+  tionCount ?? livetionCount;
 
   const handleLogout = async () => {
     try {
@@ -151,7 +151,7 @@ const displayedNotificationCount =
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => navigate("/notifications")}
+              onClick={() => handleNotificationClick(notification)}
               className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9]"
               title="Notifications"
             >
