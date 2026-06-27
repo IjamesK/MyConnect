@@ -15,6 +15,7 @@ import { NotificationsCenter } from "./components/screens/NotificationsCenter";
 import { StaffDashboard } from "./components/screens/StaffDashboard";
 import { OutageManagement } from "./components/screens/OutageManagement";
 import { AnalyticsDashboard } from "./components/screens/AnalyticsDashboard";
+import { StaffTickets } from "./components/screens/StaffTickets";
 
 export default function App() {
   return (
@@ -150,6 +151,15 @@ export default function App() {
     </ProtectedRoute>
   }
 />
+
+       <Route
+  path="/staff/tickets"
+  element={
+    <ProtectedRoute allowedRoles={["staff", "admin"]}>
+      <StaffTickets />
+    </ProtectedRoute>
+  }
+/> 
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
