@@ -1,160 +1,513 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import {
+  Activity,
+  AlertTriangle,
+  CheckCircle,
+  ChevronRight,
+  Clock,
+  MapPin,
+  Wrench,
+  WifiOff,
+} from "lucide-react";
 import { Layout } from "../isp/Layout";
-import { StatusDot, StatusBadge } from "../isp/StatusBadge";
-import { ChevronRight, X, Clock, Wrench, HardHat, ChevronDown } from "lucide-react";
+import type { CustomerProfile } from "../../../lib/auth";
+import {
+  listenToPublicIncidents,
+  type PublicIncident,
+} from "../../../lib/incidents";
 
-const areas = [
-  { name: "Kampala East", status: "operational" as const, detail: "All services running normally" },
-  { name: "Ntinda", status: "partial" as const, detail: "Fiber cut · 3 blocks affected", incident: "INC-2026-0045" },
-  { name: "Naalya", status: "operational" as const, detail: "All services running normally" },
-  { name: "Kisaasi", status: "operational" as const, detail: "All services running normally" },
-  { name: "Bukoto", status: "operational" as const, detail: "Monitoring elevated latency" },
-  { name: "Kireka", status: "operational" as const, detail: "All services running normally" },
-  { name: "Entebbe", status: "operational" as const, detail: "All services running normally" },
-  { name: "Mukono", status: "operational" as const, detail: "All services running normally" },
-];
+function makeAreaKey(district: string, area: string) {
+  return `${district.trim().toLowerCase()}/${area.trim().toLowerCase()}`;
+}
 
-const constructionZones = [
-  { area: "Kira Road", detail: "Road expansion affecting underground cables. Expected completion: Jul 15", status: "active" },
-  { area: "Lugogo Bypass", detail: "Relocating utility poles. Sporadic micro-outages possible.", status: "scheduled" }
-];
+function isCustomerAffected(profile: CustomerProfile, incident: PublicIncident) {
+  const customerAreaKey = makeAreaKey(profile.district, profile.area);
+
+  return (
+    incident.affectedAreaKeys?.includes(customerAreaKey) ||
+    incident.affectedAreaKeys?.includes("all/all") ||
+    incident.affectedAreaKeys?.includes("network/all")
+  );
+}
+
+function getIncidentLabel(incident: PublicIncident) {
+  if (incident.type === "maintenance") return "Planned Maintenance";
+  if (incident.type === "upgrade") return "Scheduled Upgrade";
+  if (incident.type === "fiber_cut") return "Fiber Cut";
+  if (incident.type === "knocked_pole") return "Knocked Pole";
+  if (incident.type === "damaged_cabinet") return "Damaged Cabinet";
+  if (incident.type === "area_outage") return "Area Outage";
+  if (incident.type === "outage") return "Network Outage";
+  return "Network Update";
+}
+
+function getStatusText(incident: PublicIncident) {
+  if (incident.status === "scheduled") return "Scheduled";
+  if (incident.status === "active") {
+    return incident.severity === "high" ? "Full Outage" : "Partial Outage";
+  }
+  if (incident.status === "monitoring") return "Monitoring";
+  if (incident.status === "resolved") return "Resolved";
+  if (incident.status === "cancelled") return "Cancelled";
+  return "Unknown";
+}
+
+function getStatusClasses(incident: PublicIncident) {
+  if (incident.status === "resolved") {
+    return "bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]";
+  }
+
+  if (incident.status === "scheduled") {
+    return "bg-[#EBF2FF] text-[#0057B8] border-[#BFDBFE]";
+  }
+
+  if (incident.status === "monitoring") {
+    return "bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]";
+  }
+
+  if (incident.severity === "high") {
+    return "bg-[#FEF2F2] text-[#DC2626] border-[#FECACA]";
+  }
+
+  return "bg-[#FFF7ED] text-[#EA580C] border-[#FED7AA]";
+}
+
+function getIcon(incident: PublicIncident) {
+  if (incident.type === "maintenance" || incident.type === "upgrade") {
+    return Wrench;
+  }
+
+  if (incident.status === "resolved") {
+    return CheckCircle;
+  }
+
+  if (incident.severity === "high") {
+    return WifiOff;
+  }
+
+  return AlertTriangle;
+}
+
+function formatIncidentAreas(incident: PublicIncident) {
+  const areas = incident.affectedAreas || [];
+  const districts = incident.affectedDistricts || [];
+
+  if (areas.length === 0 && districts.length === 0) {
+    return "Affected areas not specified";
+  }
+
+  if (areas.length > 0 && districts.length > 0) {
+    return `${areas.join(", ")} · ${districts.join(", ")}`;
+  }
+
+  if (areas.length > 0) return areas.join(", ");
+  return districts.join(", ");
+}
+
+function formatTimeAgo(incident: PublicIncident) {
+  const date = incident.updatedAt?.toDate?.() || incident.createdAt?.toDate?.();
+
+  if (!date) return "Recently updated";
+
+  const diffMs = Date.now() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMinutes < 1) return "Just now";
+  if (diffMinutes < 60) return `${diffMinutes} min ago`;
+  if (diffHours < 24) return `${diffHours} hr ago`;
+  return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+}
+
+function IncidentCard({
+  incident,
+  highlighted = false,
+  onClick,
+}: {
+  incident: PublicIncident;
+  highlighted?: boolean;
+  onClick: () => void;
+}) {
+  const Icon = getIcon(incident);
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left bg-white border rounded-2xl p-4 transition-all ${
+        highlighted
+          ? "border-[#0057B8] shadow-sm"
+          : "border-[#E2E8F0] hover:border-[#CBD5E1]"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+            incident.status === "resolved"
+              ? "bg-[#F0FDF4]"
+              : incident.status === "scheduled"
+                ? "bg-[#EBF2FF]"
+                : incident.severity === "high"
+                  ? "bg-[#FEF2F2]"
+                  : "bg-[#FFFBEB]"
+          }`}
+        >
+          <Icon
+            size={20}
+            className={
+              incident.status === "resolved"
+                ? "text-[#15803D]"
+                : incident.status === "scheduled"
+                  ? "text-[#0057B8]"
+                  : incident.severity === "high"
+                    ? "text-[#DC2626]"
+                    : "text-[#B45309]"
+            }
+          />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[#0F172A] text-sm font-semibold">
+                {incident.title}
+              </p>
+
+              <p className="text-[#64748B] text-xs mt-0.5">
+                {getIncidentLabel(incident)}
+              </p>
+            </div>
+
+            <span
+              className={`text-[10px] px-2 py-1 rounded-full border font-semibold whitespace-nowrap ${getStatusClasses(
+                incident
+              )}`}
+            >
+              {getStatusText(incident)}
+            </span>
+          </div>
+
+          <p className="text-[#64748B] text-xs mt-3 leading-relaxed">
+            {incident.description}
+          </p>
+
+          <div className="mt-3 flex items-center gap-2 text-[#94A3B8] text-xs">
+            <MapPin size={12} />
+            <span>{formatIncidentAreas(incident)}</span>
+          </div>
+
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-[#94A3B8] text-xs">
+              <Clock size={12} />
+              <span>{formatTimeAgo(incident)}</span>
+            </div>
+
+            {incident.estimatedResolution && (
+              <span className="text-[#64748B] text-xs">
+                ETA: {incident.estimatedResolution}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <ChevronRight size={16} className="text-[#CBD5E1] shrink-0 mt-1" />
+      </div>
+    </button>
+  );
+}
 
 export function ServiceStatus() {
   const navigate = useNavigate();
-  const [maintenanceDismissed, setMaintenanceDismissed] = useState(false);
-  const [expandedArea, setExpandedArea] = useState<string | null>(null);
-  const [minutesAgo, setMinutesAgo] = useState(0);
+
+  const [profile, setProfile] = useState<CustomerProfile | null>(null);
+  const [incidents, setIncidents] = useState<PublicIncident[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setMinutesAgo(prev => prev + 1);
-    }, 60000);
-    return () => clearInterval(timer);
+    const savedProfile = localStorage.getItem("customerProfile");
+
+    if (!savedProfile) {
+      navigate("/", { replace: true });
+      return;
+    }
+
+    try {
+      setProfile(JSON.parse(savedProfile) as CustomerProfile);
+    } catch (error) {
+      console.error("Failed to load customer profile:", error);
+      localStorage.removeItem("customerProfile");
+      navigate("/", { replace: true });
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    const unsubscribe = listenToPublicIncidents((items) => {
+      setIncidents(items);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
+  const visibleIncidents = useMemo(() => {
+    return incidents.filter((incident) => incident.status !== "cancelled");
+  }, [incidents]);
+
+  const activeOutages = useMemo(() => {
+    return visibleIncidents.filter(
+      (incident) =>
+        incident.status === "active" ||
+        incident.status === "monitoring"
+    );
+  }, [visibleIncidents]);
+
+  const plannedWork = useMemo(() => {
+    return visibleIncidents.filter(
+      (incident) =>
+        incident.status === "scheduled" &&
+        (incident.type === "maintenance" || incident.type === "upgrade")
+    );
+  }, [visibleIncidents]);
+
+  const resolvedIncidents = useMemo(() => {
+    return visibleIncidents.filter((incident) => incident.status === "resolved");
+  }, [visibleIncidents]);
+
+  const customerIncidents = useMemo(() => {
+    if (!profile) return [];
+
+    return visibleIncidents.filter((incident) =>
+      isCustomerAffected(profile, incident)
+    );
+  }, [visibleIncidents, profile]);
+
+  const customerActiveIncidents = useMemo(() => {
+    return customerIncidents.filter(
+      (incident) =>
+        incident.status === "active" ||
+        incident.status === "monitoring" ||
+        incident.status === "scheduled"
+    );
+  }, [customerIncidents]);
+
+  const areaStatus = useMemo(() => {
+    const highSeverity = customerActiveIncidents.some(
+      (incident) => incident.status === "active" && incident.severity === "high"
+    );
+
+    const activeIssue = customerActiveIncidents.some(
+      (incident) =>
+        incident.status === "active" || incident.status === "monitoring"
+    );
+
+    const scheduledWork = customerActiveIncidents.some(
+      (incident) => incident.status === "scheduled"
+    );
+
+    if (highSeverity) return "Full outage";
+    if (activeIssue) return "Partial outage";
+    if (scheduledWork) return "Scheduled maintenance";
+    return "Operational";
+  }, [customerActiveIncidents]);
+
+  if (!profile) {
+    return (
+      <Layout showBack backTo="/dashboard" title="Network Status">
+        <div className="px-4 py-10 text-center text-[#64748B] text-sm">
+          Loading account details...
+        </div>
+      </Layout>
+    );
+  }
+
   return (
-    <Layout title="Network Status">
-      <div className="px-4 py-5 space-y-4">
-        <div className="flex items-center justify-between">
+    <Layout showBack backTo="/dashboard" title="Network Status">
+      <div className="px-4 py-5 space-y-5">
+        <div>
           <h1
-            style={{ fontFamily: "'Inter Tight', system-ui, sans-serif", fontWeight: 800 }}
+            style={{
+              fontFamily: "'Inter Tight', system-ui, sans-serif",
+              fontWeight: 800,
+            }}
             className="text-[#0F172A] text-2xl"
           >
             Network Status
           </h1>
-          <div className="flex items-center gap-1.5 text-[#64748B] text-xs">
-            <Clock size={12} />
-            <span>Updated {minutesAgo === 0 ? "just now" : `${minutesAgo} min ago`}</span>
+
+          <p className="text-[#64748B] text-sm mt-1">
+            Live network updates for your area and other affected service zones.
+          </p>
+        </div>
+
+        {/* Customer area first */}
+        <div className="bg-gradient-to-br from-[#0057B8] to-[#003D82] rounded-2xl p-4 text-white shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-white/70 text-xs">Your Area</p>
+
+              <h2 className="text-lg font-bold mt-0.5">
+                {profile.area}, {profile.district}
+              </h2>
+
+              <div className="flex items-center gap-2 mt-3">
+                {areaStatus === "Operational" ? (
+                  <CheckCircle size={16} className="text-[#86EFAC]" />
+                ) : areaStatus === "Full outage" ? (
+                  <WifiOff size={16} className="text-[#FCA5A5]" />
+                ) : areaStatus === "Scheduled maintenance" ? (
+                  <Wrench size={16} className="text-[#BFDBFE]" />
+                ) : (
+                  <AlertTriangle size={16} className="text-[#FDE68A]" />
+                )}
+
+                <span className="text-sm font-semibold">{areaStatus}</span>
+              </div>
+            </div>
+
+            <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center">
+              <Activity size={24} />
+            </div>
+          </div>
+
+          <p className="text-white/70 text-xs mt-4">
+            {customerActiveIncidents.length > 0
+              ? `${customerActiveIncidents.length} network update${
+                  customerActiveIncidents.length === 1 ? "" : "s"
+                } affecting your area.`
+              : "No active outage or planned maintenance affecting your area."}
+          </p>
+        </div>
+
+        {/* Summary cards */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-white border border-[#E2E8F0] rounded-xl p-3">
+            <p className="text-[#94A3B8] text-xs">Active</p>
+            <p className="text-[#0F172A] text-xl font-bold mt-1">
+              {activeOutages.length}
+            </p>
+          </div>
+
+          <div className="bg-white border border-[#E2E8F0] rounded-xl p-3">
+            <p className="text-[#94A3B8] text-xs">Planned</p>
+            <p className="text-[#0F172A] text-xl font-bold mt-1">
+              {plannedWork.length}
+            </p>
+          </div>
+
+          <div className="bg-white border border-[#E2E8F0] rounded-xl p-3">
+            <p className="text-[#94A3B8] text-xs">Your Area</p>
+            <p className="text-[#0F172A] text-xl font-bold mt-1">
+              {customerActiveIncidents.length}
+            </p>
           </div>
         </div>
 
-        {/* Summary stats */}
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: "Active Incidents", value: "1", color: "text-[#DC2626]" },
-            { label: "Areas Affected", value: "1", color: "text-[#F59E0B]" },
-            { label: "Maintenance", value: "1", color: "text-[#7C3AED]" },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="bg-white border border-[#E2E8F0] rounded-xl p-3 text-center">
-              <p style={{ fontFamily: "'Inter Tight', system-ui, sans-serif", fontWeight: 800 }} className={`text-2xl ${color}`}>{value}</p>
-              <p className="text-[#64748B] text-[10px] mt-0.5 leading-tight">{label}</p>
-            </div>
-          ))}
-        </div>
+        {loading && (
+          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 text-center">
+            <p className="text-[#64748B] text-sm">Loading network updates...</p>
+          </div>
+        )}
 
-        {/* Maintenance banner */}
-        {!maintenanceDismissed && (
-          <div className="bg-[#F5F3FF] border border-[#DDD6FE] rounded-xl px-4 py-3">
-            <div className="flex items-start gap-3">
-              <Wrench size={16} className="text-[#7C3AED] mt-0.5 shrink-0" />
-              <div className="flex-1">
-                <p className="text-[#6D28D9] text-xs font-semibold">Planned Maintenance</p>
-                <p className="text-[#7C3AED] text-xs mt-0.5">Naalya fiber upgrade · Tomorrow 2:00 AM – 5:00 AM</p>
-                <p className="text-[#9B8ECF] text-[10px] mt-1">Expect brief interruptions during this window</p>
-              </div>
-              <button onClick={() => setMaintenanceDismissed(true)} className="text-[#9B8ECF] hover:text-[#6D28D9]">
-                <X size={14} />
-              </button>
+        {!loading && customerActiveIncidents.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[#0F172A] text-sm font-semibold">
+                Affecting Your Area
+              </h3>
+
+              <span className="text-[#0057B8] text-xs font-medium">
+                Priority
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {customerActiveIncidents.map((incident) => (
+                <IncidentCard
+                  key={incident.id}
+                  incident={incident}
+                  highlighted
+                  onClick={() => navigate(`/outage/${incident.id}`)}
+                />
+              ))}
             </div>
           </div>
         )}
 
-        {/* Area list */}
-        <div>
-          <p className="text-[#0F172A] text-sm font-semibold mb-3">Coverage Areas</p>
-          <div className="bg-white border border-[#E2E8F0] rounded-xl divide-y divide-[#F1F5F9]">
-            {areas.map(({ name, status, detail, incident }) => {
-              const isExpanded = expandedArea === name;
-              return (
-                <div key={name}>
-                  <button
-                    onClick={() => incident ? setExpandedArea(isExpanded ? null : name) : undefined}
-                    className={`w-full px-4 py-3.5 flex items-center gap-3 text-left ${incident ? "hover:bg-[#F8FAFC] active:bg-[#F1F5F9]" : ""}`}
-                  >
-                    <StatusDot status={status} pulse={status !== "operational"} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[#0F172A] text-sm font-medium">{name}</p>
-                      <p className="text-[#94A3B8] text-xs truncate mt-0.5">{detail}</p>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <StatusBadge status={status === "operational" ? "operational" : "investigating"} />
-                      {incident && (isExpanded ? <ChevronDown size={14} className="text-[#CBD5E1]" /> : <ChevronRight size={14} className="text-[#CBD5E1]" />)}
-                    </div>
-                  </button>
-                  {isExpanded && incident && (
-                    <div className="px-4 pb-4 pt-1 bg-[#F8FAFC]">
-                      <div className="bg-white border border-[#E2E8F0] rounded-lg p-3">
-                        <p className="text-[#0F172A] text-xs font-semibold mb-1">Incident: {incident}</p>
-                        <p className="text-[#64748B] text-xs leading-relaxed mb-3">
-                          Our field engineers are currently on-site investigating a suspected fiber cut affecting approximately 3 blocks in the Ntinda area. We are working to reroute traffic where possible.
-                        </p>
-                        <button
-                          onClick={() => navigate(`/outage/${incident}`)}
-                          className="w-full bg-[#E5007D] text-white py-1.5 rounded-md text-xs font-semibold hover:bg-[#BE0067] transition-colors"
-                        >
-                          View Live Updates
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Construction Zones */}
-        <div>
-          <p className="text-[#0F172A] text-sm font-semibold mb-3">Construction Zones</p>
-          <div className="bg-white border border-[#E2E8F0] rounded-xl divide-y divide-[#F1F5F9]">
-            {constructionZones.map(({ area, detail, status }) => (
-              <div key={area} className="p-4 flex gap-3 items-start">
-                <div className="mt-0.5">
-                  <HardHat size={16} className={status === 'active' ? "text-[#F59E0B]" : "text-[#94A3B8]"} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-[#0F172A] text-sm font-medium">{area}</p>
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${status === 'active' ? 'bg-[#FFFBEB] text-[#B45309]' : 'bg-[#F1F5F9] text-[#64748B]'}`}>
-                      {status}
-                    </span>
-                  </div>
-                  <p className="text-[#64748B] text-xs mt-1 leading-relaxed">{detail}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Overall status */}
-        <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-xl p-4 flex items-center gap-3">
-          <span className="text-xl">🔶</span>
+        {!loading && activeOutages.length > 0 && (
           <div>
-            <p className="text-[#92400E] text-sm font-semibold">Partial Service Degradation</p>
-            <p className="text-[#B45309] text-xs mt-0.5">1 area experiencing issues · Engineers deployed</p>
+            <h3 className="text-[#0F172A] text-sm font-semibold mb-3">
+              Active Outages & Incidents
+            </h3>
+
+            <div className="space-y-3">
+              {activeOutages.map((incident) => (
+                <IncidentCard
+                  key={incident.id}
+                  incident={incident}
+                  onClick={() => navigate(`/outage/${incident.id}`)}
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
+
+        {!loading && plannedWork.length > 0 && (
+          <div>
+            <h3 className="text-[#0F172A] text-sm font-semibold mb-3">
+              Planned Maintenance & Upgrades
+            </h3>
+
+            <div className="space-y-3">
+              {plannedWork.map((incident) => (
+                <IncidentCard
+                  key={incident.id}
+                  incident={incident}
+                  onClick={() => navigate(`/outage/${incident.id}`)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!loading &&
+          activeOutages.length === 0 &&
+          plannedWork.length === 0 &&
+          customerActiveIncidents.length === 0 && (
+            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] flex items-center justify-center mx-auto mb-3">
+                <CheckCircle size={26} className="text-[#16A34A]" />
+              </div>
+
+              <h3 className="text-[#0F172A] text-base font-bold">
+                All Systems Operational
+              </h3>
+
+              <p className="text-[#64748B] text-sm mt-1">
+                There are no active outages or planned maintenance updates at
+                the moment.
+              </p>
+            </div>
+          )}
+
+        {!loading && resolvedIncidents.length > 0 && (
+          <div>
+            <h3 className="text-[#0F172A] text-sm font-semibold mb-3">
+              Recently Resolved
+            </h3>
+
+            <div className="space-y-3">
+              {resolvedIncidents.slice(0, 3).map((incident) => (
+                <IncidentCard
+                  key={incident.id}
+                  incident={incident}
+                  onClick={() => navigate(`/outage/${incident.id}`)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );
