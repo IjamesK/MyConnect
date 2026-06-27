@@ -1,4 +1,6 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
+import type { CustomerProfile } from "../../../lib/auth";
+import { listenToUnreadNotificationCount } from "../../../lib/notifications";
 import { useNavigate, useLocation } from "react-router";
 import {
   Home,
@@ -31,10 +33,37 @@ export function Layout({
   title,
   showBack = false,
   backTo,
-  notificationCount = 3,
+  notificationCount,
 }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [liveNotificationCount, setLiveNotificationCount] = useState(0);
+
+useEffect(() => {
+  const savedProfile = localStorage.getItem("customerProfile");
+
+  if (!savedProfile) {
+    setLiveNotificationCount(0);
+    return;
+  }
+
+  try {
+    const profile = JSON.parse(savedProfile) as CustomerProfile;
+
+    const unsubscribe = listenToUnreadNotificationCount(
+      profile.uid,
+      setLiveNotificationCount
+    );
+
+    return () => unsubscribe();
+  } catch (error) {
+    console.error("Failed to load notification count:", error);
+    setLiveNotificationCount(0);
+  }
+}, []);
+
+const displayedNotificationCount =
+  notificationCount ?? liveNotificationCount;
 
   const handleLogout = async () => {
     try {
@@ -127,10 +156,9 @@ export function Layout({
               title="Notifications"
             >
               <Bell size={18} className="text-[#475569]" />
-
-              {notificationCount > 0 && (
+                {displayedNotificationCount > 0 && (
                 <span className="absolute top-1 right-1 w-4 h-4 bg-[#DC2626] rounded-full text-white text-[10px] flex items-center justify-center font-medium">
-                  {notificationCount}
+                  {displayedNotificationCount}
                 </span>
               )}
             </button>
