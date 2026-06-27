@@ -27,14 +27,19 @@ export function LoginScreen() {
     try {
       setLoading(true);
 
-const profile = await signIn(email.trim(), password);
-
-console.log("Logged in profile:", profile);
-
-navigate("/dashboard", { replace: true });
+      const profile = await signIn(email.trim(), password);
+      
+      localStorage.setItem("customerProfile", JSON.stringify(profile));
+      
+      navigate("/dashboard", { replace: true });
       
     } catch (err) {
       console.error(err);
+
+      if (err instanceof Error && err.message === "PROFILE_NOT_FOUND") {
+      setMessage("Login worked, but no customer profile was found. Check Firestore UID.");
+      return;
+    } 
 
       const errorCode =
         typeof err === "object" && err !== null && "code" in err
