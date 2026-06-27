@@ -124,9 +124,32 @@ export default function App() {
 />
 
         {/* Staff portal */}
-        <Route path="/staff" element={<StaffDashboard />} />
-        <Route path="/staff/outages" element={<OutageManagement />} />
-        <Route path="/staff/analytics" element={<AnalyticsDashboard />} />
+<Route
+  path="/staff"
+  element={
+    <ProtectedRoute allowedRoles={["staff", "admin"]}>
+      <StaffDashboard />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/staff/outages"
+  element={
+    <ProtectedRoute allowedRoles={["staff", "admin"]}>
+      <OutageManagement />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/staff/analytics"
+  element={
+    <ProtectedRoute allowedRoles={["staff", "admin"]}>
+      <AnalyticsDashboard />
+    </ProtectedRoute>
+  }
+/>
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
