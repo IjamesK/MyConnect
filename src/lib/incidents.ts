@@ -237,3 +237,20 @@ export function listenToPendingIncidentReports(
     );
   });
 }
+export function listenToPublicIncidents(
+  callback: (incidents: PublicIncident[]) => void
+) {
+  const incidentsQuery = query(
+    collection(db, "incidents"),
+    orderBy("createdAt", "desc")
+  );
+
+  return onSnapshot(incidentsQuery, (snapshot) => {
+    callback(
+      snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      })) as PublicIncident[]
+    );
+  });
+}
