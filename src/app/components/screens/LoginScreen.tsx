@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { Wifi, Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../../../lib/firebase";
+import { signIn } from "../../../lib/auth";
 
 export function LoginScreen() {
   const navigate = useNavigate();
@@ -26,9 +27,12 @@ export function LoginScreen() {
     try {
       setLoading(true);
 
-      await signInWithEmailAndPassword(auth, email.trim(), password);
+const profile = await signIn(email.trim(), password);
 
-      navigate("/dashboard", { replace: true });
+console.log("Logged in profile:", profile);
+
+navigate("/dashboard", { replace: true });
+      
     } catch (err) {
       console.error(err);
 
