@@ -2,6 +2,8 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -12,6 +14,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import type { CustomerProfile } from "./auth";
+import { createCustomerNotification } from "./notifications";
 
 export type IncidentReportStatus = "pending_review" | "approved" | "rejected";
 
@@ -75,6 +78,69 @@ export type PublicIncident = {
 
 function areaKey(district: string, area: string) {
   return `${district.trim().toLowerCase()}/${area.trim().toLowerCase()}`;
+}
+
+function incidentNotificationType(type: IncidentType) {
+  if (type === "maintenance" || type === "upgrade") return "maintenance";
+  return "incident";
+}
+
+function normalize(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function isNetworkWideIncident(affectedAreaKeys: string[]) {
+  return (
+    affectedAreaKeys.includes("all/all") ||
+    affectedAreaKeys.includes("network/all")
+  );
+}
+
+async function getAffectedCustomerUids(affectedAreaKeys: string[]) {
+  const usersSnapshot = await getDocs(collection(db, "users"));
+
+  return usersSnapshot.docs
+    .filter((userDoc) => {
+      const user = userDoc.data();
+
+      const role = String(user.role ?? "").trim().toLowerCase();
+      if (role && role !== "customer") return false;
+
+      if (isNetworkWideIncident(affectedAreaKeys)) return true;
+
+      const customerAreaKey = areaKey(
+        String(user.district ?? ""),
+        String(user.area ?? "")
+      );
+
+      return affectedAreaKeys.includes(customerAreaKey);
+    })
+    .map((userDoc) => userDoc.id);
+}
+
+async function notifyAffectedCustomers(data: {
+  incidentId: string;
+  type: IncidentType;
+  title: string;
+  body: string;
+  affectedAreaKeys: string[];
+}) {
+  const customerUids = await getAffectedCustomerUids(data.affectedAreaKeys);
+
+  await Promise.all(
+    customerUids.map((customerUid) =>
+      createCustomerNotification({
+        customerUid,
+        type: incidentNotificationType(data.type),
+        title: data.title,
+        body: data.body,
+        action: "/service-status",
+        relatedId: data.incidentId,
+      })
+    )
+  );
+
+  return customerUids.length;
 }
 
 export async function createIncidentReport(
@@ -148,6 +214,14 @@ export async function approveIncidentReport(data: {
     reviewedBy: data.reviewedBy,
   });
 
+await notifyAffectedCustomers({
+  incidentId: incidentRef.id,
+  type: data.type,
+  title: data.type === "maintenance" ? "Maintenance Notice" : "Network Incident Confirmed",
+  body: data.description,
+  affectedAreaKeys,
+});
+  
   return incidentRef.id;
 }
 
@@ -194,6 +268,14 @@ export async function createPlannedIncident(data: {
     updatedAt: serverTimestamp(),
   });
 
+  await notifyAffectedCustomers({
+  incidentId: incidentRef.id,
+  type: data.type,
+  title: data.type === "upgrade" ? "Scheduled Network Upgrade" : "Planned Maintenance",
+  body: data.description,
+  affectedAreaKeys,
+});
+  
   return incidentRef.id;
 }
 
@@ -253,4 +335,89 @@ export function listenToPublicIncidents(
       })) as PublicIncident[]
     );
   });
+}
+export async function updateIncidentStatus(data: {
+  incidentId: string;
+  status: IncidentStatus;
+  updatedBy: string;
+  note?: string;
+  estimatedResolution?: string;
+}) {
+  const incidentRef = doc(db, "incidents", data.incidentId);
+
+  await updateDoc(incidentRef, {
+    status: data.status,
+    statusNote: data.note ?? "",
+    estimatedResolution: data.estimatedResolution ?? "",
+    updatedBy: data.updatedBy,
+    updatedAt: serverTimestamp(),
+  });
+
+  const incidentSnap = await getDoc(incidentRef);
+
+  if (!incidentSnap.exists()) {
+    return;
+  }
+
+  const incident = {
+    id: incidentSnap.id,
+    ...incidentSnap.data(),
+  } as PublicIncident;
+
+  let title = "Network Update";
+
+  if (data.status === "resolved") title = "Network Issue Resolved";
+  if (data.status === "monitoring") title = "Network Under Monitoring";
+  if (data.status === "active") title = "Network Incident Active";
+  if (data.status === "cancelled") title = "Network Update Cancelled";
+
+  await notifyAffectedCustomers({
+    incidentId: data.incidentId,
+    type: incident.type,
+    title,
+    body:
+      data.note ||
+      `${incident.title} status changed to ${data.status.replace("_", " ")}.`,
+    affectedAreaKeys: incident.affectedAreaKeys ?? [],
+  });
+}
+
+export async function createActiveIncident(data: {
+  title: string;
+  description: string;
+  type: Exclude<IncidentType, "maintenance" | "upgrade">;
+  severity: IncidentSeverity;
+  affectedAreas: string[];
+  affectedDistricts: string[];
+  estimatedResolution?: string;
+  createdBy: string;
+}) {
+  const affectedAreaKeys = data.affectedDistricts.flatMap((district) =>
+    data.affectedAreas.map((area) => areaKey(district, area))
+  );
+
+  const incidentRef = await addDoc(collection(db, "incidents"), {
+    title: data.title,
+    description: data.description,
+    type: data.type,
+    severity: data.severity,
+    status: "active",
+    affectedAreas: data.affectedAreas,
+    affectedDistricts: data.affectedDistricts,
+    affectedAreaKeys,
+    estimatedResolution: data.estimatedResolution ?? "",
+    createdBy: data.createdBy,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
+  await notifyAffectedCustomers({
+    incidentId: incidentRef.id,
+    type: data.type,
+    title: data.severity === "high" ? "Full Outage Alert" : "Network Incident Alert",
+    body: data.description,
+    affectedAreaKeys,
+  });
+
+  return incidentRef.id;
 }
