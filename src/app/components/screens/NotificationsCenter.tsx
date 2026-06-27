@@ -144,10 +144,6 @@ const handleMarkAllRead = async () => {
   if (!profile) return;
   await markAllNotificationsRead(profile.uid);
 };
-  onClick={async () => {
-  await markNotificationRead(id);
-  if (action) navigate(action);
-}}
 
   if (!profile) {
     return (
@@ -299,9 +295,9 @@ const handleMarkAllRead = async () => {
                   <button
                     key={id}
                     type="button"
-                    onClick={() => {
-                      markRead(id);
-                      if (action) navigate(action);
+                    onClick={async () => {
+                        await markNotificationRead(id);
+                        if (action) navigate(action);
                     }}
                     className="w-full text-left p-4 rounded-2xl border bg-white border-[#E2E8F0] flex items-start gap-3"
                   >
