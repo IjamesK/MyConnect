@@ -5,13 +5,6 @@ import { Layout } from "../isp/Layout";
 import { StatusDot } from "../isp/StatusBadge";
 import { RefreshCw, Wrench, AlertCircle, Activity, ChevronRight, TrendingUp } from "lucide-react";
 
-const quickActions = [
-  { icon: RefreshCw, label: "Renew", sublabel: "{daysLeft > 0 ? `${daysLeft} Days` : "Expired"} left", color: "bg-[#FCE7F3] text-[#E5007D]", path: "/renewal" },
-  { icon: Wrench, label: "Troubleshoot", sublabel: "Diagnose issues", color: "bg-[#F0FDF4] text-[#15803D]", path: "/troubleshoot" },
-  { icon: AlertCircle, label: "Report Issue", sublabel: "Photo reports", color: "bg-[#FFFBEB] text-[#B45309]", path: "/report-issue" },
-  { icon: Activity, label: "Network Status", sublabel: "View all areas", color: "bg-[#FEF2F2] text-[#B91C1C]", path: "/service-status" },
-];
-
 function getDaysLeft(expiryDate: string) {
   const today = new Date();
   const expiry = new Date(expiryDate);
@@ -57,6 +50,30 @@ export function CustomerDashboard() {
 
   const daysLeft = getDaysLeft(profile.expiryDate);
 
+  const quickActions = [
+  {
+    icon: RefreshCw,
+    label: "Renew",
+    sublabel: daysLeft > 0 ? `${daysLeft} Days left` : "Expired",
+    color: "bg-[#FCE7F3] text-[#E5007D]",
+    path: "/renewal",
+  },
+  {
+    icon: Wrench,
+    label: "Troubleshoot",
+    sublabel: "Diagnose issues",
+    color: "bg-[#F0FDF4] text-[#15803D]",
+    path: "/troubleshoot",
+  },
+  {
+    icon: AlertCircle,
+    label: "Report Issue",
+    sublabel: "Photo reports",
+    color: "bg-[#FFFBEB] text-[#B45309]",
+    path: "/report-issue",
+  },
+];
+  
   const recentActivity = [
   {
     title: "Package Active",
