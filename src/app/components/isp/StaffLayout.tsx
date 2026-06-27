@@ -11,7 +11,7 @@ interface StaffLayoutProps {
 const navItems = [
   { icon: LayoutDashboard, label: "Overview", path: "/staff" },
   { icon: AlertTriangle, label: "Outages", path: "/staff/outages" },
-  { icon: Ticket, label: "Tickets", path: "/ticket/3021" },
+  { icon: Ticket, label: "Tickets", path: "/staff" },
   { icon: BarChart3, label: "Analytics", path: "/staff/analytics" },
   { icon: Settings, label: "Settings", path: "/staff" },
 ];
