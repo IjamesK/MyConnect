@@ -39,30 +39,13 @@ export function CustomerDashboard() {
   const greeting =
     hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
 
-  useEffect(() => {
+useEffect(() => {
   const savedProfile = localStorage.getItem("customerProfile");
 
   if (!savedProfile) {
     navigate("/", { replace: true });
     return;
   }
-
-  try {
-    const parsedProfile = JSON.parse(savedProfile) as CustomerProfile;
-    setProfile(parsedProfile);
-
-    const unsubscribe = listenToRelevantIncidents(
-      parsedProfile,
-      setIncidents
-    );
-
-    return () => unsubscribe();
-  } catch (error) {
-    console.error("Failed to load customer profile:", error);
-    localStorage.removeItem("customerProfile");
-    navigate("/", { replace: true });
-  }
-}, [navigate]);
 
   try {
     const parsedProfile = JSON.parse(savedProfile) as CustomerProfile;
@@ -77,7 +60,7 @@ export function CustomerDashboard() {
     navigate("/", { replace: true });
   }
 }, [navigate]);
-
+  
   if (!profile) {
     return (
       <Layout>
