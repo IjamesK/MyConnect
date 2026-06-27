@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import type { CustomerProfile } from "../../../lib/auth";
 import { Layout } from "../isp/Layout";
 import { StatusDot } from "../isp/StatusBadge";
 import { RefreshCw, Wrench, AlertCircle, Activity, ChevronRight, TrendingUp } from "lucide-react";
