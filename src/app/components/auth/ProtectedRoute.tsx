@@ -63,9 +63,11 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/" replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(profile.role)) {
-    return <Navigate to="/" replace />;
-  }
+const userRole = profile.role?.toLowerCase().trim();
+
+if (allowedRoles && !allowedRoles.includes(userRole as CustomerProfile["role"])) {
+  return <Navigate to="/" replace />;
+}
 
   return <>{children}</>;
 }
