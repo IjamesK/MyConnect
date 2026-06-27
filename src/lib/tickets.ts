@@ -12,228 +12,142 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import type { CustomerProfile } from "./auth";
+import { createCustomerNotification } from "./notifications";
 
-export type IncidentReportStatus = "pending_review" | "approved" | "rejected";
-
-export type IncidentStatus =
-  | "scheduled"
-  | "active"
-  | "monitoring"
+export type TicketStatus =
+  | "open"
+  | "assigned"
+  | "in_progress"
   | "resolved"
-  | "cancelled";
+  | "closed";
 
-export type IncidentType =
-  | "outage"
-  | "fiber_cut"
-  | "knocked_pole"
-  | "damaged_cabinet"
-  | "maintenance"
-  | "upgrade"
-  | "area_outage"
-  | "other";
+export type TicketPriority = "low" | "medium" | "high";
 
-export type IncidentSeverity = "low" | "medium" | "high";
-
-export type IncidentReport = {
+export type CustomerTicket = {
   id: string;
-  reporterUid: string;
-  reporterName: string;
-  phone: string;
+  customerUid: string;
+  customerName: string;
   customerNumber: string;
+  phone: string;
   area: string;
   district: string;
   address: string;
   routerSerial: string;
-  type: IncidentType;
+  packageName: string;
+  category: string;
   title: string;
   description: string;
+  priority: TicketPriority;
+  status: TicketStatus;
+  assignedTo?: string | null;
   photoCount?: number;
   locationNote?: string;
-  status: IncidentReportStatus;
-  linkedIncidentId?: string | null;
-  createdAt?: Timestamp | null;
-  reviewedAt?: Timestamp | null;
-  reviewedBy?: string | null;
-};
-
-export type PublicIncident = {
-  id: string;
-  title: string;
-  description: string;
-  type: IncidentType;
-  status: IncidentStatus;
-  severity: IncidentSeverity;
-  affectedAreas: string[];
-  affectedDistricts: string[];
-  affectedAreaKeys: string[];
-  sourceReportId?: string | null;
   createdAt?: Timestamp | null;
   updatedAt?: Timestamp | null;
-  startsAt?: Timestamp | null;
-  estimatedResolution?: string;
 };
 
-function areaKey(district: string, area: string) {
-  return `${district.trim().toLowerCase()}/${area.trim().toLowerCase()}`;
-}
-
-export async function createIncidentReport(
+export async function createTicket(
   profile: CustomerProfile,
   data: {
-    type: IncidentType;
+    category: string;
     title: string;
     description: string;
+    priority: TicketPriority;
     photoCount?: number;
     locationNote?: string;
   }
 ) {
-  const reportRef = await addDoc(collection(db, "incidentReports"), {
-    reporterUid: profile.uid,
-    reporterName: profile.fullName,
-    phone: profile.phone,
+  const ticketRef = await addDoc(collection(db, "tickets"), {
+    customerUid: profile.uid,
+    customerName: profile.fullName,
     customerNumber: profile.customerNumber,
+    phone: profile.phone,
     area: profile.area,
     district: profile.district,
     address: profile.address,
     routerSerial: profile.routerSerial,
+    packageName: profile.packageName,
 
-    type: data.type,
+    category: data.category,
     title: data.title,
     description: data.description,
+    priority: data.priority,
     photoCount: data.photoCount ?? 0,
     locationNote: data.locationNote ?? "",
 
-    status: "pending_review",
-    linkedIncidentId: null,
-    createdAt: serverTimestamp(),
-    reviewedAt: null,
-    reviewedBy: null,
-  });
-
-  return reportRef.id;
-}
-
-export async function approveIncidentReport(data: {
-  reportId: string;
-  reviewedBy: string;
-  title: string;
-  description: string;
-  type: IncidentType;
-  severity: IncidentSeverity;
-  affectedAreas: string[];
-  affectedDistricts: string[];
-}) {
-  const affectedAreaKeys = data.affectedDistricts.flatMap((district) =>
-    data.affectedAreas.map((area) => areaKey(district, area))
-  );
-
-  const incidentRef = await addDoc(collection(db, "incidents"), {
-    title: data.title,
-    description: data.description,
-    type: data.type,
-    severity: data.severity,
-    status: "active",
-    affectedAreas: data.affectedAreas,
-    affectedDistricts: data.affectedDistricts,
-    affectedAreaKeys,
-    sourceReportId: data.reportId,
+    status: "open",
+    assignedTo: null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
 
-  await updateDoc(doc(db, "incidentReports", data.reportId), {
-    status: "approved",
-    linkedIncidentId: incidentRef.id,
-    reviewedAt: serverTimestamp(),
-    reviewedBy: data.reviewedBy,
+  await createCustomerNotification({
+    customerUid: profile.uid,
+    type: "ticket",
+    title: "Ticket Created",
+    body: `Your ticket has been submitted. Reference: ${ticketRef.id}`,
+    action: `/ticket/${ticketRef.id}`,
+    relatedId: ticketRef.id,
   });
 
-  return incidentRef.id;
+  return ticketRef.id;
 }
 
-export async function rejectIncidentReport(data: {
-  reportId: string;
-  reviewedBy: string;
-  reason?: string;
+export async function updateTicketStatus(data: {
+  ticketId: string;
+  customerUid: string;
+  status: TicketStatus;
+  note?: string;
+  assignedTo?: string;
 }) {
-  await updateDoc(doc(db, "incidentReports", data.reportId), {
-    status: "rejected",
-    rejectionReason: data.reason ?? "",
-    reviewedAt: serverTimestamp(),
-    reviewedBy: data.reviewedBy,
-  });
-}
-
-export async function createPlannedIncident(data: {
-  title: string;
-  description: string;
-  type: "maintenance" | "upgrade";
-  severity: IncidentSeverity;
-  status: "scheduled" | "active";
-  affectedAreas: string[];
-  affectedDistricts: string[];
-  estimatedResolution?: string;
-  createdBy: string;
-}) {
-  const affectedAreaKeys = data.affectedDistricts.flatMap((district) =>
-    data.affectedAreas.map((area) => areaKey(district, area))
-  );
-
-  const incidentRef = await addDoc(collection(db, "incidents"), {
-    title: data.title,
-    description: data.description,
-    type: data.type,
-    severity: data.severity,
+  await updateDoc(doc(db, "tickets", data.ticketId), {
     status: data.status,
-    affectedAreas: data.affectedAreas,
-    affectedDistricts: data.affectedDistricts,
-    affectedAreaKeys,
-    estimatedResolution: data.estimatedResolution ?? "",
-    createdBy: data.createdBy,
-    createdAt: serverTimestamp(),
+    assignedTo: data.assignedTo ?? null,
+    lastNote: data.note ?? "",
     updatedAt: serverTimestamp(),
   });
 
-  return incidentRef.id;
+  await createCustomerNotification({
+    customerUid: data.customerUid,
+    type: "ticket",
+    title: "Ticket Updated",
+    body: data.note
+      ? data.note
+      : `Your ticket status changed to ${data.status.replace("_", " ")}.`,
+    action: `/ticket/${data.ticketId}`,
+    relatedId: data.ticketId,
+  });
 }
 
-export function listenToRelevantIncidents(
-  profile: CustomerProfile,
-  callback: (incidents: PublicIncident[]) => void
+export function listenToCustomerTickets(
+  customerUid: string,
+  callback: (tickets: CustomerTicket[]) => void
 ) {
-  const customerAreaKey = areaKey(profile.district, profile.area);
-
-  const incidentsQuery = query(
-    collection(db, "incidents"),
-    where("affectedAreaKeys", "array-contains", customerAreaKey),
+  const ticketsQuery = query(
+    collection(db, "tickets"),
+    where("customerUid", "==", customerUid),
     orderBy("createdAt", "desc")
   );
 
-  return onSnapshot(incidentsQuery, (snapshot) => {
+  return onSnapshot(ticketsQuery, (snapshot) => {
     callback(
       snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
         ...docSnap.data(),
-      })) as PublicIncident[]
+      })) as CustomerTicket[]
     );
   });
 }
 
-export function listenToPendingIncidentReports(
-  callback: (reports: IncidentReport[]) => void
-) {
-  const reportsQuery = query(
-    collection(db, "incidentReports"),
-    where("status", "==", "pending_review"),
-    orderBy("createdAt", "desc")
-  );
+export function listenToAllTickets(callback: (tickets: CustomerTicket[]) => void) {
+  const ticketsQuery = query(collection(db, "tickets"), orderBy("createdAt", "desc"));
 
-  return onSnapshot(reportsQuery, (snapshot) => {
+  return onSnapshot(ticketsQuery, (snapshot) => {
     callback(
       snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
         ...docSnap.data(),
-      })) as IncidentReport[]
+      })) as CustomerTicket[]
     );
   });
 }
