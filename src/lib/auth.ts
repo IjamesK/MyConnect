@@ -4,6 +4,7 @@ import {
   onAuthStateChanged,
   type User,
 } from "firebase/auth";
+
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
 
@@ -22,20 +23,12 @@ export type CustomerProfile = {
   packagePrice: number;
   expiryDate: string;
 
-  location: {
-    district: string;
-    area: string;
-    address: string;
-  };
+  district: string;
+  area: string;
+  address: string;
 
-  router: {
-    ontType: string;
-    model: string;
-    serialNumber: string;
-  };
-
-  createdAt?: string;
-  updatedAt?: string;
+  routerModel: string;
+  routerSerial: string;
 };
 
 export async function signIn(email: string, password: string) {
@@ -44,7 +37,8 @@ export async function signIn(email: string, password: string) {
   const profile = await getUserProfile(credential.user.uid);
 
   if (!profile) {
-    throw new Error("User profile not found");
+    await firebaseSignOut(auth);
+    throw new Error("PROFILE_NOT_FOUND");
   }
 
   return profile;
@@ -52,18 +46,20 @@ export async function signIn(email: string, password: string) {
 
 export async function signOut() {
   await firebaseSignOut(auth);
+  localStorage.removeItem("customerProfile");
 }
 
 export async function getUserProfile(uid: string) {
-  const userDoc = await getDoc(doc(db, "users", uid));
+  const userRef = doc(db, "users", uid);
+  const userSnap = await getDoc(userRef);
 
-  if (!userDoc.exists()) {
+  if (!userSnap.exists()) {
     return null;
   }
 
   return {
     uid,
-    ...userDoc.data(),
+    ...userSnap.data(),
   } as CustomerProfile;
 }
 
