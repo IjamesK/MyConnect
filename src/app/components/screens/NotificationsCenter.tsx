@@ -1,3 +1,9 @@
+import {
+  listenToUserNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  type AppNotification,
+} from "../../../lib/notifications";
 import { useEffect, useState, type ElementType } from "react";
 import { useNavigate } from "react-router";
 import { Layout } from "../isp/Layout";
@@ -110,33 +116,38 @@ export function NotificationsCenter() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
-    const savedProfile = localStorage.getItem("customerProfile");
+  const savedProfile = localStorage.getItem("customerProfile");
 
-    if (!savedProfile) {
-      navigate("/", { replace: true });
-      return;
-    }
+  if (!savedProfile) {
+    navigate("/", { replace: true });
+    return;
+  }
 
-    try {
-      const parsedProfile = JSON.parse(savedProfile) as CustomerProfile;
-      setProfile(parsedProfile);
-      setNotifications(buildNotifications(parsedProfile));
-    } catch (error) {
-      console.error("Failed to load customer profile:", error);
-      localStorage.removeItem("customerProfile");
-      navigate("/", { replace: true });
-    }
-  }, [navigate]);
+  try {
+    const parsedProfile = JSON.parse(savedProfile) as CustomerProfile;
+    setProfile(parsedProfile);
 
-  const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
-  };
-
-  const markRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, unread: false } : n))
+    const unsubscribe = listenToUserNotifications(
+      parsedProfile.uid,
+      setNotifications
     );
-  };
+
+    return () => unsubscribe();
+  } catch (error) {
+    console.error("Failed to load customer profile:", error);
+    localStorage.removeItem("customerProfile");
+    navigate("/", { replace: true });
+  }
+}, [navigate]);
+
+const handleMarkAllRead = async () => {
+  if (!profile) return;
+  await markAllNotificationsRead(profile.uid);
+};
+  onClick={async () => {
+  await markNotificationRead(id);
+  if (action) navigate(action);
+}}
 
   if (!profile) {
     return (
