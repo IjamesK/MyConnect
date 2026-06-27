@@ -1,9 +1,20 @@
+import {
+  listenToRelevantIncidents,
+  type PublicIncident,
+} from "../../../lib/incidents";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import type { CustomerProfile } from "../../../lib/auth";
 import { Layout } from "../isp/Layout";
 import { StatusDot } from "../isp/StatusBadge";
 import { RefreshCw, Wrench, AlertCircle, Activity, ChevronRight, TrendingUp } from "lucide-react";
+import {
+  RefreshCw,
+  Wrench,
+  AlertCircle,
+  Activity,
+  ChevronRight,
+} from "lucide-react";
 
 function getDaysLeft(expiryDate: string) {
   const today = new Date();
@@ -22,18 +33,33 @@ function formatCurrency(amount: number) {
 export function CustomerDashboard() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
+  const [incidents, setIncidents] = useState<PublicIncident[]>([]);
 
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
 
-  useEffect(() => {
-    const savedProfile = localStorage.getItem("customerProfile");
+useEffect(() => {
+  const savedProfile = localStorage.getItem("customerProfile");
 
-    if (!savedProfile) {
-      navigate("/", { replace: true });
-      return;
-    }
+  if (!savedProfile) {
+    navigate("/", { replace: true });
+    return;
+  }
+
+  try {
+    const parsedProfile = JSON.parse(savedProfile) as CustomerProfile;
+    setProfile(parsedProfile);
+
+    const unsubscribe = listenToRelevantIncidents(parsedProfile, setIncidents);
+
+    return () => unsubscribe();
+  } catch (error) {
+    console.error("Failed to load customer profile:", error);
+    localStorage.removeItem("customerProfile");
+    navigate("/", { replace: true });
+  }
+}, [navigate]);
 
     setProfile(JSON.parse(savedProfile));
   }, [navigate]);
@@ -49,6 +75,27 @@ export function CustomerDashboard() {
   }
 
   const daysLeft = getDaysLeft(profile.expiryDate);
+  const activeIncidents = incidents.filter(
+    (incident) =>
+      incident.status === "active" ||
+      incident.status === "monitoring" ||
+      incident.status === "scheduled"
+  );
+  
+  const primaryIncident = activeIncidents[0];
+  
+  const getIncidentDotStatus = (incident: PublicIncident) => {
+    if (incident.status === "scheduled") return "partial";
+    if (incident.severity === "high") return "down";
+    return "partial";
+  };
+  
+  const getIncidentLabel = (incident: PublicIncident) => {
+    if (incident.type === "maintenance") return "Planned maintenance";
+    if (incident.type === "upgrade") return "Scheduled upgrade";
+    if (incident.severity === "high") return "Full outage";
+    return "Partial outage";
+  };
 
   const quickActions = [
   {
@@ -72,6 +119,18 @@ export function CustomerDashboard() {
     color: "bg-[#FFFBEB] text-[#B45309]",
     path: "/report-issue",
   },
+    {
+  icon: Activity,
+  label: "Network Status",
+  sublabel:
+    activeIncidents.length > 0
+      ? `${activeIncidents.length} network update${
+          activeIncidents.length === 1 ? "" : "s"
+        }`
+      : "View area status",
+  color: "bg-[#EBF2FF] text-[#0057B8]",
+  path: "/service-status",
+},
 ];
   
   const recentActivity = [
@@ -208,20 +267,32 @@ export function CustomerDashboard() {
         </div>
 
         {/* Area status banner */}
-        <button
-          onClick={() => navigate("/service-status")}
-          className="w-full bg-white border border-[#E2E8F0] rounded-xl p-4 flex items-center gap-3"
-        >
-          <div className="flex items-center gap-2 flex-1">
-            <StatusDot status="partial" pulse />
-            <div className="text-left">
-              <p className="text-[#0F172A] text-sm font-semibold">Partial outage in {profile.area}</p>
-              <p className="text-[#94A3B8] text-xs">1 active incident · Investigating</p>
-            </div>
-          </div>
-          <ChevronRight size={16} className="text-[#CBD5E1]" />
-        </button>
+{primaryIncident && (
+  <button
+    type="button"
+    onClick={() => navigate("/service-status")}
+    className="w-full bg-white border border-[#E2E8F0] rounded-xl p-4 flex items-center gap-3"
+  >
+    <div className="flex items-center gap-2 flex-1">
+      <StatusDot
+        status={getIncidentDotStatus(primaryIncident)}
+        pulse={primaryIncident.status !== "scheduled"}
+      />
 
+      <div className="text-left">
+        <p className="text-[#0F172A] text-sm font-semibold">
+          {getIncidentLabel(primaryIncident)} in {profile.area}
+        </p>
+
+        <p className="text-[#94A3B8] text-xs">
+          {primaryIncident.title} · {primaryIncident.status.replace("_", " ")}
+        </p>
+      </div>
+    </div>
+
+    <ChevronRight size={16} className="text-[#CBD5E1]" />
+  </button>
+)}
         {/* Recent activity */}
         <div>
           <div className="flex items-center justify-between mb-3">
