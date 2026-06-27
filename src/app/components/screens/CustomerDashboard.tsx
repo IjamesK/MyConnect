@@ -6,23 +6,87 @@ import { StatusDot } from "../isp/StatusBadge";
 import { RefreshCw, Wrench, AlertCircle, Activity, ChevronRight, TrendingUp } from "lucide-react";
 
 const quickActions = [
-  { icon: RefreshCw, label: "Renew", sublabel: "14 days left", color: "bg-[#FCE7F3] text-[#E5007D]", path: "/renewal" },
+  { icon: RefreshCw, label: "Renew", sublabel: "{daysLeft > 0 ? `${daysLeft} Days` : "Expired"} left", color: "bg-[#FCE7F3] text-[#E5007D]", path: "/renewal" },
   { icon: Wrench, label: "Troubleshoot", sublabel: "Diagnose issues", color: "bg-[#F0FDF4] text-[#15803D]", path: "/troubleshoot" },
   { icon: AlertCircle, label: "Report Issue", sublabel: "Photo reports", color: "bg-[#FFFBEB] text-[#B45309]", path: "/report-issue" },
   { icon: Activity, label: "Network Status", sublabel: "View all areas", color: "bg-[#FEF2F2] text-[#B91C1C]", path: "/service-status" },
 ];
 
-const recentActivity = [
-  { title: "Subscription Renewed", desc: "FIT 50Mbps — UGX 90,000", time: "Jun 1", color: "text-[#16A34A]" },
-  { title: "Support Ticket Opened", desc: "#INC-3021 — Slow speed", time: "Jun 18", color: "text-[#E5007D]" },
-  { title: "Engineer Visit", desc: "Patrick M. — Cable check", time: "Jun 19", color: "text-[#F59E0B]" },
-];
+function getDaysLeft(expiryDate: string) {
+  const today = new Date();
+  const expiry = new Date(expiryDate);
+
+  const difference = expiry.getTime() - today.getTime();
+  const days = Math.ceil(difference / (1000 * 60 * 60 * 24));
+
+  return days;
+}
+
+function formatCurrency(amount: number) {
+  return `UGX ${amount.toLocaleString()}`;
+}
 
 export function CustomerDashboard() {
   const navigate = useNavigate();
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
+  const [profile, setProfile] = useState<CustomerProfile | null>(null);
 
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
+
+  useEffect(() => {
+    const savedProfile = localStorage.getItem("customerProfile");
+
+    if (!savedProfile) {
+      navigate("/", { replace: true });
+      return;
+    }
+
+    setProfile(JSON.parse(savedProfile));
+  }, [navigate]);
+
+  if (!profile) {
+    return (
+      <Layout>
+        <div className="px-4 py-10 text-center text-[#64748B] text-sm">
+          Loading your account...
+        </div>
+      </Layout>
+    );
+  }
+
+  const daysLeft = getDaysLeft(profile.expiryDate);
+
+  const recentActivity = [
+  {
+    title: "Package Active",
+    desc: `${profile.packageName} — ${formatCurrency(profile.packagePrice)}`,
+    time: "Current",
+    color: "text-[#16A34A]",
+  },
+  {
+    title: "Router Linked",
+    desc: `${profile.routerModel} — ${profile.routerSerial}`,
+    time: "Now",
+    color: "text-[#E5007D]",
+  },
+  {
+    title: "Service Location",
+    desc: `${profile.area}, ${profile.district}`,
+    time: "Verified",
+    color: "text-[#F59E0B]",
+  },
+  {
+    title: daysLeft > 0 ? "Subscription Valid" : "Subscription Expired",
+    desc:
+      daysLeft > 0
+        ? `${daysLeft} days remaining — expires ${profile.expiryDate}`
+        : `Expired on ${profile.expiryDate}`,
+    time: daysLeft > 0 ? "Active" : "Expired",
+    color: daysLeft > 0 ? "text-[#16A34A]" : "text-red-600",
+  },
+];
+  
   return (
     <Layout>
       <div className="px-4 py-5 space-y-4">
@@ -33,9 +97,9 @@ export function CustomerDashboard() {
             style={{ fontFamily: "'Inter Tight', system-ui, sans-serif", fontWeight: 800 }}
             className="text-[#0F172A] text-2xl mt-0.5"
           >
-            James Okello 👋
+            {profile.fullName} 👋
           </h1>
-          <p className="text-[#64748B] text-xs font-medium mt-0.5">KAM-8924 • Ntinda Zone</p>
+          <p className="text-[#64748B] text-xs font-medium mt-0.5">{profile.customerNumber} • {profile.area}</p>
         </div>
 
         {/* Internet status hero card */}
@@ -64,12 +128,14 @@ export function CustomerDashboard() {
                 <p className="text-white/80 text-xs mb-1">Router SN</p>
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText('ZTEGD1234567');
+                    navigator.clipboard.writeText(profile.routerSerial);
                     alert('Copied Router SN');
                   }}
                   className="bg-white/20 hover:bg-white/30 transition-colors text-white text-xs px-2 py-1 rounded flex items-center gap-1 active:scale-95"
                 >
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>ZTEGD1234567</span>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      {profile.routerSerial}
+                  </span>
                 </button>
               </div>
             </div>
@@ -77,11 +143,11 @@ export function CustomerDashboard() {
             <div className="border-t border-white/20 pt-3 flex items-center justify-between">
               <div>
                 <p className="text-white/80 text-[10px] uppercase tracking-wide">Package</p>
-                <p className="text-white text-sm font-semibold">FIT 50Mbps</p>
+                <p className="text-white text-sm font-semibold">{profile.packageName}</p>
               </div>
               <div className="text-right">
                 <p className="text-white/80 text-[10px] uppercase tracking-wide">Expires In</p>
-                <p className="text-[#FCD34D] text-sm font-semibold">14 Days</p>
+                <p className="text-[#FCD34D] text-sm font-semibold">{daysLeft > 0 ? `${daysLeft} Days` : "Expired"}</p>
               </div>
             </div>
           </div>
@@ -92,7 +158,7 @@ export function CustomerDashboard() {
           <span className="text-lg">⚠️</span>
           <div className="flex-1">
             <p className="text-[#92400E] text-xs font-semibold">Subscription expires soon</p>
-            <p className="text-[#B45309] text-xs mt-0.5">Renew before Jun 30 to avoid disconnection</p>
+            <p className="text-[#B45309] text-xs mt-0.5">Renew before {profile.expiryDate} to avoid disconnection</p>
           </div>
           <button
             onClick={() => navigate("/renewal")}
@@ -132,7 +198,7 @@ export function CustomerDashboard() {
           <div className="flex items-center gap-2 flex-1">
             <StatusDot status="partial" pulse />
             <div className="text-left">
-              <p className="text-[#0F172A] text-sm font-semibold">Partial outage in Ntinda</p>
+              <p className="text-[#0F172A] text-sm font-semibold">Partial outage in {profile.area}</p>
               <p className="text-[#94A3B8] text-xs">1 active incident · Investigating</p>
             </div>
           </div>
