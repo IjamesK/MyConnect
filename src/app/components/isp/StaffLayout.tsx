@@ -1,7 +1,16 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { LayoutDashboard, AlertTriangle, Ticket, BarChart3, Settings, LogOut, Wifi, ChevronRight } from "lucide-react";
+
+type StaffProfile = {
+  uid?: string;
+  email?: string;
+  fullName?: string;
+  role?: "customer" | "staff" | "admin";
+  staffId?: string;
+  department?: string;
+  position?: string;
+};
 
 interface StaffLayoutProps {
   children: ReactNode;
@@ -14,12 +23,43 @@ const navItems = [
   { icon: AlertTriangle, label: "Outages", path: "/staff/outages" },
   { icon: Ticket, label: "Tickets", path: "/staff/tickets" },
   { icon: BarChart3, label: "Analytics", path: "/staff/analytics" },
-  { icon: Settings, label: "Settings", path: "/staff" },
 ];
 
 export function StaffLayout({ children, title, subtitle }: StaffLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [profile, setProfile] = useState<StaffProfile | null>(null);
+  
+  useEffect(() => {
+    const savedProfile = localStorage.getItem("customerProfile");
+  
+    if (!savedProfile) return;
+  
+    try {
+      setProfile(JSON.parse(savedProfile) as StaffProfile);
+    } catch (error) {
+      console.error("Failed to load staff profile:", error);
+    }
+  }, []);
+  
+  const staffName =
+    profile?.fullName ||
+    profile?.email ||
+    "Staff User";
+  
+  const staffRole =
+    profile?.position ||
+    profile?.department ||
+    profile?.role ||
+    "Staff";
+  
+  const staffInitials = staffName
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex">
@@ -69,8 +109,8 @@ export function StaffLayout({ children, title, subtitle }: StaffLayoutProps) {
              {staffInitials}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-white text-xs font-medium truncate">staffName</div>
-              <div className="text-[#64748B] text-[10px]">staffRole</div>
+              <div className="text-white text-xs font-medium truncate">{staffName}</div>
+              <div className="text-[#64748B] text-[10px]">{staffRole}</div>
             </div>
             <button onClick={() => navigate("/")} className="text-[#64748B] hover:text-white">
               <LogOut size={14} />
