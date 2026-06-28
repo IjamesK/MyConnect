@@ -737,7 +737,7 @@ const handleMarkReportSeen = async (report: IncidentReport) => {
                       <CheckCircle size={14} />
                       Approve & Publish
                     </button>
-
+                    
                     <button
                       type="button"
                       onClick={() => handleRejectReport(report)}
@@ -746,6 +746,26 @@ const handleMarkReportSeen = async (report: IncidentReport) => {
                       <XCircle size={14} />
                       Reject
                     </button>
+                    {!report.seenAt && (
+                    <button
+                  type="button"
+                  onClick={() => handleMarkReportSeen(report)}
+                  className="px-3 py-2 bg-[#EBF2FF] text-[#0057B8] rounded-xl text-xs font-semibold"
+                    >
+                      Mark Seen
+                    </button>
+                  )}
+
+                                   {report.seenAt ? (
+                  <span className="text-[#16A34A] text-xs">
+                    Seen by {report.seenByName || report.seenBy || "staff"}
+                  </span>
+                ) : (
+                  <span className="text-[#DC2626] text-xs">
+                    Not yet seen
+                  </span>
+                )} 
+                                  
                   </div>
                 </div>
               ))}
