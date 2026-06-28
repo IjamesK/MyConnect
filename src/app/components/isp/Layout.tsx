@@ -1,6 +1,4 @@
 import { ReactNode, useEffect, useState } from "react";
-import type { CustomerProfile } from "../../../lib/auth";
-import { listenToUnreadNotificationCount } from "../../../lib/notifications";
 import { useNavigate, useLocation } from "react-router";
 import {
   Home,
@@ -11,14 +9,16 @@ import {
   LogOut,
   ArrowLeft,
 } from "lucide-react";
+import type { CustomerProfile } from "../../../lib/auth";
 import { signOut } from "../../../lib/auth";
+import { listenToUnreadNotificationCount } from "../../../lib/notifications";
 
 interface LayoutProps {
   children: ReactNode;
   title?: string;
   showBack?: boolean;
   backTo?: string;
-  NotificationCount?: number;
+  notificationCount?: number;
 }
 
 const navItems = [
@@ -35,33 +35,36 @@ export function Layout({
   backTo,
   notificationCount,
 }: LayoutProps) {
-const [liveNotificationCount, setLiveNotificationCount] = useState(0);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-useEffect(() => {
-  const savedProfile = localStorage.getItem("customerProfile");
+  const [liveNotificationCount, setLiveNotificationCount] = useState(0);
 
-  if (!savedProfile) {
-    setLiveNotificationCount(0);
-    return;
-  }
+  useEffect(() => {
+    const savedProfile = localStorage.getItem("customerProfile");
 
-  try {
-    const profile = JSON.parse(savedProfile) as CustomerProfile;
+    if (!savedProfile) {
+      setLiveNotificationCount(0);
+      return;
+    }
 
-    const unsubscribe = listenToUnreadNotificationCount(
-      profile.uid,
-      setLiveNotificationCount
-    );
+    try {
+      const profile = JSON.parse(savedProfile) as CustomerProfile;
 
-    return () => unsubscribe();
-  } catch (error) {
-    console.error("Failed to load notification count:", error);
-    setLiveNotificationCount(0);
-  }
-}, []);
+      const unsubscribe = listenToUnreadNotificationCount(
+        profile.uid,
+        setLiveNotificationCount
+      );
 
-const displayedNotificationCount =
-  notificationCount ?? liveNotificationCount;
+      return () => unsubscribe();
+    } catch (error) {
+      console.error("Failed to load notification count:", error);
+      setLiveNotificationCount(0);
+    }
+  }, []);
+
+  const displayedNotificationCount =
+    notificationCount ?? liveNotificationCount;
 
   const handleLogout = async () => {
     try {
@@ -81,7 +84,7 @@ const displayedNotificationCount =
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center">
       <div className="w-full max-w-sm bg-[#F8FAFC] min-h-screen flex flex-col relative">
         {/* Top bar */}
-        <div className="sticky top-0 z-20 bg-white border-b border-[#E2E8F0] px-4 h-14 flex items-center justify-between shrink-0">
+        <div className="sticky top-0 z-50 bg-white border-b border-[#E2E8F0] px-4 h-14 flex items-center justify-between shrink-0">
           {/* Left side */}
           {showBack ? (
             <div className="flex items-center gap-2">
@@ -154,8 +157,8 @@ const displayedNotificationCount =
               title="Notifications"
             >
               <Bell size={18} className="text-[#475569]" />
-              
-                {displayedNotificationCount > 0 && (
+
+              {displayedNotificationCount > 0 && (
                 <span className="absolute top-1 right-1 w-4 h-4 bg-[#DC2626] rounded-full text-white text-[10px] flex items-center justify-center font-medium">
                   {displayedNotificationCount}
                 </span>
@@ -174,11 +177,11 @@ const displayedNotificationCount =
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto pb-20">{children}</div>
+        <div className="flex-1 overflow-y-auto pb-28">{children}</div>
 
         {/* Bottom nav */}
-        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-sm z-20 bg-white border-t border-[#E2E8F0]">
-          <div className="flex">
+        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-sm z-[9999] bg-white border-t border-[#E2E8F0] pointer-events-auto">
+          <div className="flex pointer-events-auto">
             {navItems.map(({ icon: Icon, label, path }) => {
               const active =
                 location.pathname === path ||
@@ -189,7 +192,7 @@ const displayedNotificationCount =
                   key={path}
                   type="button"
                   onClick={() => navigate(path)}
-                  className="flex-1 flex flex-col items-center py-3 gap-0.5"
+                  className="flex-1 flex flex-col items-center py-3 gap-0.5 pointer-events-auto active:bg-[#F8FAFC]"
                 >
                   <Icon
                     size={20}
