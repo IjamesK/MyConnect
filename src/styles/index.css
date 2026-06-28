@@ -1,3 +1,21 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+:root {
+  --color-primary: #0057b8;
+  --color-primary-dark: #003d82;
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-soft: #ebf2ff;
+  --color-text: #0f172a;
+  --color-muted: #64748b;
+  --color-border: #e2e8f0;
+  --color-success: #16a34a;
+  --color-danger: #dc2626;
+  --color-warning: #b45309;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
