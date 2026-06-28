@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { Layout } from "../isp/Layout";
 
-type LightValue = "on" | "off" | "unknown";
 
 type LightQuestion = {
   key: string;
@@ -60,51 +59,6 @@ const lightQuestions: LightQuestion[] = [
     icon: Router,
   },
 ];
-
-function getDiagnosisPattern(data: Record<string, LightValue>, issue: string) {
-  const powerOn = data.power === "on";
-  const ponOn = data.pon === "on";
-  const losRedOn = data.los === "on";
-  const internetOn = data.internet === "on";
-  const wifiOn = data.wifi === "on";
-
-  if (!powerOn) {
-    return "zte_no_power";
-  }
-
-  if (losRedOn) {
-    return "zte_los_red";
-  }
-
-  if (!wifiOn && issue === "wifi") {
-    return "zte_wifi_disabled";
-  }
-
-  if (!wifiOn && internetOn) {
-    return "zte_wifi_disabled";
-  }
-
-  if (powerOn && ponOn && !losRedOn && !internetOn) {
-    return "zte_internet_off_noc";
-  }
-
-  if (
-    issue === "slow" &&
-    powerOn &&
-    ponOn &&
-    !losRedOn &&
-    internetOn &&
-    wifiOn
-  ) {
-    return "zte_slow_speed_normal_lights";
-  }
-
-  if (powerOn && ponOn && !losRedOn && internetOn) {
-    return "zte_normal_lights";
-  }
-
-  return "zte_unclear";
-}
 
 function lightStatusLabel(value: LightValue) {
   if (value === "on") return "On";
