@@ -326,17 +326,22 @@ export function listenToPendingIncidentReports(
 ) {
   const reportsQuery = query(
     collection(db, "incidentReports"),
-    where("status", "==", "pending_review"),
-    orderBy("createdAt", "desc")
+    where("status", "==", "pending_review")
   );
 
   return onSnapshot(reportsQuery, (snapshot) => {
-    callback(
-      snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      })) as IncidentReport[]
-    );
+    const reports = snapshot.docs.map((docSnap) => ({
+      id: docSnap.id,
+      ...docSnap.data(),
+    })) as IncidentReport[];
+
+    reports.sort((a, b) => {
+      const aTime = a.createdAt?.toMillis?.() ?? 0;
+      const bTime = b.createdAt?.toMillis?.() ?? 0;
+      return bTime - aTime;
+    });
+
+    callback(reports);
   });
 }
 export function listenToPublicIncidents(
