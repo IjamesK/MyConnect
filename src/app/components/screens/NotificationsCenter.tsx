@@ -22,4 +22,14 @@ const handleNotificationClick = async (notification: AppNotification) => {
   if (notification.type === "billing") {
     navigate("/renewal");
   }
+{notifications.map((notification) => (
+  <button
+    key={notification.id}
+    type="button"
+    onClick={() => handleNotificationClick(notification)}
+  >
+    ...
+  </button>
+))}
+  
 };
