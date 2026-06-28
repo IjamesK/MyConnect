@@ -1,4 +1,5 @@
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { OutageDetail } from "./components/screens/OutageDetail";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import { LoginScreen } from "./components/screens/LoginScreen";
 import { CustomerDashboard } from "./components/screens/CustomerDashboard";
@@ -46,8 +47,8 @@ export default function App() {
 <Route
   path="/outage/:id"
   element={
-    <ProtectedRoute allowedRoles={["customer", "admin"]}>
-      <OutageDetails />
+    <ProtectedRoute allowedRoles={["customer", "staff", "admin"]}>
+      <OutageDetail />
     </ProtectedRoute>
   }
 />
