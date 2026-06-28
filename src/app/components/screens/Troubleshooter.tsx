@@ -338,7 +338,9 @@ export function Troubleshooter() {
 
             <button
               type="button"
-              onClick={() => navigate("/report-issue")}
+              onClick={() =>
+                    navigate("/report-issue?mode=ticket&type=password_reset&source=troubleshooter")
+                  }
               className="mt-3 w-full py-2.5 bg-[#FCE7F3] text-[#E5007D] rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5"
             >
               <Wrench size={14} />
