@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { Layout } from "../isp/Layout";
 import {
   Camera,
@@ -35,8 +35,37 @@ const networkIssueTypes = [
   { label: "Other Network Issue", value: "other" },
 ] as const;
 
+function isPersonalIssueType(value: string) {
+  return personalIssueTypes.some((item) => item.value === value);
+}
+
+function getPrefilledDescription(type: string) {
+  if (type === "password_reset") {
+    return "I would like help resetting or changing my Wi-Fi password.";
+  }
+
+  if (type === "no_internet") {
+    return "I have no internet connection. Please help check my connection.";
+  }
+
+  if (type === "slow_speed") {
+    return "My internet speed is slower than expected. Please help check the connection.";
+  }
+
+  if (type === "los_light") {
+    return "The LOS light on my router/ONT is red or blinking.";
+  }
+
+  if (type === "router_issue") {
+    return "I am experiencing a router or Wi-Fi issue. Please assist.";
+  }
+
+  return "";
+}
+
 export function ReportIssue() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
@@ -69,6 +98,29 @@ export function ReportIssue() {
       navigate("/", { replace: true });
     }
   }, [navigate]);
+
+  useEffect(() => {
+  const modeParam = searchParams.get("mode");
+  const typeParam = searchParams.get("type");
+  const sourceParam = searchParams.get("source");
+
+  if (modeParam === "ticket") {
+    setMode("ticket");
+  }
+
+  if (typeParam && isPersonalIssueType(typeParam)) {
+    setMode("ticket");
+    setPersonalIssueType(typeParam);
+
+    if (sourceParam === "troubleshooter") {
+      const prefilledText = getPrefilledDescription(typeParam);
+
+      if (prefilledText) {
+        setDescription((current) => current || prefilledText);
+      }
+    }
+  }
+}, [searchParams]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []).slice(0, 5 - photos.length);
