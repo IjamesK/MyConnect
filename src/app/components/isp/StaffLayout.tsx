@@ -1,3 +1,4 @@
+import { useEffect, useState, type ReactNode } from "react";
 import { ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { LayoutDashboard, AlertTriangle, Ticket, BarChart3, Settings, LogOut, Wifi, ChevronRight } from "lucide-react";
@@ -65,11 +66,11 @@ export function StaffLayout({ children, title, subtitle }: StaffLayoutProps) {
         <div className="px-4 py-4 border-t border-white/10">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-[#0057B8] flex items-center justify-center text-white text-xs font-semibold">
-              SM
+             {staffInitials}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-white text-xs font-medium truncate">Sarah Namukasa</div>
-              <div className="text-[#64748B] text-[10px]">NOC Engineer</div>
+              <div className="text-white text-xs font-medium truncate">staffName</div>
+              <div className="text-[#64748B] text-[10px]">staffRole</div>
             </div>
             <button onClick={() => navigate("/")} className="text-[#64748B] hover:text-white">
               <LogOut size={14} />
