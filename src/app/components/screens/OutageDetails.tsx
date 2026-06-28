@@ -48,7 +48,7 @@ function typeText(type: string) {
   return "Other";
 }
 
-export function OutageDetail() {
+export function OutageDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
 
