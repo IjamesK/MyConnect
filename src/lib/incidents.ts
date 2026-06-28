@@ -155,7 +155,37 @@ export async function createIncidentReport(
     photoCount?: number;
     locationNote?: string;
   }
-) 
+) {
+  const reportRef = await addDoc(collection(db, "incidentReports"), {
+    reporterUid: profile.uid,
+    reporterName: profile.fullName,
+    phone: profile.phone ?? "",
+    customerNumber: profile.customerNumber ?? "",
+    area: profile.area ?? "",
+    district: profile.district ?? "",
+    address: profile.address ?? "",
+    routerSerial: profile.routerSerial ?? "",
+
+    type: data.type,
+    title: data.title,
+    description: data.description,
+    photoCount: data.photoCount ?? 0,
+    locationNote: data.locationNote ?? "",
+
+    status: "pending_review",
+    linkedIncidentId: null,
+    createdAt: serverTimestamp(),
+
+    seenAt: null,
+    seenBy: null,
+    seenByName: null,
+
+    reviewedAt: null,
+    reviewedBy: null,
+  });
+
+  return reportRef.id;
+}
 
 export async function markIncidentReportSeen(data: {
   reportId: string;
@@ -167,38 +197,6 @@ export async function markIncidentReportSeen(data: {
     seenBy: data.seenBy,
     seenByName: data.seenByName ?? data.seenBy,
   });
-}
-  
-{
-  const reportRef = await addDoc(collection(db, "incidentReports"), {
-    reporterUid: profile.uid,
-    reporterName: profile.fullName,
-    phone: profile.phone,
-    customerNumber: profile.customerNumber,
-    area: profile.area,
-    district: profile.district,
-    address: profile.address,
-    routerSerial: profile.routerSerial,
-
-    type: data.type,
-    title: data.title,
-    description: data.description,
-    photoCount: data.photoCount ?? 0,
-    locationNote: data.locationNote ?? "",
-
-status: "pending_review",
-linkedIncidentId: null,
-createdAt: serverTimestamp(),
-
-seenAt: null,
-seenBy: null,
-seenByName: null,
-
-reviewedAt: null,
-reviewedBy: null,
-  });
-
-  return reportRef.id;
 }
 
 export async function approveIncidentReport(data: {
