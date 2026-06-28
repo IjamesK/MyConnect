@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router";
 import {
+  Settings,
   Home,
   Activity,
   Headphones,
@@ -91,10 +92,10 @@ export function Layout({
               <button
                 type="button"
                 onClick={handleBack}
-                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9]"
+                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[var(--color-bg)]"
                 title="Back"
               >
-                <ArrowLeft size={18} className="text-[#475569]" />
+                <ArrowLeft size={18} className="text-[var(--color-muted)]" />
               </button>
 
               {title && (
@@ -103,7 +104,7 @@ export function Layout({
                     fontFamily: "'Inter Tight', system-ui, sans-serif",
                     fontWeight: 700,
                   }}
-                  className="text-[#0F172A] text-sm"
+                  className="text-[var(--color-text)] text-sm"
                 >
                   {title}
                 </span>
@@ -141,7 +142,7 @@ export function Layout({
                   fontFamily: "'Inter Tight', system-ui, sans-serif",
                   fontWeight: 700,
                 }}
-                className="text-[#0F172A] text-sm"
+                className="text-[var(--color-text)] text-sm"
               >
                 MyConnect
               </span>
@@ -152,14 +153,23 @@ export function Layout({
           <div className="flex items-center gap-1">
             <button
               type="button"
+              onClick={() => navigate("/settings")}
+              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[var(--color-bg)]"
+              title="Settings"
+            >
+              <Settings size={17} className="text-[var(--color-muted)]" />
+            </button>
+
+            <button
+              type="button"
               onClick={() => navigate("/notifications")}
-              className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9]"
+              className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-[var(--color-bg)]"
               title="Notifications"
             >
-              <Bell size={18} className="text-[#475569]" />
+              <Bell size={18} className="text-[var(--color-muted)]" />
 
               {displayedNotificationCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-[#DC2626] rounded-full text-white text-[10px] flex items-center justify-center font-medium">
+                <span className="absolute top-1 right-1 w-4 h-4 bg-[var(--color-danger)] rounded-full text-white text-[10px] flex items-center justify-center font-medium">
                   {displayedNotificationCount}
                 </span>
               )}
@@ -168,10 +178,10 @@ export function Layout({
             <button
               type="button"
               onClick={handleLogout}
-              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9]"
+              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[var(--color-bg)]"
               title="Logout"
             >
-              <LogOut size={17} className="text-[#64748B]" />
+              <LogOut size={17} className="text-[var(--color-muted)]" />
             </button>
           </div>
         </div>
@@ -196,13 +206,19 @@ export function Layout({
                 >
                   <Icon
                     size={20}
-                    className={active ? "text-[#0057B8]" : "text-[#94A3B8]"}
+                    className={
+                      active
+                        ? "text-[var(--color-primary)]"
+                        : "text-[var(--color-muted)]"
+                    }
                     strokeWidth={active ? 2.5 : 1.5}
                   />
 
                   <span
                     className={`text-[10px] font-medium ${
-                      active ? "text-[#0057B8]" : "text-[#94A3B8]"
+                      active
+                        ? "text-[var(--color-primary)]"
+                        : "text-[var(--color-muted)]"
                     }`}
                   >
                     {label}
