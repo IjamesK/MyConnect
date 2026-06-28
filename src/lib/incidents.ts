@@ -55,6 +55,9 @@ export type IncidentReport = {
   status: IncidentReportStatus;
   linkedIncidentId?: string | null;
   createdAt?: Timestamp | null;
+  seenAt?: Timestamp | null;
+  seenBy?: string | null;
+  seenByName?: string | null;
   reviewedAt?: Timestamp | null;
   reviewedBy?: string | null;
 };
@@ -152,7 +155,21 @@ export async function createIncidentReport(
     photoCount?: number;
     locationNote?: string;
   }
-) {
+) 
+
+export async function markIncidentReportSeen(data: {
+  reportId: string;
+  seenBy: string;
+  seenByName?: string;
+}) {
+  await updateDoc(doc(db, "incidentReports", data.reportId), {
+    seenAt: serverTimestamp(),
+    seenBy: data.seenBy,
+    seenByName: data.seenByName ?? data.seenBy,
+  });
+}
+  
+{
   const reportRef = await addDoc(collection(db, "incidentReports"), {
     reporterUid: profile.uid,
     reporterName: profile.fullName,
@@ -169,11 +186,16 @@ export async function createIncidentReport(
     photoCount: data.photoCount ?? 0,
     locationNote: data.locationNote ?? "",
 
-    status: "pending_review",
-    linkedIncidentId: null,
-    createdAt: serverTimestamp(),
-    reviewedAt: null,
-    reviewedBy: null,
+status: "pending_review",
+linkedIncidentId: null,
+createdAt: serverTimestamp(),
+
+seenAt: null,
+seenBy: null,
+seenByName: null,
+
+reviewedAt: null,
+reviewedBy: null,
   });
 
   return reportRef.id;
