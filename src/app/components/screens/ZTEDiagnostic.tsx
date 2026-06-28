@@ -184,12 +184,15 @@ export function ZTEDiagnostic() {
           </p>
         </div>
 
-        <button
-          onClick={() => navigate("/troubleshoot/result")}
-          className="w-full py-3 bg-[#0057B8] hover:bg-[#003D82] text-white rounded-xl font-semibold text-sm transition-colors"
-        >
-          Analyze LEDs →
-        </button>
+          <button
+            type="button"
+            onClick={() =>
+              navigate("/troubleshoot/result?issue=no-internet&device=zte&pattern=led-check")
+            }
+            className="w-full py-3 bg-[#0057B8] hover:bg-[#003D82] text-white rounded-xl font-semibold text-sm transition-colors"
+          >
+            Analyze LEDs →
+          </button>
       </div>
     </Layout>
   );
