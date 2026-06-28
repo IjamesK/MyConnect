@@ -81,10 +81,10 @@ export function Layout({
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center">
-      <div className="w-full max-w-sm bg-[#F8FAFC] min-h-screen flex flex-col relative">
+    <div className="min-h-screen bg-[var(--color-bg)] flex flex-col items-center">
+      <div className="w-full max-w-sm bg-[var(--color-bg)] min-h-screen flex flex-col relative">
         {/* Top bar */}
-        <div className="sticky top-0 z-50 bg-white border-b border-[#E2E8F0] px-4 h-14 flex items-center justify-between shrink-0">
+        <div className="sticky top-0 z-50 bg-[var(--color-surface)] border-b border-[var(--color-border)] px-4 h-14 flex items-center justify-between shrink-0">
           {/* Left side */}
           {showBack ? (
             <div className="flex items-center gap-2">
@@ -111,7 +111,7 @@ export function Layout({
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-[#0057B8] flex items-center justify-center">
+              <div className="w-7 h-7 rounded-lg bg-[var(--color-primary)] flex items-center justify-center">
                 <svg
                   width="14"
                   height="14"
@@ -180,7 +180,7 @@ export function Layout({
         <div className="flex-1 overflow-y-auto pb-28">{children}</div>
 
         {/* Bottom nav */}
-        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-sm z-[9999] bg-white border-t border-[#E2E8F0] pointer-events-auto">
+        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-sm z-[9999] bg-[var(--color-surface)] border-t border-[var(--color-border)] pointer-events-auto">
           <div className="flex pointer-events-auto">
             {navItems.map(({ icon: Icon, label, path }) => {
               const active =
@@ -192,7 +192,7 @@ export function Layout({
                   key={path}
                   type="button"
                   onClick={() => navigate(path)}
-                  className="flex-1 flex flex-col items-center py-3 gap-0.5 pointer-events-auto active:bg-[#F8FAFC]"
+                  className="flex-1 flex flex-col items-center py-3 gap-0.5 pointer-events-auto active:bg-[var(--color-bg)]"
                 >
                   <Icon
                     size={20}
