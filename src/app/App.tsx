@@ -1,3 +1,4 @@
+import NotificationsCenter from "./components/screens/NotificationsCenter";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import { LoginScreen } from "./components/screens/LoginScreen";
