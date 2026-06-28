@@ -181,6 +181,53 @@ function getPreview(pattern: string) {
   };
 }
 
+type LightValue = "on" | "off" | "unknown";
+
+function getDiagnosisPattern(data: Record<string, LightValue>, issue: string) {
+  const powerOn = data.power === "on";
+  const ponOn = data.pon === "on";
+  const losRedOn = data.los === "on";
+  const internetOn = data.internet === "on";
+  const wifiOn = data.wifi === "on";
+
+  if (!powerOn) {
+    return "zte_no_power";
+  }
+
+  if (losRedOn) {
+    return "zte_los_red";
+  }
+
+  if (!wifiOn && issue === "wifi") {
+    return "zte_wifi_disabled";
+  }
+
+  if (!wifiOn && internetOn) {
+    return "zte_wifi_disabled";
+  }
+
+  if (powerOn && ponOn && !losRedOn && !internetOn) {
+    return "zte_internet_off_noc";
+  }
+
+  if (
+    issue === "slow" &&
+    powerOn &&
+    ponOn &&
+    !losRedOn &&
+    internetOn &&
+    wifiOn
+  ) {
+    return "zte_slow_speed_normal_lights";
+  }
+
+  if (powerOn && ponOn && !losRedOn && internetOn) {
+    return "zte_normal_lights";
+  }
+
+  return "zte_unclear";
+}
+
 export function ZTEDiagnostic() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -210,10 +257,12 @@ export function ZTEDiagnostic() {
     }));
   };
 
-  const handleAnalyze = () => {
-    navigate(`/troubleshoot/result?issue=${issue}&device=zte&pattern=${pattern}`);
-  };
+const handleAnalyze = () => {
+  const pattern = getDiagnosisPattern(lights, issue);
 
+  navigate(`/troubleshoot/result?issue=${issue}&device=zte&pattern=${pattern}`);
+};
+  
   return (
     <Layout showBack backTo="/troubleshoot" title="ZTE ONT Check">
       <div className="px-4 py-5 space-y-5">
