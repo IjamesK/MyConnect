@@ -1,3 +1,4 @@
+import type { CustomerProfile } from "../../../lib/auth";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -97,6 +98,7 @@ function incidentTypeLabel(type: IncidentType) {
 
 export function OutageManagement() {
   const [profile, setProfile] = useState<StaffProfile | null>(null);
+  const [profile, setProfile] = useState<CustomerProfile | null>(null);
 
   const [incidents, setIncidents] = useState<PublicIncident[]>([]);
   const [pendingReports, setPendingReports] = useState<IncidentReport[]>([]);
@@ -118,6 +120,18 @@ export function OutageManagement() {
 
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+
+ useEffect(() => {
+  const savedProfile = localStorage.getItem("customerProfile");
+
+  if (!savedProfile) return;
+
+  try {
+    setProfile(JSON.parse(savedProfile) as CustomerProfile);
+  } catch (error) {
+    console.error("Failed to load staff profile:", error);
+  }
+}, []); 
 
   useEffect(() => {
     const savedProfile = localStorage.getItem("customerProfile");
