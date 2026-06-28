@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { applyTheme, getSavedTheme } from "../lib/theme";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import { LoginScreen } from "./components/screens/LoginScreen";
@@ -18,6 +20,11 @@ import { AnalyticsDashboard } from "./components/screens/AnalyticsDashboard";
 import { StaffTickets } from "./components/screens/StaffTickets";
 
 export default function App() {
+
+  useEffect(() => {
+  applyTheme(getSavedTheme());
+}, []);
+  
   return (
     <BrowserRouter>
       <Routes>
