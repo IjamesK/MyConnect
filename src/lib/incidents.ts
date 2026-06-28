@@ -16,6 +16,25 @@ import { db } from "./firebase";
 import type { CustomerProfile } from "./auth";
 import { createCustomerNotification } from "./notifications";
 
+export function listenToPublicIncident(
+  incidentId: string,
+  callback: (incident: PublicIncident | null) => void
+) {
+  const incidentRef = doc(db, "incidents", incidentId);
+
+  return onSnapshot(incidentRef, (snapshot) => {
+    if (!snapshot.exists()) {
+      callback(null);
+      return;
+    }
+
+    callback({
+      id: snapshot.id,
+      ...snapshot.data(),
+    } as PublicIncident);
+  });
+}
+
 export type IncidentReportStatus = "pending_review" | "approved" | "rejected";
 
 export type IncidentStatus =
