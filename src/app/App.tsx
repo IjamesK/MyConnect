@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { SettingsScreen } from "./components/screens/SettingsScreen";
 import { applyTheme, getSavedTheme } from "../lib/theme";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
@@ -32,6 +33,16 @@ export default function App() {
         <Route path="/" element={<LoginScreen />} />
 
         {/* Customer portal */}
+
+<Route
+  path="/settings"
+  element={
+    <ProtectedRoute allowedRoles={["customer", "staff", "admin"]}>
+      <SettingsScreen />
+    </ProtectedRoute>
+  }
+/>
+        
 <Route
   path="/dashboard"
   element={
