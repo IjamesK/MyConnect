@@ -1,3 +1,4 @@
+export function NotificationsCenter() {
 const handleNotificationClick = async (notification: AppNotification) => {
   await markNotificationRead(notification.id);
 
