@@ -17,6 +17,7 @@ import {
   createActiveIncident,
   createPlannedIncident,
   listenToPendingIncidentReports,
+  markIncidentReportSeen,
   listenToPublicIncidents,
   rejectIncidentReport,
   updateIncidentStatus,
@@ -257,6 +258,23 @@ export function OutageManagement() {
     }
   };
 
+const handleMarkReportSeen = async (report: IncidentReport) => {
+  if (report.seenAt) return;
+
+  try {
+    await markIncidentReportSeen({
+      reportId: report.id,
+      seenBy: createdBy,
+      seenByName: profile?.fullName || profile?.email || "Staff",
+    });
+
+    setMessage("Report marked as seen.");
+  } catch (error) {
+    console.error("Failed to mark report as seen:", error);
+    setMessage("Failed to mark report as seen.");
+  }
+};
+  
   const handleRejectReport = async (report: IncidentReport) => {
     const reason = window.prompt("Reason for rejecting this report?");
 
