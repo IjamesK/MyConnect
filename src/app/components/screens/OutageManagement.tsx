@@ -1,4 +1,3 @@
-import type { CustomerProfile } from "../../../lib/auth";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -34,6 +33,9 @@ type StaffProfile = {
   email?: string;
   fullName?: string;
   role?: "customer" | "staff" | "admin";
+  staffId?: string;
+  department?: string;
+  position?: string;
 };
 
 type FormMode = "active" | "planned";
@@ -98,8 +100,7 @@ function incidentTypeLabel(type: IncidentType) {
 
 export function OutageManagement() {
   const [profile, setProfile] = useState<StaffProfile | null>(null);
-  const [profile, setProfile] = useState<CustomerProfile | null>(null);
-
+  
   const [incidents, setIncidents] = useState<PublicIncident[]>([]);
   const [pendingReports, setPendingReports] = useState<IncidentReport[]>([]);
 
@@ -134,18 +135,6 @@ export function OutageManagement() {
 }, []); 
 
   useEffect(() => {
-    const savedProfile = localStorage.getItem("customerProfile");
-
-    if (!savedProfile) return;
-
-    try {
-      setProfile(JSON.parse(savedProfile) as StaffProfile);
-    } catch (error) {
-      console.error("Failed to load staff profile:", error);
-    }
-  }, []);
-
-  useEffect(() => {
     const unsubscribeIncidents = listenToPublicIncidents(setIncidents);
     const unsubscribeReports = listenToPendingIncidentReports(setPendingReports);
 
@@ -155,7 +144,11 @@ export function OutageManagement() {
     };
   }, []);
 
-  const createdBy = profile?.uid || profile?.email || "staff";
+  const createdBy =
+  profile?.fullName ||
+  profile?.email ||
+  profile?.staffId ||
+  "Staff";
 
   const activeIncidents = useMemo(() => {
     return incidents.filter(
