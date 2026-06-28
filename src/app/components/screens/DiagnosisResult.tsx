@@ -171,6 +171,14 @@ function deviceLabel(device: string) {
   return "Unknown device";
 }
 
+function ticketTypeFromIssue(issue: string) {
+  if (issue === "password-reset") return "password_reset";
+  if (issue === "slow") return "slow_speed";
+  if (issue === "wifi") return "router_issue";
+  if (issue === "intermittent") return "slow_speed";
+  return "no_internet";
+}
+
 export function DiagnosisResult() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -329,14 +337,18 @@ export function DiagnosisResult() {
           View Network Status
         </button>
 
-        <button
-          type="button"
-          onClick={() => navigate("/report-issue")}
-          className="w-full py-3 bg-white border border-[#E2E8F0] text-[#0F172A] rounded-xl font-semibold text-sm hover:bg-[#F8FAFC] transition-colors flex items-center justify-center gap-2"
-        >
-          <Ticket size={15} />
-          Open Support Ticket
-        </button>
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  `/report-issue?mode=ticket&type=${ticketTypeFromIssue(issue)}&source=troubleshooter`
+                )
+              }
+              className="w-full py-3 bg-white border border-[#E2E8F0] text-[#0F172A] rounded-xl font-semibold text-sm hover:bg-[#F8FAFC] transition-colors flex items-center justify-center gap-2"
+            >
+              <Ticket size={15} />
+              Open Support Ticket
+            </button>
 
         <button
           type="button"
