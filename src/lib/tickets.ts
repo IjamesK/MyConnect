@@ -31,6 +31,13 @@ export type TicketWorkType =
   | "technician"
   | "monitoring";
 
+export type TicketUpdate = {
+  text: string;
+  by: string;
+  status?: TicketStatus;
+  createdAt?: Timestamp;
+};
+
 export type CustomerTicket = {
   id: string;
 
@@ -65,13 +72,6 @@ export type CustomerTicket = {
   updatedAt?: Timestamp | null;
 };
 
-export type TicketUpdate = {
-  text: string;
-  by: string;
-  status?: TicketStatus;
-  createdAt?: Timestamp;
-};
-
 function inferWorkType(category: string): TicketWorkType {
   if (category === "password_reset" || category === "payment_not_reflected") {
     return "remote_support";
@@ -88,61 +88,67 @@ function inferWorkType(category: string): TicketWorkType {
   return "monitoring";
 }
 
-export async function updateTicketStatus(data: {
-  ticketId: string;
-  customerUid: string;
-  status: TicketStatus;
-  note?: string;
-  assignedTo?: string;
-  assignedTechnicianName?: string;
-  assignedTechnicianPhone?: string;
-  eta?: string;
-  workType?: TicketWorkType;
-}) {
-  const cleanStatus = data.status.replace("_", " ");
+export async function createTicket(
+  profile: CustomerProfile,
+  data: {
+    category: string;
+    title: string;
+    description: string;
+    priority: TicketPriority;
+    workType?: TicketWorkType;
+    photoCount?: number;
+    locationNote?: string;
+  }
+) {
+  const workType = data.workType ?? inferWorkType(data.category);
 
-  const updatePayload: Record<string, unknown> = {
-    status: data.status,
+  const ticketRef = await addDoc(collection(db, "tickets"), {
+    customerUid: profile.uid,
+    customerName: profile.fullName,
+    customerNumber: profile.customerNumber ?? "",
+    phone: profile.phone ?? "",
+    area: profile.area ?? "",
+    district: profile.district ?? "",
+    address: profile.address ?? "",
+    routerSerial: profile.routerSerial ?? "",
+    packageName: profile.packageName ?? "",
+
+    category: data.category,
+    title: data.title,
+    description: data.description,
+    priority: data.priority,
+    workType,
+
+    status: "open",
+    assignedTo: null,
+    assignedTechnicianName: null,
+    assignedTechnicianPhone: null,
+    eta: null,
+
+    photoCount: data.photoCount ?? 0,
+    locationNote: data.locationNote ?? "",
+
+    updates: [
+      {
+        text: "Ticket submitted successfully.",
+        by: "System",
+        status: "open",
+        createdAt: Timestamp.now(),
+      },
+    ],
+
+    createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-    updates: arrayUnion({
-      text: data.note || `Ticket status changed to ${cleanStatus}.`,
-      by: "Support Team",
-      status: data.status,
-      createdAt: Timestamp.now(),
-    }),
-  };
-
-  if (data.assignedTo !== undefined) {
-    updatePayload.assignedTo = data.assignedTo;
-  }
-
-  if (data.assignedTechnicianName !== undefined) {
-    updatePayload.assignedTechnicianName = data.assignedTechnicianName;
-  }
-
-  if (data.assignedTechnicianPhone !== undefined) {
-    updatePayload.assignedTechnicianPhone = data.assignedTechnicianPhone;
-  }
-
-  if (data.eta !== undefined) {
-    updatePayload.eta = data.eta;
-  }
-
-  if (data.workType !== undefined) {
-    updatePayload.workType = data.workType;
-  }
-
-  await updateDoc(doc(db, "tickets", data.ticketId), updatePayload);
+  });
 
   await createCustomerNotification({
-    customerUid: data.customerUid,
+    customerUid: profile.uid,
     type: "ticket",
-    title: "Ticket Updated",
-    body: data.note || `Your ticket status changed to ${cleanStatus}.`,
-    action: `/ticket/${data.ticketId}`,
-    relatedId: data.ticketId,
+    title: "Ticket Created",
+    body: `Your ticket has been submitted. Reference: ${ticketRef.id}`,
+    action: `/ticket/${ticketRef.id}`,
+    relatedId: ticketRef.id,
   });
-}
 
   return ticketRef.id;
 }
@@ -217,13 +223,8 @@ export async function updateTicketStatus(data: {
 }) {
   const cleanStatus = data.status.replace("_", " ");
 
-  await updateDoc(doc(db, "tickets", data.ticketId), {
+  const updatePayload: Record<string, unknown> = {
     status: data.status,
-    assignedTo: data.assignedTo ?? null,
-    assignedTechnicianName: data.assignedTechnicianName ?? null,
-    assignedTechnicianPhone: data.assignedTechnicianPhone ?? null,
-    eta: data.eta ?? null,
-    ...(data.workType ? { workType: data.workType } : {}),
     updatedAt: serverTimestamp(),
     updates: arrayUnion({
       text: data.note || `Ticket status changed to ${cleanStatus}.`,
@@ -231,7 +232,29 @@ export async function updateTicketStatus(data: {
       status: data.status,
       createdAt: Timestamp.now(),
     }),
-  });
+  };
+
+  if (data.assignedTo !== undefined) {
+    updatePayload.assignedTo = data.assignedTo;
+  }
+
+  if (data.assignedTechnicianName !== undefined) {
+    updatePayload.assignedTechnicianName = data.assignedTechnicianName;
+  }
+
+  if (data.assignedTechnicianPhone !== undefined) {
+    updatePayload.assignedTechnicianPhone = data.assignedTechnicianPhone;
+  }
+
+  if (data.eta !== undefined) {
+    updatePayload.eta = data.eta;
+  }
+
+  if (data.workType !== undefined) {
+    updatePayload.workType = data.workType;
+  }
+
+  await updateDoc(doc(db, "tickets", data.ticketId), updatePayload);
 
   await createCustomerNotification({
     customerUid: data.customerUid,
