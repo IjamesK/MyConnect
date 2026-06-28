@@ -18,13 +18,13 @@ interface LayoutProps {
   title?: string;
   showBack?: boolean;
   backTo?: string;
-  notificationCount?: number;
+  NotificationCount?: number;
 }
 
 const navItems = [
   { icon: Home, label: "Home", path: "/dashboard" },
   { icon: Activity, label: "Status", path: "/service-status" },
-  { icon: Headphones, label: "Support", path: "/ticket/3021" },
+  { icon: Headphones, label: "Support", path: "/report-issue" },
   { icon: User, label: "Account", path: "/subscription" },
 ];
 
@@ -33,37 +33,35 @@ export function Layout({
   title,
   showBack = false,
   backTo,
-  tionCount,
+  notificationCount,
 }: LayoutProps) {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [livetionCount, setLivetionCount] = useState(0);
+const [liveNotificationCount, setLiveNotificationCount] = useState(0);
 
 useEffect(() => {
   const savedProfile = localStorage.getItem("customerProfile");
 
   if (!savedProfile) {
-    setLivetionCount(0);
+    setLiveNotificationCount(0);
     return;
   }
 
   try {
     const profile = JSON.parse(savedProfile) as CustomerProfile;
 
-    const unsubscribe = listenToUnreadtionCount(
+    const unsubscribe = listenToUnreadNotificationCount(
       profile.uid,
-      setLivetionCount
+      setLiveNotificationCount
     );
 
     return () => unsubscribe();
   } catch (error) {
-    console.error("Failed to load tion count:", error);
-    setLivetionCount(0);
+    console.error("Failed to load notification count:", error);
+    setLiveNotificationCount(0);
   }
 }, []);
 
-const displayedtionCount =
-  tionCount ?? livetionCount;
+const displayedNotificationCount =
+  notificationCount ?? liveNotificationCount;
 
   const handleLogout = async () => {
     try {
@@ -151,11 +149,12 @@ const displayedtionCount =
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => handleNotificationClick(notification)}
+              onClick={() => navigate("/notifications")}
               className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9]"
               title="Notifications"
             >
               <Bell size={18} className="text-[#475569]" />
+              
                 {displayedNotificationCount > 0 && (
                 <span className="absolute top-1 right-1 w-4 h-4 bg-[#DC2626] rounded-full text-white text-[10px] flex items-center justify-center font-medium">
                   {displayedNotificationCount}
