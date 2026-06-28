@@ -4,10 +4,12 @@ import {
   CheckCircle,
   ExternalLink,
   KeyRound,
+  Power,
   Ticket,
   Wifi,
   WifiOff,
   Wrench,
+  Zap,
 } from "lucide-react";
 import { Layout } from "../isp/Layout";
 
@@ -23,7 +25,129 @@ type ResultConfig = {
   steps: string[];
 };
 
-function getResultConfig(issue: string, device: string): ResultConfig {
+function getResultConfig(issue: string, device: string, pattern: string): ResultConfig {
+    if (device === "zte" && pattern === "zte_los_red") {
+    return {
+      title: "Fibre Loss of Signal",
+      subtitle: "LOS red light detected on ZTE ONT",
+      confidence: 98,
+      cause: "Fibre cut or physical fibre signal loss",
+      deviceStatus: "LOS red light is on",
+      recommendation:
+        "This should be escalated as a fibre signal issue. Customer should not reset the ONT repeatedly; support should check the fibre path or assign field support.",
+      icon: AlertTriangle,
+      tone: "danger",
+      steps: [
+        "Detected ZTE ONT",
+        "Checked LOS indicator",
+        "LOS red light means loss of fibre signal",
+        "Recommended field escalation",
+      ],
+    };
+  }
+
+  if (device === "zte" && pattern === "zte_wifi_disabled") {
+    return {
+      title: "Wi-Fi May Be Disabled",
+      subtitle: "Wi-Fi indicator is off",
+      confidence: 90,
+      cause: "Wi-Fi button may have been pressed accidentally",
+      deviceStatus: "Wi-Fi light is off",
+      recommendation:
+        "Ask the customer to press the Wi-Fi/WLAN button on the ONT to turn wireless broadcasting back on. If it stays off, open a router support ticket.",
+      icon: WifiOff,
+      tone: "info",
+      steps: [
+        "Detected ZTE ONT",
+        "Checked Wi-Fi indicator",
+        "Wi-Fi light is off",
+        "Recommended enabling Wi-Fi from the ONT button",
+      ],
+    };
+  }
+
+  if (device === "zte" && pattern === "zte_internet_off_noc") {
+    return {
+      title: "Internet Light Is Off",
+      subtitle: "Likely service/session issue, not fibre cut",
+      confidence: 88,
+      cause: "Internet service issue requiring NOC monitoring",
+      deviceStatus: "Power/PON okay, LOS off, Internet light off",
+      recommendation:
+        "This should be monitored by NOC. If the issue continues, open a support ticket under No Internet so the team can check service status.",
+      icon: Zap,
+      tone: "warning",
+      steps: [
+        "Detected ZTE ONT",
+        "Power and PON appear okay",
+        "LOS red light is not active",
+        "Internet light is off",
+        "Recommended NOC monitoring",
+      ],
+    };
+  }
+
+  if (device === "zte" && pattern === "zte_slow_speed_normal_lights") {
+    return {
+      title: "Slow Speed With Normal Lights",
+      subtitle: "ONT indicators look normal",
+      confidence: 82,
+      cause: "Possible speed degradation, Wi-Fi congestion, or service quality issue",
+      deviceStatus: "Power, PON, Internet and Wi-Fi lights are on",
+      recommendation:
+        "Ask the customer to run a speed test and submit the result. Support can monitor the connection and compare against the customer's package.",
+      icon: Wifi,
+      tone: "warning",
+      steps: [
+        "Detected ZTE ONT",
+        "Checked active indicators",
+        "Lights appear normal",
+        "Classified issue as speed degradation",
+        "Recommended speed test and monitoring",
+      ],
+    };
+  }
+
+  if (device === "zte" && pattern === "zte_no_power") {
+    return {
+      title: "ONT Power Issue",
+      subtitle: "Power light is off",
+      confidence: 86,
+      cause: "Power adapter, socket, or ONT power issue",
+      deviceStatus: "Power light is off",
+      recommendation:
+        "Ask the customer to check the wall socket, power adapter, and ONT power button. If the ONT still does not power on, open a support ticket.",
+      icon: Power,
+      tone: "warning",
+      steps: [
+        "Detected ZTE ONT",
+        "Checked Power indicator",
+        "Power light is off",
+        "Recommended power checks before escalation",
+      ],
+    };
+  }
+
+  if (device === "zte" && pattern === "zte_normal_lights") {
+    return {
+      title: "ZTE ONT Lights Look Normal",
+      subtitle: "No obvious light fault detected",
+      confidence: 80,
+      cause: "Issue may be device-specific, Wi-Fi range, account, or service quality",
+      deviceStatus: "Power, PON, Internet and Wi-Fi indicators look normal",
+      recommendation:
+        "If the customer still has a problem, open a support ticket with details of what they cannot access and whether they tested on Wi-Fi or Ethernet.",
+      icon: CheckCircle,
+      tone: "success",
+      steps: [
+        "Detected ZTE ONT",
+        "Checked Power, PON, LOS, Internet and Wi-Fi",
+        "No clear fault from lights",
+        "Recommended support ticket if issue continues",
+      ],
+    };
+  }
+  
   if (issue === "password-reset") {
     return {
       title: "Wi-Fi Password Help",
@@ -171,11 +295,18 @@ function deviceLabel(device: string) {
   return "Unknown device";
 }
 
-function ticketTypeFromIssue(issue: string) {
+function ticketTypeFromIssue(issue: string, pattern?: string) {
+  if (pattern === "zte_los_red") return "los_light";
+  if (pattern === "zte_wifi_disabled") return "router_issue";
+  if (pattern === "zte_internet_off_noc") return "no_internet";
+  if (pattern === "zte_slow_speed_normal_lights") return "slow_speed";
+  if (pattern === "zte_no_power") return "router_issue";
+
   if (issue === "password-reset") return "password_reset";
   if (issue === "slow") return "slow_speed";
   if (issue === "wifi") return "router_issue";
   if (issue === "intermittent") return "slow_speed";
+
   return "no_internet";
 }
 
@@ -185,8 +316,9 @@ export function DiagnosisResult() {
 
   const issue = searchParams.get("issue") ?? "no-internet";
   const device = searchParams.get("device") ?? "unknown";
+  const pattern = searchParams.get("pattern") ?? "";
 
-  const result = getResultConfig(issue, device);
+  const result = getResultConfig(issue, device, pattern);
   const Icon = result.icon;
   const classes = toneClasses(result.tone);
 
@@ -341,7 +473,7 @@ export function DiagnosisResult() {
               type="button"
               onClick={() =>
                 navigate(
-                  `/report-issue?mode=ticket&type=${ticketTypeFromIssue(issue)}&source=troubleshooter`
+                  `/report-issue?mode=ticket&type=${ticketTypeFromIssue(issue, pattern)}&source=troubleshooter`
                 )
               }
               className="w-full py-3 bg-white border border-[#E2E8F0] text-[#0F172A] rounded-xl font-semibold text-sm hover:bg-[#F8FAFC] transition-colors flex items-center justify-center gap-2"
