@@ -22,6 +22,7 @@ const personalIssueTypes = [
   { label: "LOS Light Red", value: "los_light", priority: "high" },
   { label: "Payment Not Reflected", value: "payment_not_reflected", priority: "medium" },
   { label: "Router Not Working", value: "router_issue", priority: "medium" },
+  { label: "Wi-Fi Password Reset", value: "password_reset", priority: "low" },
   { label: "Other Account Issue", value: "other", priority: "low" },
 ] as const;
 
@@ -110,6 +111,13 @@ export function ReportIssue() {
           title: selectedIssue?.label ?? "Customer Issue",
           description: description.trim(),
           priority: (selectedIssue?.priority ?? "medium") as TicketPriority,
+          workType:
+            personalIssueType === "password_reset" ||
+            personalIssueType === "payment_not_reflected"
+              ? "remote_support"
+              : personalIssueType === "slow_speed"
+                ? "monitoring"
+                : "technician",
           photoCount: photos.length,
           locationNote: locationNote.trim(),
         });
