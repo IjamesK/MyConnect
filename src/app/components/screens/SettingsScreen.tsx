@@ -1,11 +1,5 @@
-import {
-  getSavedLanguage,
-  languageLabels,
-  saveLanguage,
-  type AppLanguage,
-} from "../../../lib/i18n";
 import { useEffect, useState } from "react";
-import { CheckCircle, Palette } from "lucide-react";
+import { CheckCircle, Languages, Palette } from "lucide-react";
 import { Layout } from "../isp/Layout";
 import {
   applyTheme,
@@ -13,8 +7,12 @@ import {
   themes,
   type ThemeName,
 } from "../../../lib/theme";
-
-const [selectedLanguage, setSelectedLanguage] = useState<AppLanguage>("en");
+import {
+  getSavedLanguage,
+  languageLabels,
+  saveLanguage,
+  type AppLanguage,
+} from "../../../lib/i18n";
 
 const themeLabels: Record<ThemeName, string> = {
   canalbox: "CanalBox Blue",
@@ -32,20 +30,21 @@ const themeDescriptions: Record<ThemeName, string> = {
 
 export function SettingsScreen() {
   const [selectedTheme, setSelectedTheme] = useState<ThemeName>("canalbox");
+  const [selectedLanguage, setSelectedLanguage] = useState<AppLanguage>("en");
 
   useEffect(() => {
-    setSelectedLanguage(getSavedLanguage());
     setSelectedTheme(getSavedTheme());
+    setSelectedLanguage(getSavedLanguage());
   }, []);
-
-  const handleLanguageChange = (language: AppLanguage) => {
-  setSelectedLanguage(language);
-  saveLanguage(language);
-};
 
   const handleThemeChange = (themeName: ThemeName) => {
     setSelectedTheme(themeName);
     applyTheme(themeName);
+  };
+
+  const handleLanguageChange = (language: AppLanguage) => {
+    setSelectedLanguage(language);
+    saveLanguage(language);
   };
 
   return (
@@ -63,7 +62,7 @@ export function SettingsScreen() {
           </h1>
 
           <p className="text-[var(--color-muted)] text-sm mt-1">
-            Choose how MyConnect looks on this device.
+            Choose how MyConnect looks and feels on this device.
           </p>
         </div>
 
@@ -102,15 +101,15 @@ export function SettingsScreen() {
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1">
                       <span
-                        className="w-5 h-5 rounded-full border"
+                        className="w-5 h-5 rounded-full border border-[var(--color-border)]"
                         style={{ backgroundColor: theme.primary }}
                       />
                       <span
-                        className="w-5 h-5 rounded-full border"
+                        className="w-5 h-5 rounded-full border border-[var(--color-border)]"
                         style={{ backgroundColor: theme.background }}
                       />
                       <span
-                        className="w-5 h-5 rounded-full border"
+                        className="w-5 h-5 rounded-full border border-[var(--color-border)]"
                         style={{ backgroundColor: theme.surface }}
                       />
                     </div>
@@ -138,49 +137,56 @@ export function SettingsScreen() {
           </div>
         </div>
 
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center">
+              <Languages size={20} className="text-[var(--color-primary)]" />
+            </div>
+
+            <div>
+              <p className="text-[var(--color-text)] text-sm font-bold">
+                Language
+              </p>
+              <p className="text-[var(--color-muted)] text-xs">
+                Choose the language used in the customer app.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {(Object.keys(languageLabels) as AppLanguage[]).map((language) => {
+              const active = selectedLanguage === language;
+
+              return (
+                <button
+                  key={language}
+                  type="button"
+                  onClick={() => handleLanguageChange(language)}
+                  className={`p-3 rounded-xl border text-sm font-semibold ${
+                    active
+                      ? "border-[var(--color-primary)] bg-[var(--color-surface-soft)] text-[var(--color-primary)]"
+                      : "border-[var(--color-border)] text-[var(--color-text)]"
+                  }`}
+                >
+                  {languageLabels[language]}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-2xl p-4">
           <p className="text-[var(--color-text)] text-sm font-semibold">
             Note
           </p>
 
           <p className="text-[var(--color-muted)] text-xs mt-1 leading-relaxed">
-            Some older pages may still use fixed colors. We can gradually update
-            them to use the theme system so the entire app changes perfectly.
+            Some older pages may still use fixed colors or English-only text. We
+            can gradually update them so the entire app follows the selected
+            theme and language.
           </p>
         </div>
       </div>
-
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
-  <p className="text-[var(--color-text)] text-sm font-bold mb-1">
-    Language
-  </p>
-
-  <p className="text-[var(--color-muted)] text-xs mb-4">
-    Choose the language used in the customer app.
-  </p>
-
-  <div className="grid grid-cols-2 gap-2">
-    {(Object.keys(languageLabels) as AppLanguage[]).map((language) => {
-      const active = selectedLanguage === language;
-
-      return (
-        <button
-          key={language}
-          type="button"
-          onClick={() => handleLanguageChange(language)}
-          className={`p-3 rounded-xl border text-sm font-semibold ${
-            active
-              ? "border-[var(--color-primary)] bg-[var(--color-surface-soft)] text-[var(--color-primary)]"
-              : "border-[var(--color-border)] text-[var(--color-text)]"
-          }`}
-        >
-          {languageLabels[language]}
-        </button>
-      );
-    })}
-  </div>
-</div>
-      
     </Layout>
   );
 }
