@@ -497,20 +497,6 @@ export function CustomerDashboard() {
             ))}
           </div>
         </div>
-
-        {/* Demo note for proposal */}
-        <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 flex items-start gap-3">
-          <ShieldCheck size={18} className="text-[#16A34A] mt-0.5" />
-          <div>
-            <p className="text-[#0F172A] text-sm font-semibold">
-              Better support, fewer back-and-forth calls
-            </p>
-            <p className="text-[#64748B] text-xs mt-1 leading-relaxed">
-              Tickets now carry account details, area, router serial, diagnosis
-              context, and speed test evidence where needed.
-            </p>
-          </div>
-        </div>
       </div>
     </Layout>
   );
