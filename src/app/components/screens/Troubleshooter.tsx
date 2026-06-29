@@ -1,3 +1,4 @@
+import { useTranslation } from "../../../lib/useTranslation";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import {
@@ -17,16 +18,18 @@ import {
   type PublicIncident,
 } from "../../../lib/incidents";
 
+const { t } = useTranslation();
+
 const issues = [
   {
     icon: WifiOff,
-    label: "No Internet",
+    label: "{t.noInternet}",
     desc: "Can't connect at all",
     value: "no-internet",
   },
   {
     icon: Zap,
-    label: "Slow Internet",
+    label: "{t.Slow Internet}",
     desc: "Slower than expected speed",
     value: "slow",
   },
@@ -145,7 +148,7 @@ export function Troubleshooter() {
             }}
             className="text-[#0F172A] text-2xl"
           >
-            Smart Troubleshooter
+            {t.troubleshoot}
           </h1>
 
           <p className="text-[#64748B] text-sm mt-1">
