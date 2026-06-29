@@ -72,38 +72,56 @@ export const themes: Record<ThemeName, ThemeColors> = {
   },
 };
 
-export function getSavedTheme(): ThemeName {
-  const saved = localStorage.getItem("appTheme");
+function isThemeName(value: string | null): value is ThemeName {
+  return (
+    value === "canalbox" ||
+    value === "dark" ||
+    value === "emerald" ||
+    value === "sunset"
+  );
+}
 
-  if (
-    saved === "canalbox" ||
-    saved === "dark" ||
-    saved === "emerald" ||
-    saved === "sunset"
-  ) {
-    return saved;
+export function getSavedTheme(): ThemeName {
+  try {
+    if (typeof window === "undefined") return "canalbox";
+
+    const saved = window.localStorage.getItem("appTheme");
+
+    if (isThemeName(saved)) return saved;
+  } catch (error) {
+    console.warn("Failed to read saved theme:", error);
   }
 
   return "canalbox";
 }
 
 export function applyTheme(themeName: ThemeName) {
-  const theme = themes[themeName];
+  try {
+    if (typeof document === "undefined") return;
 
-  const root = document.documentElement;
+    const theme = themes[themeName] ?? themes.canalbox;
+    const root = document.documentElement;
 
-  root.style.setProperty("--color-primary", theme.primary);
-  root.style.setProperty("--color-primary-dark", theme.primaryDark);
-  root.style.setProperty("--color-bg", theme.background);
-  root.style.setProperty("--color-surface", theme.surface);
-  root.style.setProperty("--color-surface-soft", theme.surfaceSoft);
-  root.style.setProperty("--color-text", theme.text);
-  root.style.setProperty("--color-muted", theme.muted);
-  root.style.setProperty("--color-border", theme.border);
-  root.style.setProperty("--color-success", theme.success);
-  root.style.setProperty("--color-danger", theme.danger);
-  root.style.setProperty("--color-warning", theme.warning);
+    root.style.setProperty("--color-primary", theme.primary);
+    root.style.setProperty("--color-primary-dark", theme.primaryDark);
+    root.style.setProperty("--color-bg", theme.background);
+    root.style.setProperty("--color-surface", theme.surface);
+    root.style.setProperty("--color-surface-soft", theme.surfaceSoft);
+    root.style.setProperty("--color-text", theme.text);
+    root.style.setProperty("--color-muted", theme.muted);
+    root.style.setProperty("--color-border", theme.border);
+    root.style.setProperty("--color-success", theme.success);
+    root.style.setProperty("--color-danger", theme.danger);
+    root.style.setProperty("--color-warning", theme.warning);
 
-  root.setAttribute("data-theme", themeName);
-  localStorage.setItem("appTheme", themeName);
+    root.setAttribute("data-theme", themeName);
+
+    try {
+      window.localStorage.setItem("appTheme", themeName);
+    } catch (error) {
+      console.warn("Failed to save theme:", error);
+    }
+  } catch (error) {
+    console.error("Failed to apply theme:", error);
+  }
 }

@@ -109,17 +109,31 @@ export const translations = {
   },
 } as const;
 
-export function getSavedLanguage(): AppLanguage {
-  const saved = localStorage.getItem("appLanguage");
+function isLanguage(value: string | null): value is AppLanguage {
+  return value === "en" || value === "sw" || value === "lg" || value === "fr";
+}
 
-  if (saved === "en" || saved === "sw" || saved === "lg" || saved === "fr") {
-    return saved;
+export function getSavedLanguage(): AppLanguage {
+  try {
+    if (typeof window === "undefined") return "en";
+
+    const saved = window.localStorage.getItem("appLanguage");
+
+    if (isLanguage(saved)) return saved;
+  } catch (error) {
+    console.warn("Failed to read saved language:", error);
   }
 
   return "en";
 }
 
 export function saveLanguage(language: AppLanguage) {
-  localStorage.setItem("appLanguage", language);
-  window.dispatchEvent(new Event("languagechange"));
+  try {
+    if (typeof window === "undefined") return;
+
+    window.localStorage.setItem("appLanguage", language);
+    window.dispatchEvent(new Event("languagechange"));
+  } catch (error) {
+    console.warn("Failed to save language:", error);
+  }
 }
