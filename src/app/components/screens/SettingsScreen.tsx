@@ -1,3 +1,9 @@
+import {
+  getSavedLanguage,
+  languageLabels,
+  saveLanguage,
+  type AppLanguage,
+} from "../../../lib/i18n";
 import { useEffect, useState } from "react";
 import { CheckCircle, Palette } from "lucide-react";
 import { Layout } from "../isp/Layout";
@@ -7,6 +13,8 @@ import {
   themes,
   type ThemeName,
 } from "../../../lib/theme";
+
+const [selectedLanguage, setSelectedLanguage] = useState<AppLanguage>("en");
 
 const themeLabels: Record<ThemeName, string> = {
   canalbox: "CanalBox Blue",
@@ -26,8 +34,14 @@ export function SettingsScreen() {
   const [selectedTheme, setSelectedTheme] = useState<ThemeName>("canalbox");
 
   useEffect(() => {
+    setSelectedLanguage(getSavedLanguage());
     setSelectedTheme(getSavedTheme());
   }, []);
+
+  const handleLanguageChange = (language: AppLanguage) => {
+  setSelectedLanguage(language);
+  saveLanguage(language);
+};
 
   const handleThemeChange = (themeName: ThemeName) => {
     setSelectedTheme(themeName);
@@ -135,6 +149,38 @@ export function SettingsScreen() {
           </p>
         </div>
       </div>
+
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
+  <p className="text-[var(--color-text)] text-sm font-bold mb-1">
+    Language
+  </p>
+
+  <p className="text-[var(--color-muted)] text-xs mb-4">
+    Choose the language used in the customer app.
+  </p>
+
+  <div className="grid grid-cols-2 gap-2">
+    {(Object.keys(languageLabels) as AppLanguage[]).map((language) => {
+      const active = selectedLanguage === language;
+
+      return (
+        <button
+          key={language}
+          type="button"
+          onClick={() => handleLanguageChange(language)}
+          className={`p-3 rounded-xl border text-sm font-semibold ${
+            active
+              ? "border-[var(--color-primary)] bg-[var(--color-surface-soft)] text-[var(--color-primary)]"
+              : "border-[var(--color-border)] text-[var(--color-text)]"
+          }`}
+        >
+          {languageLabels[language]}
+        </button>
+      );
+    })}
+  </div>
+</div>
+      
     </Layout>
   );
 }
