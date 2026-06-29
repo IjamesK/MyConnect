@@ -1,4 +1,3 @@
-import { useTranslation } from "../../../lib/useTranslation";
 import { ReactNode, useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router";
 import {
@@ -14,6 +13,7 @@ import {
 import type { CustomerProfile } from "../../../lib/auth";
 import { signOut } from "../../../lib/auth";
 import { listenToUnreadNotificationCount } from "../../../lib/notifications";
+import { useTranslation } from "../../../lib/useTranslation";
 
 interface LayoutProps {
   children: ReactNode;
@@ -22,13 +22,6 @@ interface LayoutProps {
   backTo?: string;
   notificationCount?: number;
 }
-
-const navItems = [
-  { icon: Home, label: t.home, path: "/dashboard" },
-  { icon: Activity, label: t.status, path: "/service-status" },
-  { icon: Headphones, label: t.support, path: "/report-issue" },
-  { icon: User, label: t.account, path: "/subscription" },
-];
 
 export function Layout({
   children,
@@ -40,6 +33,13 @@ export function Layout({
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
+
+  const navItems = [
+    { icon: Home, label: t.home, path: "/dashboard" },
+    { icon: Activity, label: t.status, path: "/service-status" },
+    { icon: Headphones, label: t.support, path: "/report-issue" },
+    { icon: User, label: t.account, path: "/subscription" },
+  ];
 
   const [liveNotificationCount, setLiveNotificationCount] = useState(0);
 
