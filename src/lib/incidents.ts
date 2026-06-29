@@ -18,7 +18,7 @@ import { createCustomerNotification } from "./notifications";
 
 export function listenToPublicIncident(
   incidentId: string,
-  callback: (incident: PublicIncident | null) => void
+  callback: (incident: PublicIncident | null) => void,
 ) {
   const incidentRef = doc(db, "incidents", incidentId);
 
@@ -38,11 +38,7 @@ export function listenToPublicIncident(
 export type IncidentReportStatus = "pending_review" | "approved" | "rejected";
 
 export type IncidentStatus =
-  | "scheduled"
-  | "active"
-  | "monitoring"
-  | "resolved"
-  | "cancelled";
+  "scheduled" | "active" | "monitoring" | "resolved" | "cancelled";
 
 export type IncidentType =
   | "outage"
@@ -125,14 +121,16 @@ async function getAffectedCustomerUids(affectedAreaKeys: string[]) {
     .filter((userDoc) => {
       const user = userDoc.data();
 
-      const role = String(user.role ?? "").trim().toLowerCase();
+      const role = String(user.role ?? "")
+        .trim()
+        .toLowerCase();
       if (role && role !== "customer") return false;
 
       if (isNetworkWideIncident(affectedAreaKeys)) return true;
 
       const customerAreaKey = areaKey(
         String(user.district ?? ""),
-        String(user.area ?? "")
+        String(user.area ?? ""),
       );
 
       return affectedAreaKeys.includes(customerAreaKey);
@@ -158,8 +156,8 @@ async function notifyAffectedCustomers(data: {
         body: data.body,
         action: "/service-status",
         relatedId: data.incidentId,
-      })
-    )
+      }),
+    ),
   );
 
   return customerUids.length;
@@ -173,7 +171,7 @@ export async function createIncidentReport(
     description: string;
     photoCount?: number;
     locationNote?: string;
-  }
+  },
 ) {
   const reportRef = await addDoc(collection(db, "incidentReports"), {
     reporterUid: profile.uid,
@@ -229,7 +227,7 @@ export async function approveIncidentReport(data: {
   affectedDistricts: string[];
 }) {
   const affectedAreaKeys = data.affectedDistricts.flatMap((district) =>
-    data.affectedAreas.map((area) => areaKey(district, area))
+    data.affectedAreas.map((area) => areaKey(district, area)),
   );
 
   const incidentRef = await addDoc(collection(db, "incidents"), {
@@ -253,14 +251,17 @@ export async function approveIncidentReport(data: {
     reviewedBy: data.reviewedBy,
   });
 
-await notifyAffectedCustomers({
-  incidentId: incidentRef.id,
-  type: data.type,
-  title: data.type === "maintenance" ? "Maintenance Notice" : "Network Incident Confirmed",
-  body: data.description,
-  affectedAreaKeys,
-});
-  
+  await notifyAffectedCustomers({
+    incidentId: incidentRef.id,
+    type: data.type,
+    title:
+      data.type === "maintenance"
+        ? "Maintenance Notice"
+        : "Network Incident Confirmed",
+    body: data.description,
+    affectedAreaKeys,
+  });
+
   return incidentRef.id;
 }
 
@@ -289,7 +290,7 @@ export async function createPlannedIncident(data: {
   createdBy: string;
 }) {
   const affectedAreaKeys = data.affectedDistricts.flatMap((district) =>
-    data.affectedAreas.map((area) => areaKey(district, area))
+    data.affectedAreas.map((area) => areaKey(district, area)),
   );
 
   const incidentRef = await addDoc(collection(db, "incidents"), {
@@ -308,44 +309,46 @@ export async function createPlannedIncident(data: {
   });
 
   await notifyAffectedCustomers({
-  incidentId: incidentRef.id,
-  type: data.type,
-  title: data.type === "upgrade" ? "Scheduled Network Upgrade" : "Planned Maintenance",
-  body: data.description,
-  affectedAreaKeys,
-});
-  
+    incidentId: incidentRef.id,
+    type: data.type,
+    title:
+      data.type === "upgrade"
+        ? "Scheduled Network Upgrade"
+        : "Planned Maintenance",
+    body: data.description,
+    affectedAreaKeys,
+  });
+
   return incidentRef.id;
 }
 
 export function listenToRelevantIncidents(
   profile: CustomerProfile,
-  callback: (incidents: PublicIncident[]) => void
+  callback: (incidents: PublicIncident[]) => void,
 ) {
-  const customerAreaKey = areaKey(profile.district, profile.area);
+  const customerAreaKey = areaKey(profile.district ?? "", profile.area ?? "");
 
-  const incidentsQuery = query(
-    collection(db, "incidents"),
-    where("affectedAreaKeys", "array-contains", customerAreaKey),
-    orderBy("createdAt", "desc")
-  );
-
-  return onSnapshot(incidentsQuery, (snapshot) => {
+  return listenToPublicIncidents((items) => {
     callback(
-      snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      })) as PublicIncident[]
+      items.filter((incident) => {
+        const keys = incident.affectedAreaKeys ?? [];
+
+        return (
+          keys.includes(customerAreaKey) ||
+          keys.includes("all/all") ||
+          keys.includes("network/all")
+        );
+      }),
     );
   });
 }
 
 export function listenToPendingIncidentReports(
-  callback: (reports: IncidentReport[]) => void
+  callback: (reports: IncidentReport[]) => void,
 ) {
   const reportsQuery = query(
     collection(db, "incidentReports"),
-    where("status", "==", "pending_review")
+    where("status", "==", "pending_review"),
   );
 
   return onSnapshot(reportsQuery, (snapshot) => {
@@ -364,11 +367,11 @@ export function listenToPendingIncidentReports(
   });
 }
 export function listenToPublicIncidents(
-  callback: (incidents: PublicIncident[]) => void
+  callback: (incidents: PublicIncident[]) => void,
 ) {
   const incidentsQuery = query(
     collection(db, "incidents"),
-    orderBy("createdAt", "desc")
+    orderBy("createdAt", "desc"),
   );
 
   return onSnapshot(incidentsQuery, (snapshot) => {
@@ -376,7 +379,7 @@ export function listenToPublicIncidents(
       snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
         ...docSnap.data(),
-      })) as PublicIncident[]
+      })) as PublicIncident[],
     );
   });
 }
@@ -437,7 +440,7 @@ export async function createActiveIncident(data: {
   createdBy: string;
 }) {
   const affectedAreaKeys = data.affectedDistricts.flatMap((district) =>
-    data.affectedAreas.map((area) => areaKey(district, area))
+    data.affectedAreas.map((area) => areaKey(district, area)),
   );
 
   const incidentRef = await addDoc(collection(db, "incidents"), {
@@ -458,7 +461,8 @@ export async function createActiveIncident(data: {
   await notifyAffectedCustomers({
     incidentId: incidentRef.id,
     type: data.type,
-    title: data.severity === "high" ? "Full Outage Alert" : "Network Incident Alert",
+    title:
+      data.severity === "high" ? "Full Outage Alert" : "Network Incident Alert",
     body: data.description,
     affectedAreaKeys,
   });

@@ -3,6 +3,10 @@ import { useNavigate, useParams } from "react-router";
 import {
   CheckCircle2,
   Clock,
+  Gauge,
+  Download,
+  Upload,
+  Timer,
   Loader2,
   MapPin,
   MessageSquare,
@@ -63,9 +67,12 @@ function buildTimeline(ticket: CustomerTicket) {
     "closed",
   ].includes(status);
 
-  const progressDone = ["in_progress", "monitoring", "resolved", "closed"].includes(
-    status
-  );
+  const progressDone = [
+    "in_progress",
+    "monitoring",
+    "resolved",
+    "closed",
+  ].includes(status);
 
   const resolvedDone = ["resolved", "closed"].includes(status);
 
@@ -185,13 +192,11 @@ export function TicketTracking() {
             <MessageSquare size={24} className="text-[#DC2626]" />
           </div>
 
-          <h2 className="text-[#0F172A] text-lg font-bold">
-            Ticket not found
-          </h2>
+          <h2 className="text-[#0F172A] text-lg font-bold">Ticket not found</h2>
 
           <p className="text-[#64748B] text-sm mt-1">
-            This ticket may have been removed, or the notification may be pointing
-            to an old demo ticket.
+            This ticket may have been removed, or the notification may be
+            pointing to an old demo ticket.
           </p>
 
           <button
@@ -212,7 +217,11 @@ export function TicketTracking() {
   const isPasswordReset = ticket.category === "password_reset";
 
   return (
-    <Layout showBack backTo="/dashboard" title={`Ticket ${ticket.id.slice(0, 8)}`}>
+    <Layout
+      showBack
+      backTo="/dashboard"
+      title={`Ticket ${ticket.id.slice(0, 8)}`}
+    >
       <div className="px-4 py-5 space-y-4">
         {/* Ticket header */}
         <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5">
@@ -294,6 +303,48 @@ export function TicketTracking() {
           </div>
         </div>
 
+        {/* Attached speed test */}
+        {ticket.speedTest && (
+          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Gauge size={18} className="text-[#0057B8]" />
+              <p className="text-[#0F172A] text-sm font-semibold">
+                Attached Speed Test
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-[#F8FAFC] border border-[#F1F5F9] rounded-xl p-3">
+                <Download size={14} className="text-[#0057B8] mb-1" />
+                <p className="text-[#94A3B8] text-[10px]">Download</p>
+                <p className="text-[#0F172A] text-sm font-bold">
+                  {ticket.speedTest.downloadMbps} Mbps
+                </p>
+              </div>
+
+              <div className="bg-[#F8FAFC] border border-[#F1F5F9] rounded-xl p-3">
+                <Upload size={14} className="text-[#0057B8] mb-1" />
+                <p className="text-[#94A3B8] text-[10px]">Upload</p>
+                <p className="text-[#0F172A] text-sm font-bold">
+                  {ticket.speedTest.uploadMbps} Mbps
+                </p>
+              </div>
+
+              <div className="bg-[#F8FAFC] border border-[#F1F5F9] rounded-xl p-3">
+                <Timer size={14} className="text-[#0057B8] mb-1" />
+                <p className="text-[#94A3B8] text-[10px]">Latency</p>
+                <p className="text-[#0F172A] text-sm font-bold">
+                  {ticket.speedTest.latencyMs} ms
+                </p>
+              </div>
+            </div>
+
+            <p className="text-[#64748B] text-xs mt-3">
+              Devices connected during test: {ticket.speedTest.connectedDevices}
+            </p>
+          </div>
+        )}
+
         {/* Password reset notice */}
         {isPasswordReset && (
           <div className="bg-[#EBF2FF] border border-[#BFDBFE] rounded-2xl p-4">
@@ -303,8 +354,8 @@ export function TicketTracking() {
 
             <p className="text-[#64748B] text-xs mt-1 leading-relaxed">
               Support will verify the account and guide you through the password
-              reset process. For security reasons, do not share your new password
-              inside the ticket conversation.
+              reset process. For security reasons, do not share your new
+              password inside the ticket conversation.
             </p>
           </div>
         )}
@@ -380,7 +431,10 @@ export function TicketTracking() {
                     }`}
                   >
                     {active ? (
-                      <Loader2 size={12} className="text-[#E5007D] animate-spin" />
+                      <Loader2
+                        size={12}
+                        className="text-[#E5007D] animate-spin"
+                      />
                     ) : done ? (
                       <CheckCircle2 size={12} className="text-[#16A34A]" />
                     ) : (
@@ -440,9 +494,7 @@ export function TicketTracking() {
             )}
           </div>
 
-          {message && (
-            <p className="text-[#16A34A] text-xs mb-2">{message}</p>
-          )}
+          {message && <p className="text-[#16A34A] text-xs mb-2">{message}</p>}
 
           <div className="flex gap-2 pt-3 border-t border-[#F1F5F9]">
             <input
@@ -469,7 +521,7 @@ export function TicketTracking() {
             type="button"
             onClick={() => {
               navigator.clipboard.writeText(
-                `Ticket #${ticket.id} - Status: ${ticket.status}`
+                `Ticket #${ticket.id} - Status: ${ticket.status}`,
               );
               alert("Ticket details copied to clipboard!");
             }}

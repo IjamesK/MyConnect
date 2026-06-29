@@ -9,10 +9,23 @@ import {
   CheckCircle,
   WifiOff,
   AlertTriangle,
+  Gauge,
+  Smartphone,
+  Download,
+  Timer,
+  RefreshCw,
 } from "lucide-react";
 import type { CustomerProfile } from "../../../lib/auth";
 import { createTicket, type TicketPriority } from "../../../lib/tickets";
-import { createIncidentReport, type IncidentType } from "../../../lib/incidents";
+import {
+  createIncidentReport,
+  type IncidentType,
+} from "../../../lib/incidents";
+import {
+  qualityLabel,
+  runBrowserSpeedTest,
+  type SpeedTestResult,
+} from "../../../lib/speedTest";
 
 type ReportMode = "ticket" | "incident";
 
@@ -20,7 +33,11 @@ const personalIssueTypes = [
   { label: "No Internet", value: "no_internet", priority: "high" },
   { label: "Slow Speed", value: "slow_speed", priority: "medium" },
   { label: "LOS Light Red", value: "los_light", priority: "high" },
-  { label: "Payment Not Reflected", value: "payment_not_reflected", priority: "medium" },
+  {
+    label: "Payment Not Reflected",
+    value: "payment_not_reflected",
+    priority: "medium",
+  },
   { label: "Router Not Working", value: "router_issue", priority: "medium" },
   { label: "Wi-Fi Password Reset", value: "password_reset", priority: "low" },
   { label: "Other Account Issue", value: "other", priority: "low" },
@@ -71,9 +88,13 @@ export function ReportIssue() {
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [mode, setMode] = useState<ReportMode>("ticket");
   const [personalIssueType, setPersonalIssueType] = useState("no_internet");
-  const [networkIssueType, setNetworkIssueType] = useState<IncidentType>("knocked_pole");
+  const [networkIssueType, setNetworkIssueType] =
+    useState<IncidentType>("knocked_pole");
   const [description, setDescription] = useState("");
   const [locationNote, setLocationNote] = useState("");
+  const [connectedDevices, setConnectedDevices] = useState(3);
+  const [speedTest, setSpeedTest] = useState<SpeedTestResult | null>(null);
+  const [speedTesting, setSpeedTesting] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState<{
@@ -100,30 +121,31 @@ export function ReportIssue() {
   }, [navigate]);
 
   useEffect(() => {
-  const modeParam = searchParams.get("mode");
-  const typeParam = searchParams.get("type");
-  const sourceParam = searchParams.get("source");
+    const modeParam = searchParams.get("mode");
+    const typeParam = searchParams.get("type");
+    const sourceParam = searchParams.get("source");
 
-  if (modeParam === "ticket") {
-    setMode("ticket");
-  }
+    if (modeParam === "ticket") {
+      setMode("ticket");
+    }
 
-  if (typeParam && isPersonalIssueType(typeParam)) {
-    setMode("ticket");
-    setPersonalIssueType(typeParam);
+    if (typeParam && isPersonalIssueType(typeParam)) {
+      setMode("ticket");
+      setPersonalIssueType(typeParam);
 
-    if (sourceParam === "troubleshooter") {
-      const prefilledText = getPrefilledDescription(typeParam);
+      if (sourceParam === "troubleshooter") {
+        const prefilledText = getPrefilledDescription(typeParam);
 
-      if (prefilledText) {
-        setDescription((current) => current || prefilledText);
+        if (prefilledText) {
+          setDescription((current) => current || prefilledText);
+        }
       }
     }
-  }
-}, [searchParams]);
+  }, [searchParams]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []).slice(0, 5 - photos.length);
+    const selectedFiles = Array.from(e.target.files ?? []) as File[];
+    const files = selectedFiles.slice(0, 5 - photos.length);
 
     files.forEach((file) => {
       const reader = new FileReader();
@@ -140,6 +162,31 @@ export function ReportIssue() {
     setPhotos((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  const isSlowSpeedTicket =
+    mode === "ticket" && personalIssueType === "slow_speed";
+
+  const handleRunSpeedTest = async () => {
+    setError("");
+    setSpeedTesting(true);
+
+    try {
+      const result = await runBrowserSpeedTest(connectedDevices);
+      setSpeedTest(result);
+      setDescription(
+        (current) =>
+          current ||
+          `I am experiencing slow internet. Speed test shows ${result.downloadMbps} Mbps download, ${result.uploadMbps} Mbps upload, ${result.latencyMs} ms latency with ${result.connectedDevices} connected device(s).`,
+      );
+    } catch (err) {
+      console.error("Speed test failed:", err);
+      setError(
+        "Speed test failed. Please try again or submit the ticket without it after checking your connection.",
+      );
+    } finally {
+      setSpeedTesting(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!profile) return;
 
@@ -150,18 +197,27 @@ export function ReportIssue() {
       return;
     }
 
+    if (mode === "ticket" && personalIssueType === "slow_speed" && !speedTest) {
+      setError(
+        "Please run the speed test first so download and upload speed are attached to the ticket.",
+      );
+      return;
+    }
+
     try {
       setLoading(true);
 
       if (mode === "ticket") {
         const selectedIssue = personalIssueTypes.find(
-          (item) => item.value === personalIssueType
+          (item) => item.value === personalIssueType,
         );
 
         const ticketId = await createTicket(profile, {
           category: personalIssueType,
           title: selectedIssue?.label ?? "Customer Issue",
-          description: description.trim(),
+          description: speedTest
+            ? `${description.trim()}\n\nSpeed test attached: ${speedTest.downloadMbps} Mbps download, ${speedTest.uploadMbps} Mbps upload, ${speedTest.latencyMs} ms latency, ${speedTest.connectedDevices} connected device(s), ${qualityLabel(speedTest.quality)}.`
+            : description.trim(),
           priority: (selectedIssue?.priority ?? "medium") as TicketPriority,
           workType:
             personalIssueType === "password_reset" ||
@@ -172,6 +228,7 @@ export function ReportIssue() {
                 : "technician",
           photoCount: photos.length,
           locationNote: locationNote.trim(),
+          speedTest: personalIssueType === "slow_speed" ? speedTest : null,
         });
 
         setSubmitted({ mode: "ticket", id: ticketId });
@@ -179,7 +236,7 @@ export function ReportIssue() {
       }
 
       const selectedIncident = networkIssueTypes.find(
-        (item) => item.value === networkIssueType
+        (item) => item.value === networkIssueType,
       );
 
       const reportId = await createIncidentReport(profile, {
@@ -245,7 +302,9 @@ export function ReportIssue() {
           <button
             type="button"
             onClick={() =>
-              isTicket ? navigate(`/ticket/${submitted.id}`) : navigate("/service-status")
+              isTicket
+                ? navigate(`/ticket/${submitted.id}`)
+                : navigate("/service-status")
             }
             className="px-4 py-2.5 bg-[#0057B8] text-white rounded-xl text-sm font-semibold"
           >
@@ -256,7 +315,8 @@ export function ReportIssue() {
     );
   }
 
-  const activeIssueTypes = mode === "ticket" ? personalIssueTypes : networkIssueTypes;
+  const activeIssueTypes =
+    mode === "ticket" ? personalIssueTypes : networkIssueTypes;
 
   return (
     <Layout showBack backTo="/dashboard" title="Report Issue">
@@ -290,7 +350,9 @@ export function ReportIssue() {
           >
             <WifiOff
               size={20}
-              className={mode === "ticket" ? "text-[#0057B8]" : "text-[#94A3B8]"}
+              className={
+                mode === "ticket" ? "text-[#0057B8]" : "text-[#94A3B8]"
+              }
             />
             <p className="text-[#0F172A] text-sm font-semibold mt-2">
               My Connection
@@ -311,7 +373,9 @@ export function ReportIssue() {
           >
             <AlertTriangle
               size={20}
-              className={mode === "incident" ? "text-[#E5007D]" : "text-[#94A3B8]"}
+              className={
+                mode === "incident" ? "text-[#E5007D]" : "text-[#94A3B8]"
+              }
             />
             <p className="text-[#0F172A] text-sm font-semibold mt-2">
               Network Incident
@@ -385,6 +449,109 @@ export function ReportIssue() {
           />
         </div>
 
+        {/* Speed test for slow speed tickets */}
+        {isSlowSpeedTicket && (
+          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#EBF2FF] flex items-center justify-center shrink-0">
+                <Gauge size={20} className="text-[#0057B8]" />
+              </div>
+
+              <div className="flex-1">
+                <p className="text-[#0F172A] text-sm font-bold">
+                  Speed Test Required
+                </p>
+                <p className="text-[#64748B] text-xs mt-0.5 leading-relaxed">
+                  This attaches download speed, upload speed, latency, and
+                  connected devices to the ticket so support receives organized
+                  evidence.
+                </p>
+              </div>
+            </div>
+
+            <label className="block">
+              <span className="text-[#0F172A] text-xs font-semibold">
+                Devices currently connected
+              </span>
+              <div className="mt-2 flex items-center gap-2">
+                <Smartphone size={15} className="text-[#94A3B8]" />
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={connectedDevices}
+                  onChange={(e) => {
+                    setConnectedDevices(
+                      Math.max(1, Number(e.target.value) || 1),
+                    );
+                    setSpeedTest(null);
+                  }}
+                  className="w-full px-3 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] outline-none focus:border-[#0057B8] focus:ring-2 focus:ring-[#0057B8]/20"
+                />
+              </div>
+            </label>
+
+            <button
+              type="button"
+              onClick={handleRunSpeedTest}
+              disabled={speedTesting}
+              className="w-full py-2.5 bg-[#0057B8] disabled:bg-[#0057B8]/60 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+            >
+              {speedTesting ? (
+                <>
+                  <RefreshCw size={15} className="animate-spin" />
+                  Testing speed...
+                </>
+              ) : (
+                <>
+                  <Gauge size={15} />
+                  Run Speed Test
+                </>
+              )}
+            </button>
+
+            {speedTest && (
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3">
+                  <Download size={14} className="text-[#0057B8] mb-1" />
+                  <p className="text-[#94A3B8] text-[10px]">Download</p>
+                  <p className="text-[#0F172A] text-sm font-bold">
+                    {speedTest.downloadMbps} Mbps
+                  </p>
+                </div>
+
+                <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3">
+                  <Upload size={14} className="text-[#0057B8] mb-1" />
+                  <p className="text-[#94A3B8] text-[10px]">Upload</p>
+                  <p className="text-[#0F172A] text-sm font-bold">
+                    {speedTest.uploadMbps} Mbps
+                  </p>
+                </div>
+
+                <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3">
+                  <Timer size={14} className="text-[#0057B8] mb-1" />
+                  <p className="text-[#94A3B8] text-[10px]">Latency</p>
+                  <p className="text-[#0F172A] text-sm font-bold">
+                    {speedTest.latencyMs} ms
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {speedTest && (
+              <div className="bg-[#EBF2FF] border border-[#BFDBFE] rounded-xl p-3">
+                <p className="text-[#1D4ED8] text-xs font-semibold">
+                  {qualityLabel(speedTest.quality)}
+                </p>
+                <p className="text-[#1D4ED8] text-xs mt-0.5">
+                  This result will be saved with the support ticket. Production
+                  can later connect this to an approved speed-test provider.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Photo upload */}
         <div>
           <p className="text-[#0F172A] text-sm font-semibold mb-2">
@@ -399,7 +566,11 @@ export function ReportIssue() {
                   key={src}
                   className="relative w-20 h-20 rounded-xl overflow-hidden border border-[#E2E8F0]"
                 >
-                  <img src={src} alt="Upload" className="w-full h-full object-cover" />
+                  <img
+                    src={src}
+                    alt="Upload"
+                    className="w-full h-full object-cover"
+                  />
 
                   <button
                     type="button"

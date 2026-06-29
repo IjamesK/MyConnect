@@ -3,6 +3,10 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
+  Gauge,
+  Download,
+  Upload,
+  Timer,
   MapPin,
   Phone,
   Search,
@@ -118,9 +122,7 @@ export function StaffTickets() {
 
   const openTickets = useMemo(() => {
     return tickets.filter(
-      (ticket) =>
-        ticket.status !== "resolved" &&
-        ticket.status !== "closed"
+      (ticket) => ticket.status !== "resolved" && ticket.status !== "closed",
     );
   }, [tickets]);
 
@@ -132,103 +134,128 @@ export function StaffTickets() {
     return tickets.filter((ticket) => ticket.status === "resolved");
   }, [tickets]);
 
-const handleAssignTechnician = async (ticket: CustomerTicket) => {
-  const technicianName = window.prompt("Technician name:");
+  const handleAssignTechnician = async (ticket: CustomerTicket) => {
+    const technicianName = window.prompt("Technician name:");
 
-  if (!technicianName?.trim()) return;
+    if (!technicianName?.trim()) return;
 
-  const technicianPhone = window.prompt("Technician phone number:") ?? "";
-  const eta = window.prompt("ETA for customer, e.g. Today 3 PM:") ?? "";
+    const technicianPhone = window.prompt("Technician phone number:") ?? "";
+    const eta = window.prompt("ETA for customer, e.g. Today 3 PM:") ?? "";
 
-  try {
-    await updateTicketStatus({
-      ticketId: ticket.id,
-      customerUid: ticket.customerUid,
-      status: "assigned",
-      workType: "technician",
-      assignedTo: technicianName.trim(),
-      assignedTechnicianName: technicianName.trim(),
-      assignedTechnicianPhone: technicianPhone.trim(),
-      eta: eta.trim(),
-      note: `A technician has been assigned to your ticket. ${
-        eta.trim() ? `ETA: ${eta.trim()}.` : ""
-      }`,
-    });
+    try {
+      await updateTicketStatus({
+        ticketId: ticket.id,
+        customerUid: ticket.customerUid,
+        status: "assigned",
+        workType: "technician",
+        assignedTo: technicianName.trim(),
+        assignedTechnicianName: technicianName.trim(),
+        assignedTechnicianPhone: technicianPhone.trim(),
+        eta: eta.trim(),
+        note: `A technician has been assigned to your ticket. ${
+          eta.trim() ? `ETA: ${eta.trim()}.` : ""
+        }`,
+      });
 
-    setMessage("Technician assigned and customer notified.");
-  } catch (error) {
-    console.error("Failed to assign technician:", error);
-    setMessage("Failed to assign technician.");
-  }
-};
+      setMessage("Technician assigned and customer notified.");
+    } catch (error) {
+      console.error("Failed to assign technician:", error);
+      setMessage("Failed to assign technician.");
+    }
+  };
 
-const handleRemoteSupport = async (ticket: CustomerTicket) => {
-  const note =
-    window.prompt(
-      "Note to customer:",
-      "Support is reviewing your request remotely. You will be updated shortly."
-    ) ?? "";
+  const handleRemoteSupport = async (ticket: CustomerTicket) => {
+    const note =
+      window.prompt(
+        "Note to customer:",
+        "Support is reviewing your request remotely. You will be updated shortly.",
+      ) ?? "";
 
-  try {
-    await updateTicketStatus({
-      ticketId: ticket.id,
-      customerUid: ticket.customerUid,
-      status: "in_progress",
-      workType: "remote_support",
-      note,
-    });
+    try {
+      await updateTicketStatus({
+        ticketId: ticket.id,
+        customerUid: ticket.customerUid,
+        status: "in_progress",
+        workType: "remote_support",
+        note,
+      });
 
-    setMessage("Ticket marked for remote support.");
-  } catch (error) {
-    console.error("Failed to mark remote support:", error);
-    setMessage("Failed to update ticket.");
-  }
-};
+      setMessage("Ticket marked for remote support.");
+    } catch (error) {
+      console.error("Failed to mark remote support:", error);
+      setMessage("Failed to update ticket.");
+    }
+  };
 
-const handleMonitoring = async (ticket: CustomerTicket) => {
-  const note =
-    window.prompt(
-      "Monitoring note to customer:",
-      "We are monitoring your connection stability before closing this ticket."
-    ) ?? "";
+  const handleMonitoring = async (ticket: CustomerTicket) => {
+    const note =
+      window.prompt(
+        "Monitoring note to customer:",
+        "We are monitoring your connection stability before closing this ticket.",
+      ) ?? "";
 
-  try {
-    await updateTicketStatus({
-      ticketId: ticket.id,
-      customerUid: ticket.customerUid,
-      status: "monitoring",
-      workType: "monitoring",
-      note,
-    });
+    try {
+      await updateTicketStatus({
+        ticketId: ticket.id,
+        customerUid: ticket.customerUid,
+        status: "monitoring",
+        workType: "monitoring",
+        note,
+      });
 
-    setMessage("Ticket marked as monitoring.");
-  } catch (error) {
-    console.error("Failed to mark monitoring:", error);
-    setMessage("Failed to update ticket.");
-  }
-};
+      setMessage("Ticket marked as monitoring.");
+    } catch (error) {
+      console.error("Failed to mark monitoring:", error);
+      setMessage("Failed to update ticket.");
+    }
+  };
 
-const handleResolveTicket = async (ticket: CustomerTicket) => {
-  const note =
-    window.prompt(
-      "Resolution note to customer:",
-      "Your ticket has been resolved. Please contact support if the issue continues."
-    ) ?? "";
+  const handleStatusChange = async (
+    ticket: CustomerTicket,
+    status: TicketStatus,
+  ) => {
+    const note =
+      window.prompt(
+        "Note to customer:",
+        `Your ticket is now ${status.replace("_", " ")}.`,
+      ) ?? "";
 
-  try {
-    await updateTicketStatus({
-      ticketId: ticket.id,
-      customerUid: ticket.customerUid,
-      status: "resolved",
-      note,
-    });
+    try {
+      await updateTicketStatus({
+        ticketId: ticket.id,
+        customerUid: ticket.customerUid,
+        status,
+        note,
+      });
 
-    setMessage("Ticket resolved and customer notified.");
-  } catch (error) {
-    console.error("Failed to resolve ticket:", error);
-    setMessage("Failed to resolve ticket.");
-  }
-};
+      setMessage(`Ticket marked as ${status.replace("_", " ")}.`);
+    } catch (error) {
+      console.error("Failed to update ticket status:", error);
+      setMessage("Failed to update ticket.");
+    }
+  };
+
+  const handleResolveTicket = async (ticket: CustomerTicket) => {
+    const note =
+      window.prompt(
+        "Resolution note to customer:",
+        "Your ticket has been resolved. Please contact support if the issue continues.",
+      ) ?? "";
+
+    try {
+      await updateTicketStatus({
+        ticketId: ticket.id,
+        customerUid: ticket.customerUid,
+        status: "resolved",
+        note,
+      });
+
+      setMessage("Ticket resolved and customer notified.");
+    } catch (error) {
+      console.error("Failed to resolve ticket:", error);
+      setMessage("Failed to resolve ticket.");
+    }
+  };
 
   return (
     <StaffLayout
@@ -317,7 +344,8 @@ const handleResolveTicket = async (ticket: CustomerTicket) => {
                 Support Tickets
               </p>
               <p className="text-[#94A3B8] text-xs mt-0.5">
-                Personal customer issues. These are not public network incidents.
+                Personal customer issues. These are not public network
+                incidents.
               </p>
             </div>
 
@@ -329,9 +357,7 @@ const handleResolveTicket = async (ticket: CustomerTicket) => {
           {filteredTickets.length === 0 ? (
             <div className="p-8 text-center">
               <Ticket size={30} className="text-[#94A3B8] mx-auto mb-2" />
-              <p className="text-[#64748B] text-sm">
-                No tickets found.
-              </p>
+              <p className="text-[#64748B] text-sm">No tickets found.</p>
             </div>
           ) : (
             <div className="divide-y divide-[#F1F5F9]">
@@ -358,12 +384,14 @@ const handleResolveTicket = async (ticket: CustomerTicket) => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-[#0F172A] text-sm font-bold">
-                            {ticket.title || ticket.category || "Customer Issue"}
+                            {ticket.title ||
+                              ticket.category ||
+                              "Customer Issue"}
                           </p>
 
                           <span
                             className={`px-2 py-1 rounded-full border text-[10px] font-semibold ${statusBadgeClass(
-                              ticket.status
+                              ticket.status,
                             )}`}
                           >
                             {ticket.status.replace("_", " ")}
@@ -371,7 +399,7 @@ const handleResolveTicket = async (ticket: CustomerTicket) => {
 
                           <span
                             className={`px-2 py-1 rounded-full text-[10px] font-semibold ${priorityBadgeClass(
-                              ticket.priority
+                              ticket.priority,
                             )}`}
                           >
                             {ticket.priority} priority
@@ -381,6 +409,39 @@ const handleResolveTicket = async (ticket: CustomerTicket) => {
                         <p className="text-[#64748B] text-xs mt-2 leading-relaxed">
                           {ticket.description}
                         </p>
+
+                        {ticket.speedTest && (
+                          <div className="mt-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Gauge size={14} className="text-[#0057B8]" />
+                              <p className="text-[#0F172A] text-xs font-semibold">
+                                Speed Test Evidence
+                              </p>
+                              <span className="text-[#94A3B8] text-[10px]">
+                                {ticket.speedTest.connectedDevices} device(s)
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2 text-xs">
+                              <div className="flex items-center gap-1 text-[#64748B]">
+                                <Download size={12} />
+                                <span>
+                                  {ticket.speedTest.downloadMbps} Mbps down
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 text-[#64748B]">
+                                <Upload size={12} />
+                                <span>
+                                  {ticket.speedTest.uploadMbps} Mbps up
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 text-[#64748B]">
+                                <Timer size={12} />
+                                <span>{ticket.speedTest.latencyMs} ms</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
 
                         <div className="grid grid-cols-2 xl:grid-cols-4 gap-2 mt-3">
                           <div className="flex items-center gap-1.5 text-[#64748B] text-xs">
@@ -403,71 +464,79 @@ const handleResolveTicket = async (ticket: CustomerTicket) => {
                             <span>{formatTimeAgo(ticket)}</span>
                           </div>
                         </div>
-                            <div className="mt-3 flex flex-wrap items-center gap-3 text-[#94A3B8] text-xs">
-                              <span>Customer No: {ticket.customerNumber}</span>
-                              <span>Router: {ticket.routerSerial}</span>
-                              <span>Package: {ticket.packageName}</span>
-                              <span>Work Type: {workTypeLabel(ticket.workType)}</span>
-                              {ticket.assignedTechnicianName && (
-                                <span>Tech: {ticket.assignedTechnicianName}</span>
-                              )}
-                              {ticket.eta && <span>ETA: {ticket.eta}</span>}
-                            </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-3 text-[#94A3B8] text-xs">
+                          <span>Customer No: {ticket.customerNumber}</span>
+                          <span>Router: {ticket.routerSerial}</span>
+                          <span>Package: {ticket.packageName}</span>
+                          <span>
+                            Work Type: {workTypeLabel(ticket.workType)}
+                          </span>
+                          {ticket.assignedTechnicianName && (
+                            <span>Tech: {ticket.assignedTechnicianName}</span>
+                          )}
+                          {ticket.eta && <span>ETA: {ticket.eta}</span>}
+                        </div>
                       </div>
                     </div>
 
-                                      <div className="flex flex-col gap-2 shrink-0 min-w-[160px]">
-                    {ticket.workType !== "technician" && ticket.status !== "resolved" && (
-                      <button
-                        type="button"
-                        onClick={() => handleAssignTechnician(ticket)}
-                        className="px-3 py-2 bg-[#EBF2FF] text-[#0057B8] rounded-xl text-xs font-semibold"
-                      >
-                        Assign Technician
-                      </button>
-                    )}
-                  
-                    {ticket.workType !== "remote_support" && ticket.status !== "resolved" && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoteSupport(ticket)}
-                        className="px-3 py-2 bg-[#F8FAFC] text-[#475569] border border-[#E2E8F0] rounded-xl text-xs font-semibold"
-                      >
-                        Remote Support
-                      </button>
-                    )}
-                  
-                    {ticket.status !== "monitoring" && ticket.status !== "resolved" && (
-                      <button
-                        type="button"
-                        onClick={() => handleMonitoring(ticket)}
-                        className="px-3 py-2 bg-[#FCE7F3] text-[#E5007D] rounded-xl text-xs font-semibold"
-                      >
-                        Monitor
-                      </button>
-                    )}
-                  
-                    {ticket.status !== "in_progress" && ticket.status !== "resolved" && (
-                      <button
-                        type="button"
-                        onClick={() => handleStatusChange(ticket, "in_progress")}
-                        className="px-3 py-2 bg-[#FFFBEB] text-[#B45309] rounded-xl text-xs font-semibold"
-                      >
-                        In Progress
-                      </button>
-                    )}
-                  
-                    {ticket.status !== "resolved" && (
-                      <button
-                        type="button"
-                        onClick={() => handleResolveTicket(ticket)}
-                        className="px-3 py-2 bg-[#F0FDF4] text-[#15803D] rounded-xl text-xs font-semibold flex items-center justify-center gap-1"
-                      >
-                        <CheckCircle size={13} />
-                        Resolve
-                      </button>
-                    )}
-                  </div>
+                    <div className="flex flex-col gap-2 shrink-0 min-w-[160px]">
+                      {ticket.workType !== "technician" &&
+                        ticket.status !== "resolved" && (
+                          <button
+                            type="button"
+                            onClick={() => handleAssignTechnician(ticket)}
+                            className="px-3 py-2 bg-[#EBF2FF] text-[#0057B8] rounded-xl text-xs font-semibold"
+                          >
+                            Assign Technician
+                          </button>
+                        )}
+
+                      {ticket.workType !== "remote_support" &&
+                        ticket.status !== "resolved" && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoteSupport(ticket)}
+                            className="px-3 py-2 bg-[#F8FAFC] text-[#475569] border border-[#E2E8F0] rounded-xl text-xs font-semibold"
+                          >
+                            Remote Support
+                          </button>
+                        )}
+
+                      {ticket.status !== "monitoring" &&
+                        ticket.status !== "resolved" && (
+                          <button
+                            type="button"
+                            onClick={() => handleMonitoring(ticket)}
+                            className="px-3 py-2 bg-[#FCE7F3] text-[#E5007D] rounded-xl text-xs font-semibold"
+                          >
+                            Monitor
+                          </button>
+                        )}
+
+                      {ticket.status !== "in_progress" &&
+                        ticket.status !== "resolved" && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleStatusChange(ticket, "in_progress")
+                            }
+                            className="px-3 py-2 bg-[#FFFBEB] text-[#B45309] rounded-xl text-xs font-semibold"
+                          >
+                            In Progress
+                          </button>
+                        )}
+
+                      {ticket.status !== "resolved" && (
+                        <button
+                          type="button"
+                          onClick={() => handleResolveTicket(ticket)}
+                          className="px-3 py-2 bg-[#F0FDF4] text-[#15803D] rounded-xl text-xs font-semibold flex items-center justify-center gap-1"
+                        >
+                          <CheckCircle size={13} />
+                          Resolve
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
