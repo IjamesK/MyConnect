@@ -1,3 +1,4 @@
+import { useTranslation } from "../../../lib/useTranslation";
 import { ReactNode, useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router";
 import {
@@ -23,10 +24,10 @@ interface LayoutProps {
 }
 
 const navItems = [
-  { icon: Home, label: "Home", path: "/dashboard" },
-  { icon: Activity, label: "Status", path: "/service-status" },
-  { icon: Headphones, label: "Support", path: "/report-issue" },
-  { icon: User, label: "Account", path: "/subscription" },
+  { icon: Home, label: t.home, path: "/dashboard" },
+  { icon: Activity, label: t.status, path: "/service-status" },
+  { icon: Headphones, label: t.support, path: "/report-issue" },
+  { icon: User, label: t.account, path: "/subscription" },
 ];
 
 export function Layout({
@@ -38,6 +39,7 @@ export function Layout({
 }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
 
   const [liveNotificationCount, setLiveNotificationCount] = useState(0);
 
