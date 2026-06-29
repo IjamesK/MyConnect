@@ -18,47 +18,6 @@ import {
   type PublicIncident,
 } from "../../../lib/incidents";
 
-const { t } = useTranslation();
-
-const issues = [
-  {
-    icon: WifiOff,
-    label: "{t.noInternet}",
-    desc: "Can't connect at all",
-    value: "no-internet",
-  },
-  {
-    icon: Zap,
-    label: "{t.Slow Internet}",
-    desc: "Slower than expected speed",
-    value: "slow",
-  },
-  {
-    icon: Wifi,
-    label: "Wi-Fi Problems",
-    desc: "Signal, SSID, or router issues",
-    value: "wifi",
-  },
-  {
-    icon: AlertCircle,
-    label: "Intermittent",
-    desc: "Connection keeps dropping",
-    value: "intermittent",
-  },
-  {
-    icon: KeyRound,
-    label: "Change Wi-Fi Password",
-    desc: "Guidance or password reset request",
-    value: "password-reset",
-  },
-  {
-    icon: HelpCircle,
-    label: "Other Issue",
-    desc: "Something else",
-    value: "other",
-  },
-];
-
 const devices = [
   {
     label: "White ZTE ONT",
@@ -89,6 +48,49 @@ function incidentLabel(incident: PublicIncident) {
 
 export function Troubleshooter() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+
+  const issues = useMemo(
+    () => [
+      {
+        icon: WifiOff,
+        label: t.noInternet,
+        desc: "Can't connect at all",
+        value: "no-internet",
+      },
+      {
+        icon: Zap,
+        label: t.slowInternet,
+        desc: "Slower than expected speed",
+        value: "slow",
+      },
+      {
+        icon: Wifi,
+        label: t.wifiProblems,
+        desc: "Signal, SSID, or router issues",
+        value: "wifi",
+      },
+      {
+        icon: AlertCircle,
+        label: "Intermittent",
+        desc: "Connection keeps dropping",
+        value: "intermittent",
+      },
+      {
+        icon: KeyRound,
+        label: t.changeWifiPassword,
+        desc: "Guidance or password reset request",
+        value: "password-reset",
+      },
+      {
+        icon: HelpCircle,
+        label: "Other Issue",
+        desc: "Something else",
+        value: "other",
+      },
+    ],
+    [t]
+  );
 
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [incidents, setIncidents] = useState<PublicIncident[]>([]);
