@@ -37,7 +37,7 @@ export function Layout({
   const navItems = [
     { icon: Home, label: t.home, path: "/dashboard" },
     { icon: Activity, label: t.status, path: "/service-status" },
-    { icon: Headphones, label: t.support, path: "/report-issue" },
+    { icon: Headphones, label: "Report", path: "/report-issue" },
     { icon: User, label: t.account, path: "/subscription" },
   ];
 
