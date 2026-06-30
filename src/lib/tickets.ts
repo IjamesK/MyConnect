@@ -16,6 +16,7 @@ import { db } from "./firebase";
 import type { CustomerProfile } from "./auth";
 import { createCustomerNotification } from "./notifications";
 import type { SpeedTestResult } from "./speedTest";
+import type { RouterLightCheck } from "./routerTypes";
 
 export type TicketStatus =
   | "open"
@@ -40,6 +41,7 @@ export type TicketUpdate = {
 };
 
 export type TicketSpeedTest = SpeedTestResult;
+export type TicketRouterLightCheck = RouterLightCheck;
 
 export type CustomerTicket = {
   id: string;
@@ -69,6 +71,7 @@ export type CustomerTicket = {
   photoCount?: number;
   locationNote?: string;
   speedTest?: TicketSpeedTest | null;
+  routerLightCheck?: TicketRouterLightCheck | null;
 
   updates?: TicketUpdate[];
 
@@ -103,6 +106,7 @@ export async function createTicket(
     photoCount?: number;
     locationNote?: string;
     speedTest?: TicketSpeedTest | null;
+    routerLightCheck?: TicketRouterLightCheck | null;
   }
 ) {
   const workType = data.workType ?? inferWorkType(data.category);
@@ -133,6 +137,7 @@ export async function createTicket(
     photoCount: data.photoCount ?? 0,
     locationNote: data.locationNote ?? "",
     speedTest: data.speedTest ?? null,
+    routerLightCheck: data.routerLightCheck ?? null,
 
     updates: [
       {

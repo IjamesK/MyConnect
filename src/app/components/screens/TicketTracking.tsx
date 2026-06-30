@@ -345,6 +345,27 @@ export function TicketTracking() {
           </div>
         )}
 
+        {ticket.routerLightCheck && (
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Wifi size={18} className="text-[var(--color-primary)]" />
+              <p className="text-[var(--color-text)] text-sm font-semibold">
+                Router Light Check
+              </p>
+            </div>
+
+            <div className="space-y-1 text-xs text-[var(--color-muted)]">
+              <p>Router: {ticket.routerLightCheck.routerName}</p>
+              <p>Pattern: {ticket.routerLightCheck.pattern}</p>
+              <p>
+                Selected lights: {ticket.routerLightCheck.selectedLights?.length
+                  ? ticket.routerLightCheck.selectedLights.join(", ")
+                  : "None selected"}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Password reset notice */}
         {isPasswordReset && (
           <div className="bg-[#EBF2FF] border border-[#BFDBFE] rounded-2xl p-4">

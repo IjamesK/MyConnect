@@ -71,6 +71,15 @@ export default function App() {
 />
         
 <Route
+  path="/self-help"
+  element={
+    <ProtectedRoute allowedRoles={["customer", "admin"]}>
+      <Troubleshooter />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
   path="/troubleshoot"
   element={
     <ProtectedRoute allowedRoles={["customer", "admin"]}>

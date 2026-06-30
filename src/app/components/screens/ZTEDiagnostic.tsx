@@ -1,146 +1,73 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Info } from "lucide-react";
+import type { CustomerProfile } from "../../../lib/auth";
+import {
+  diagnoseRouterLights,
+  normalizeRouterType,
+  routerLightsFor,
+  routerName,
+  ticketTypeFromRouterPattern,
+  type RouterLight,
+} from "../../../lib/routerTypes";
 import { Layout } from "../isp/Layout";
 
-interface LED {
-  id: string;
-  label: string;
-  description: string;
-  normalState: "green" | "off";
-  currentColor: string;
+function loadProfile() {
+  try {
+    const savedProfile = localStorage.getItem("customerProfile");
+    return savedProfile ? (JSON.parse(savedProfile) as CustomerProfile) : null;
+  } catch {
+    return null;
+  }
 }
 
-const successColor = "var(--color-success)";
-const dangerColor = "var(--color-danger)";
-
-const initialLEDs: LED[] = [
-  {
-    id: "power",
-    label: "POWER",
-    normalState: "green",
-    currentColor: "transparent",
-    description: "Device power status",
-  },
-  {
-    id: "pon",
-    label: "PON",
-    normalState: "green",
-    currentColor: "transparent",
-    description: "Fiber signal from the ISP",
-  },
-  {
-    id: "los",
-    label: "LOS",
-    normalState: "off",
-    currentColor: "transparent",
-    description: "Loss of Signal. Red means the fiber signal may be down",
-  },
-  {
-    id: "internet",
-    label: "INTERNET",
-    normalState: "green",
-    currentColor: "transparent",
-    description: "Internet connection status",
-  },
-  {
-    id: "wifi",
-    label: "WiFi",
-    normalState: "green",
-    currentColor: "transparent",
-    description: "Wireless network is active",
-  },
-  {
-    id: "lan1",
-    label: "LAN1",
-    normalState: "green",
-    currentColor: "transparent",
-    description: "Wired device connected",
-  },
-  {
-    id: "lan2",
-    label: "LAN2",
-    normalState: "off",
-    currentColor: "transparent",
-    description: "Second wired device connection",
-  },
-];
-
-function isOn(led: LED) {
-  return led.currentColor !== "transparent";
-}
-
-function getDiagnosisPattern(leds: LED[]) {
-  const state = Object.fromEntries(
-    leds.map((led) => [led.id, isOn(led)])
-  ) as Record<string, boolean>;
-
-  const powerOn = state.power;
-  const ponOn = state.pon;
-  const losRedOn = state.los;
-  const internetOn = state.internet;
-  const wifiOn = state.wifi;
-  const lanOn = state.lan1 || state.lan2;
-
-  if (!powerOn) return "zte_no_power";
-  if (losRedOn) return "zte_los_red";
-  if (powerOn && ponOn && !losRedOn && !internetOn) return "zte_internet_off_noc";
-  if (powerOn && ponOn && internetOn && !wifiOn) return "zte_wifi_disabled";
-  if (powerOn && ponOn && internetOn && wifiOn) return "zte_normal_lights";
-  if (powerOn && !ponOn && !losRedOn) return "zte_fiber_unclear";
-  if (powerOn && lanOn && !internetOn) return "zte_lan_but_no_internet";
-
-  return "zte_unclear";
-}
-
-function routerLightsSummary(leds: LED[]) {
-  return leds
-    .filter(isOn)
-    .map((led) => led.label)
-    .join(",");
+function lightColor(light: RouterLight) {
+  return light.color === "red" ? "var(--color-danger)" : "var(--color-success)";
 }
 
 export function ZTEDiagnostic() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-
-  const issue = searchParams.get("issue") ?? "no-internet";
-
-  const [leds, setLeds] = useState<LED[]>(initialLEDs);
-  const [activeLed, setActiveLed] = useState<string | null>(null);
+  const issue = searchParams.get("issue") ?? "no_internet";
+  const profile = loadProfile();
+  const routerType = normalizeRouterType(profile?.routerType ?? "zte_white");
+  const lights = useMemo(() => routerLightsFor(routerType), [routerType]);
+  const [selectedLights, setSelectedLights] = useState<string[]>([]);
+  const [activeLight, setActiveLight] = useState<string | null>(null);
   const [showInfo, setShowInfo] = useState(false);
 
-  const toggleLed = (id: string) => {
-    setActiveLed(id);
+  const selectedLightObjects = lights.filter((light) =>
+    selectedLights.includes(light.id)
+  );
 
-    setLeds((prev) =>
-      prev.map((led) => {
-        if (led.id !== id) return led;
-
-        if (isOn(led)) {
-          return { ...led, currentColor: "transparent" };
-        }
-
-        return {
-          ...led,
-          currentColor: id === "los" ? dangerColor : successColor,
-        };
-      })
+  const toggleLight = (id: string) => {
+    setActiveLight(id);
+    setSelectedLights((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id]
     );
   };
 
-  const handleAnalyze = () => {
-    const pattern = getDiagnosisPattern(leds);
-    const activeLights = routerLightsSummary(leds);
+  const handleContinue = () => {
+    const pattern = diagnoseRouterLights(routerType, selectedLights, issue);
+    const activeLightLabels = selectedLightObjects
+      .map((light) => light.label)
+      .join(",");
 
     navigate(
-      `/troubleshoot/result?issue=${issue}&device=zte&pattern=${pattern}&lights=${encodeURIComponent(
-        activeLights
+      `/report-issue?mode=ticket&type=${ticketTypeFromRouterPattern(
+        issue,
+        pattern
+      )}&source=router_lights&routerType=${routerType}&pattern=${pattern}&lights=${encodeURIComponent(
+        activeLightLabels
       )}`
     );
   };
 
-  const activeLEDs = leds.filter(isOn);
+  const isBlackOnt = routerType === "alc_black" || routerType === "alcl_black";
+  const deviceWidth = isBlackOnt ? "min-w-[560px]" : "min-w-[390px]";
+  const bodyWidth = isBlackOnt ? "w-[560px]" : "w-[390px]";
 
   return (
     <Layout showBack backTo="/report-issue" title="Check Router Lights">
@@ -158,14 +85,14 @@ export function ZTEDiagnostic() {
             </h1>
 
             <p className="text-[var(--color-muted)] text-sm mt-1">
-              Tap each router light that is currently on, red, or blinking.
+              Your account is linked to {routerName(routerType)}. Tap each light that is currently on, red, or blinking.
             </p>
           </div>
 
           <button
             type="button"
             onClick={() => setShowInfo(!showInfo)}
-            className="w-9 h-9 rounded-full bg-[var(--color-surface-soft)] flex items-center justify-center"
+            className="w-9 h-9 rounded-full bg-[var(--color-surface-soft)] flex items-center justify-center shrink-0"
           >
             <Info size={16} className="text-[var(--color-primary)]" />
           </button>
@@ -177,17 +104,17 @@ export function ZTEDiagnostic() {
               Router light guide
             </p>
 
-            {leds.map((led) => (
-              <div key={led.id} className="flex items-start gap-2 py-1">
+            {lights.map((light) => (
+              <div key={light.id} className="flex items-start gap-2 py-1">
                 <span
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                  className="text-[10px] text-[var(--color-muted)] w-16"
+                  className="text-[10px] text-[var(--color-muted)] w-20 shrink-0 whitespace-nowrap"
                 >
-                  {led.label}
+                  {light.label}
                 </span>
 
                 <span className="text-[var(--color-muted)] text-xs">
-                  {led.description}
+                  {light.description}
                 </span>
               </div>
             ))}
@@ -195,61 +122,78 @@ export function ZTEDiagnostic() {
         )}
 
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
-          <div className="flex justify-center py-3 overflow-x-auto">
-            <div className="relative min-w-[360px]">
+          <div className="flex justify-start py-3 overflow-x-auto">
+            <div className={`relative ${deviceWidth}`}>
               {/* Router body starts */}
-              <div className="w-[360px] h-[145px] bg-gradient-to-b from-[#E2E8F0] to-[#CBD5E1] rounded-2xl border-2 border-[#94A3B8] shadow-xl relative overflow-hidden">
+              <div
+                className={`${bodyWidth} h-[150px] rounded-2xl border-2 shadow-xl relative overflow-hidden ${
+                  isBlackOnt
+                    ? "bg-gradient-to-b from-[#111827] to-[#020617] border-[#334155]"
+                    : "bg-gradient-to-b from-[#E2E8F0] to-[#CBD5E1] border-[#94A3B8]"
+                }`}
+              >
                 <div className="absolute top-3 left-1/2 -translate-x-1/2 text-center">
                   <p
                     style={{
                       fontFamily: "'Inter Tight', system-ui, sans-serif",
                       fontWeight: 800,
                     }}
-                    className="text-[#475569] text-[10px] tracking-[0.25em]"
+                    className={`text-[10px] tracking-[0.25em] ${
+                      isBlackOnt ? "text-white/70" : "text-[#475569]"
+                    }`}
                   >
-                    ZTE
+                    {isBlackOnt ? "ALCL" : "ZTE"}
                   </p>
                 </div>
 
-                <div className="absolute top-8 left-1/2 -translate-x-1/2 w-24 h-1.5 bg-[#94A3B8]/40 rounded-full" />
+                <div
+                  className={`absolute top-8 left-1/2 -translate-x-1/2 w-24 h-1.5 rounded-full ${
+                    isBlackOnt ? "bg-white/15" : "bg-[#94A3B8]/40"
+                  }`}
+                />
 
-                <div className="absolute left-1/2 -translate-x-1/2 top-[52px] flex items-start justify-center gap-3">
-                  {leds.map((led) => {
-                    const selected = isOn(led);
+                <div className="absolute left-1/2 -translate-x-1/2 top-[54px] flex items-start justify-center gap-2.5">
+                  {lights.map((light) => {
+                    const selected = selectedLights.includes(light.id);
+                    const color = lightColor(light);
 
                     return (
                       <button
-                        key={led.id}
+                        key={light.id}
                         type="button"
-                        onClick={() => toggleLed(led.id)}
+                        onClick={() => toggleLight(light.id)}
                         className={`flex flex-col items-center gap-2 px-1.5 py-1 rounded-lg transition-all ${
-                          activeLed === led.id
-                            ? "bg-white/50"
-                            : "hover:bg-white/30"
+                          activeLight === light.id
+                            ? isBlackOnt
+                              ? "bg-white/10"
+                              : "bg-white/50"
+                            : isBlackOnt
+                              ? "hover:bg-white/10"
+                              : "hover:bg-white/30"
                         }`}
-                        aria-label={`Toggle ${led.label}`}
+                        aria-label={`Toggle ${light.label}`}
                       >
                         <div
-                          className={`rounded-full border border-white/20 transition-all ${
-                            selected ? "w-4 h-4" : "w-3.5 h-3.5"
-                          }`}
+                          className={`${selected ? "w-4 h-4" : "w-3.5 h-3.5"} rounded-full border border-white/20 transition-all`}
                           style={{
-                            backgroundColor: selected
-                              ? led.currentColor
-                              : "#0F172A",
-                            boxShadow: selected
-                              ? `0 0 9px ${led.currentColor}`
-                              : "none",
+                            backgroundColor: selected ? color : isBlackOnt ? "#020617" : "#0F172A",
+                            boxShadow: selected ? `0 0 9px ${color}` : "none",
                           }}
                         />
 
                         <span
                           style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                          className={`text-[9px] font-bold whitespace-nowrap leading-none ${
-                            selected ? "text-[#0F172A]" : "text-[#64748B]"
+                          className={`text-[8.5px] font-bold whitespace-nowrap leading-none ${
+                            selected
+                              ? isBlackOnt
+                                ? "text-white"
+                                : "text-[#0F172A]"
+                              : isBlackOnt
+                                ? "text-white/55"
+                                : "text-[#64748B]"
                           }`}
                         >
-                          {led.label}
+                          {light.label}
                         </span>
                       </button>
                     );
@@ -257,8 +201,13 @@ export function ZTEDiagnostic() {
                 </div>
 
                 <div className="absolute bottom-4 right-5 flex gap-1">
-                  {[...Array(4)].map((_, i) => (
-                    <div key={i} className="w-4 h-2.5 bg-[#0F172A] rounded-sm" />
+                  {[...Array(isBlackOnt ? 5 : 4)].map((_, i) => (
+                    <div
+                      key={i}
+                      className={`w-4 h-2.5 rounded-sm ${
+                        isBlackOnt ? "bg-white/20" : "bg-[#0F172A]"
+                      }`}
+                    />
                   ))}
                 </div>
               </div>
@@ -273,24 +222,23 @@ export function ZTEDiagnostic() {
           </p>
 
           <div className="flex flex-wrap gap-2">
-            {activeLEDs.map((led) => (
+            {selectedLightObjects.map((light) => (
               <span
-                key={led.id}
+                key={light.id}
                 style={{
                   fontFamily: "'JetBrains Mono', monospace",
-                  color: led.currentColor,
-                  borderColor: led.currentColor,
+                  color: lightColor(light),
+                  borderColor: lightColor(light),
                 }}
-                className="px-2 py-0.5 rounded-full text-xs font-medium border bg-[var(--color-surface-soft)]"
+                className="px-2 py-0.5 rounded-full text-xs font-medium border bg-[var(--color-surface-soft)] whitespace-nowrap"
               >
-                {led.label}
+                {light.label}
               </span>
             ))}
 
-            {activeLEDs.length === 0 && (
+            {selectedLightObjects.length === 0 && (
               <span className="text-[var(--color-muted)] text-xs">
-                No lights selected yet. Tap the lights you can see on your
-                router.
+                No lights selected yet. Tap the lights you can see on your router.
               </span>
             )}
           </div>
@@ -298,17 +246,14 @@ export function ZTEDiagnostic() {
 
         <div className="bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-xl p-3">
           <p className="text-[var(--color-muted)] text-xs">
-            <span className="font-semibold text-[var(--color-text)]">
-              Tip:
-            </span>{" "}
-            If LOS is red or blinking, it usually points to a fiber signal
-            problem.
+            <span className="font-semibold text-[var(--color-text)]">Tip:</span>{" "}
+            This light check is attached to your ticket so support can understand the issue faster.
           </p>
         </div>
 
         <button
           type="button"
-          onClick={handleAnalyze}
+          onClick={handleContinue}
           className="w-full py-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white rounded-xl font-semibold text-sm transition-colors"
         >
           Continue →

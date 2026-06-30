@@ -443,6 +443,26 @@ export function StaffTickets() {
                           </div>
                         )}
 
+                        {ticket.routerLightCheck && (
+                          <div className="mt-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <WifiOff size={14} className="text-[var(--color-primary)]" />
+                              <p className="text-[var(--color-text)] text-xs font-semibold">
+                                Router Light Evidence
+                              </p>
+                            </div>
+                            <div className="text-[var(--color-muted)] text-xs space-y-1">
+                              <p>Router: {ticket.routerLightCheck.routerName}</p>
+                              <p>Pattern: {ticket.routerLightCheck.pattern}</p>
+                              <p>
+                                Lights: {ticket.routerLightCheck.selectedLights?.length
+                                  ? ticket.routerLightCheck.selectedLights.join(", ")
+                                  : "None selected"}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
                         <div className="grid grid-cols-2 xl:grid-cols-4 gap-2 mt-3">
                           <div className="flex items-center gap-1.5 text-[#64748B] text-xs">
                             <User size={12} />

@@ -7,6 +7,7 @@ import {
 
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
+import type { RouterType } from "./routerTypes";
 
 export type CustomerProfile = {
   uid: string;
@@ -29,6 +30,7 @@ export type CustomerProfile = {
 
   routerModel: string;
   routerSerial: string;
+  routerType?: RouterType;
 
   staffId?: string;
   department?: string;

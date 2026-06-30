@@ -154,7 +154,7 @@ export function CustomerDashboard() {
   if (!profile) {
     return (
       <Layout>
-        <div className="px-4 py-10 text-center text-[#64748B] text-sm">
+        <div className="px-4 py-10 text-center text-[var(--color-muted)] text-sm">
           Loading your account...
         </div>
       </Layout>
@@ -171,21 +171,14 @@ export function CustomerDashboard() {
       icon: RefreshCw,
       label: "Renew",
       sublabel: daysLeft > 0 ? `${daysLeft} Days left` : "Expired",
-      color: "bg-[#FCE7F3] text-[#E5007D]",
+      color: "bg-[var(--color-surface-soft)] text-[var(--color-primary)]",
       path: "/renewal",
     },
     {
-      icon: Wrench,
-      label: "Troubleshoot",
-      sublabel: "Diagnose issues",
-      color: "bg-[#F0FDF4] text-[#15803D]",
-      path: "/troubleshoot",
-    },
-    {
       icon: AlertCircle,
-      label: "Report Issue",
-      sublabel: "Structured ticket",
-      color: "bg-[#FFFBEB] text-[#B45309]",
+      label: "Report",
+      sublabel: "Report a problem",
+      color: "bg-[var(--color-surface-soft)] text-[var(--color-primary)]",
       path: "/report-issue",
     },
     {
@@ -197,8 +190,15 @@ export function CustomerDashboard() {
               activeIncidents.length === 1 ? "" : "s"
             }`
           : "View area status",
-      color: "bg-[#EBF2FF] text-[#0057B8]",
+      color: "bg-[var(--color-surface-soft)] text-[var(--color-primary)]",
       path: "/service-status",
+    },
+    {
+      icon: Wrench,
+      label: "Self Help",
+      sublabel: "Simple guides",
+      color: "bg-[var(--color-surface-soft)] text-[var(--color-primary)]",
+      path: "/self-help",
     },
   ];
 
@@ -207,19 +207,19 @@ export function CustomerDashboard() {
       title: "Package Active",
       desc: `${profile.packageName} — ${formatCurrency(profile.packagePrice)}`,
       time: "Current",
-      color: "text-[#16A34A]",
+      color: "var(--color-success)",
     },
     {
       title: "Router Linked",
       desc: `${profile.routerModel} — ${profile.routerSerial}`,
       time: "Now",
-      color: "text-[#E5007D]",
+      color: "var(--color-primary)",
     },
     {
       title: "Service Location",
       desc: `${profile.area}, ${profile.district}`,
       time: "Verified",
-      color: "text-[#F59E0B]",
+      color: "var(--color-warning)",
     },
     {
       title: daysLeft > 0 ? "Subscription Valid" : "Subscription Expired",
@@ -228,7 +228,7 @@ export function CustomerDashboard() {
           ? `${daysLeft} days remaining — expires ${profile.expiryDate}`
           : `Expired on ${profile.expiryDate}`,
       time: daysLeft > 0 ? "Active" : "Expired",
-      color: daysLeft > 0 ? "text-[#16A34A]" : "text-red-600",
+      color: daysLeft > 0 ? "var(--color-success)" : "var(--color-danger)",
     },
   ];
 
@@ -350,7 +350,7 @@ export function CustomerDashboard() {
               <button
                 type="button"
                 onClick={() => navigate("/service-status")}
-                className="text-[#0057B8] text-xs font-semibold"
+                className="text-[var(--color-primary)] text-xs font-semibold"
               >
                 View all
               </button>
@@ -361,7 +361,7 @@ export function CustomerDashboard() {
                 key={incident.id}
                 type="button"
                 onClick={() => navigate(`/outage/${incident.id}`)}
-                className="w-full bg-white border border-[#E2E8F0] rounded-xl p-4 flex items-center gap-3 text-left"
+                className="w-full bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 flex items-center gap-3 text-left"
               >
                 <StatusDot
                   status={getIncidentDotStatus(incident)}
@@ -369,13 +369,13 @@ export function CustomerDashboard() {
                 />
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-[#0F172A] text-sm font-semibold truncate">
+                  <p className="text-[var(--color-text)] text-sm font-semibold truncate">
                     {getIncidentLabel(incident)}: {incident.title}
                   </p>
-                  <p className="text-[#94A3B8] text-xs mt-0.5 truncate">
+                  <p className="text-[var(--color-muted)] text-xs mt-0.5 truncate">
                     {incident.description}
                   </p>
-                  <p className="text-[#64748B] text-xs mt-1">
+                  <p className="text-[var(--color-muted)] text-xs mt-1">
                     {incident.status.replace("_", " ")}
                     {incident.estimatedResolution
                       ? ` · ETA: ${incident.estimatedResolution}`
@@ -394,28 +394,28 @@ export function CustomerDashboard() {
           <button
             type="button"
             onClick={() => navigate(`/ticket/${activeTicket.id}`)}
-            className="w-full bg-white border border-[#E2E8F0] rounded-2xl p-4 text-left"
+            className="w-full bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 text-left"
           >
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="flex items-center gap-2">
-                <TicketCheck size={18} className="text-[#0057B8]" />
-                <p className="text-[#0F172A] text-sm font-semibold">
+                <TicketCheck size={18} className="text-[var(--color-primary)]" />
+                <p className="text-[var(--color-text)] text-sm font-semibold">
                   Ticket Progress
                 </p>
               </div>
-              <span className="text-[#0057B8] text-xs font-semibold">
+              <span className="text-[var(--color-primary)] text-xs font-semibold">
                 {progress.label}
               </span>
             </div>
 
-            <p className="text-[#64748B] text-xs mb-3">
+            <p className="text-[var(--color-muted)] text-xs mb-3">
               {activeTicket.title || activeTicket.category} · #
               {activeTicket.id.slice(0, 8)}
             </p>
 
-            <div className="w-full h-2.5 rounded-full bg-[#F1F5F9] overflow-hidden">
+            <div className="w-full h-2.5 rounded-full bg-[var(--color-surface-soft)] overflow-hidden">
               <div
-                className="h-full rounded-full bg-[#0057B8]"
+                className="h-full rounded-full bg-[var(--color-primary)]"
                 style={{ width: `${progress.value}%` }}
               />
             </div>
@@ -423,16 +423,16 @@ export function CustomerDashboard() {
         )}
 
         {/* Internet tips banner */}
-        <div className="bg-[#EBF2FF] border border-[#BFDBFE] rounded-2xl p-4 flex gap-3">
-          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shrink-0">
-            <Lightbulb size={19} className="text-[#0057B8]" />
+        <div className="bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-2xl p-4 flex gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[var(--color-surface)] flex items-center justify-center shrink-0">
+            <Lightbulb size={19} className="text-[var(--color-primary)]" />
           </div>
           <div>
-            <p className="text-[#0F172A] text-sm font-bold">Internet Tip</p>
-            <p className="text-[#0057B8] text-xs font-semibold mt-0.5">
+            <p className="text-[var(--color-text)] text-sm font-bold">Internet Tip</p>
+            <p className="text-[var(--color-primary)] text-xs font-semibold mt-0.5">
               {currentTip.title}
             </p>
-            <p className="text-[#475569] text-xs mt-1 leading-relaxed">
+            <p className="text-[var(--color-muted)] text-xs mt-1 leading-relaxed">
               {currentTip.body}
             </p>
           </div>
@@ -450,7 +450,7 @@ export function CustomerDashboard() {
                   key={label}
                   type="button"
                   onClick={() => navigate(path)}
-                  className="bg-white border border-[#E2E8F0] rounded-xl p-4 flex flex-col gap-2.5 text-left hover:shadow-md transition-shadow active:scale-95"
+                  className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 flex flex-col gap-2.5 text-left hover:shadow-md transition-shadow active:scale-95"
                 >
                   <div
                     className={`w-9 h-9 rounded-xl flex items-center justify-center ${color}`}
@@ -458,10 +458,10 @@ export function CustomerDashboard() {
                     <Icon size={18} />
                   </div>
                   <div>
-                    <p className="text-[#0F172A] text-sm font-semibold">
+                    <p className="text-[var(--color-text)] text-sm font-semibold">
                       {label}
                     </p>
-                    <p className="text-[#94A3B8] text-xs mt-0.5">{sublabel}</p>
+                    <p className="text-[var(--color-muted)] text-xs mt-0.5">{sublabel}</p>
                   </div>
                 </button>
               ),
@@ -475,22 +475,20 @@ export function CustomerDashboard() {
             <p className="text-[var(--color-text)] text-sm font-semibold">
               Recent Activity
             </p>
-            <TrendingUp size={14} className="text-[#94A3B8]" />
+            <TrendingUp size={14} className="text-[var(--color-muted)]" />
           </div>
-          <div className="bg-white border border-[#E2E8F0] rounded-xl divide-y divide-[#F1F5F9]">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl divide-y divide-[var(--color-border)]">
             {recentActivity.map(({ title, desc, time, color }) => (
               <div key={title} className="px-4 py-3 flex items-center gap-3">
                 <div
-                  className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${color.replace(
-                    "text-",
-                    "bg-",
-                  )}`}
+                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: color }}
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[#0F172A] text-sm font-medium">{title}</p>
-                  <p className="text-[#94A3B8] text-xs truncate">{desc}</p>
+                  <p className="text-[var(--color-text)] text-sm font-medium">{title}</p>
+                  <p className="text-[var(--color-muted)] text-xs truncate">{desc}</p>
                 </div>
-                <span className="text-[#CBD5E1] text-xs whitespace-nowrap">
+                <span className="text-[var(--color-muted)] text-xs whitespace-nowrap">
                   {time}
                 </span>
               </div>
