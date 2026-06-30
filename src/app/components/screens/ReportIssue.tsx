@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { runBrowserSpeedTest, type SpeedTestResult } from "../../../lib/speedTest";
 import { useNavigate, useSearchParams } from "react-router";
 import { Layout } from "../isp/Layout";
 import {
@@ -85,21 +84,7 @@ export function ReportIssue() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fileRef = useRef<HTMLInputElement>(null);
-  const handleIssueSelect = (issueType: string) => {
-  if (
-    issueType === "no_internet" ||
-    issueType === "los_light" ||
-    issueType === "router_issue"
-  ) {
-    navigate(`/troubleshoot/zte?issue=${issueType}`);
-    return;
-  }
-
-  setMode("ticket");
-  setPersonalIssueType(issueType);
-};
-  
-  const [profile, setProfile] = useState<CustomerProfile | null>(null);
+const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [mode, setMode] = useState<ReportMode>("ticket");
   const [personalIssueType, setPersonalIssueType] = useState("no_internet");
   const [networkIssueType, setNetworkIssueType] =
@@ -112,12 +97,26 @@ export function ReportIssue() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   
-  const [connectedDevices, setConnectedDevices] = useState(1);
   const [submitted, setSubmitted] = useState<{
     mode: ReportMode;
     id: string;
   } | null>(null);
   const [error, setError] = useState("");
+
+  const handleIssueSelect = (issueType: string) => {
+    if (
+      issueType === "no_internet" ||
+      issueType === "los_light" ||
+      issueType === "router_issue"
+    ) {
+      navigate(`/troubleshoot/zte?issue=${issueType}`);
+      return;
+    }
+
+    setMode("ticket");
+    setPersonalIssueType(issueType);
+  };
+
 
   useEffect(() => {
     const savedProfile = localStorage.getItem("customerProfile");
@@ -206,7 +205,7 @@ export function ReportIssue() {
       ) {
         handleRunSpeedTest();
       }
-    }, [mode, personalIssueType]);
+    }, [isSlowSpeedTicket, speedTest, speedTesting]);
 
   const handleSubmit = async () => {
     if (!profile) return;
@@ -218,10 +217,8 @@ export function ReportIssue() {
       return;
     }
 
-    if (mode === "ticket" && personalIssueType === "slow_speed" && !speedTest) {
-      setError(
-        "Please run the speed test first so download and upload speed are attached to the ticket.",
-      );
+    if (mode === "ticket" && personalIssueType === "slow_speed" && speedTesting) {
+      setError("Please wait for the connection check to finish before submitting.");
       return;
     }
 
