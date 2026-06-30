@@ -1,148 +1,86 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Info,
-  Power,
-  Radio,
-  Router,
-  Wifi,
-  WifiOff,
-  Zap,
-} from "lucide-react";
+import { Info } from "lucide-react";
 import { Layout } from "../isp/Layout";
 
-
-type LightQuestion = {
-  key: string;
+interface LED {
+  id: string;
   label: string;
   description: string;
-  icon: typeof Power;
-};
+  normalState: "green" | "off";
+  currentColor: string;
+}
 
-const lightQuestions: LightQuestion[] = [
+const successColor = "var(--color-success)";
+const dangerColor = "var(--color-danger)";
+
+const initialLEDs: LED[] = [
   {
-    key: "power",
-    label: "Power",
-    description: "Is the Power light green/on?",
-    icon: Power,
+    id: "power",
+    label: "PWR",
+    normalState: "green",
+    currentColor: "transparent",
+    description: "Device power status",
   },
   {
-    key: "pon",
+    id: "pon",
     label: "PON",
-    description: "Is the PON light green/on?",
-    icon: Radio,
+    normalState: "green",
+    currentColor: "transparent",
+    description: "Fiber signal from the ISP",
   },
   {
-    key: "los",
+    id: "los",
     label: "LOS",
-    description: "Is the LOS red light on?",
-    icon: AlertTriangle,
+    normalState: "off",
+    currentColor: "transparent",
+    description: "Loss of Signal. Red means the fiber signal may be down",
   },
   {
-    key: "internet",
-    label: "Internet",
-    description: "Is the Internet light green/on?",
-    icon: Zap,
+    id: "internet",
+    label: "INT",
+    normalState: "green",
+    currentColor: "transparent",
+    description: "Internet connection status",
   },
   {
-    key: "wifi",
+    id: "wifi",
     label: "Wi-Fi",
-    description: "Is the Wi-Fi indicator on?",
-    icon: Wifi,
+    normalState: "green",
+    currentColor: "transparent",
+    description: "Wireless network is active",
   },
   {
-    key: "ethernet",
-    label: "Ethernet",
-    description: "Is Ethernet green/on when cable is connected?",
-    icon: Router,
+    id: "lan1",
+    label: "LAN1",
+    normalState: "green",
+    currentColor: "transparent",
+    description: "Wired device connected",
+  },
+  {
+    id: "lan2",
+    label: "LAN2",
+    normalState: "off",
+    currentColor: "transparent",
+    description: "Second wired device connection",
   },
 ];
 
-function lightStatusLabel(value: LightValue) {
-  if (value === "on") return "On";
-  if (value === "off") return "Off";
-  return "Not sure";
+function isOn(led: LED) {
+  return led.currentColor !== "transparent";
 }
 
-function lightStatusClass(value: LightValue) {
-  if (value === "on") return "border-[#16A34A] bg-[#F0FDF4] text-[#15803D]";
-  if (value === "off") return "border-[#DC2626] bg-[#FEF2F2] text-[#DC2626]";
-  return "border-[#CBD5E1] bg-[#F8FAFC] text-[#64748B]";
-}
+function getDiagnosisPattern(leds: LED[]) {
+  const state = Object.fromEntries(
+    leds.map((led) => [led.id, isOn(led)])
+  ) as Record<string, boolean>;
 
-function getPreview(pattern: string) {
-  if (pattern === "zte_no_power") {
-    return {
-      title: "Power issue detected",
-      body: "The ONT may not be powered. Customer should check socket, adapter, and power button before escalation.",
-      color: "bg-[#FFFBEB] border-[#FDE68A] text-[#92400E]",
-      icon: Power,
-    };
-  }
-
-  if (pattern === "zte_los_red") {
-    return {
-      title: "LOS red light detected",
-      body: "This indicates fibre loss of signal. It is likely a fibre cut or physical fibre issue and should be escalated for field support.",
-      color: "bg-[#FEF2F2] border-[#FECACA] text-[#991B1B]",
-      icon: AlertTriangle,
-    };
-  }
-
-  if (pattern === "zte_wifi_disabled") {
-    return {
-      title: "Wi-Fi may be disabled",
-      body: "The customer may have accidentally pressed the Wi-Fi button and turned off wireless broadcasting.",
-      color: "bg-[#EBF2FF] border-[#BFDBFE] text-[#1D4ED8]",
-      icon: WifiOff,
-    };
-  }
-
-  if (pattern === "zte_internet_off_noc") {
-    return {
-      title: "Internet light is off",
-      body: "Power and PON may be okay, but the Internet light is off. This is usually not a fibre cut and should be monitored by NOC.",
-      color: "bg-[#FFFBEB] border-[#FDE68A] text-[#92400E]",
-      icon: Zap,
-    };
-  }
-
-  if (pattern === "zte_slow_speed_normal_lights") {
-    return {
-      title: "Slow speed with normal lights",
-      body: "The ONT lights look normal. Customer should run a speed test and submit results for monitoring.",
-      color: "bg-[#FCE7F3] border-[#FBCFE8] text-[#BE0067]",
-      icon: Wifi,
-    };
-  }
-
-  if (pattern === "zte_normal_lights") {
-    return {
-      title: "ZTE ONT lights look normal",
-      body: "Power, PON, Internet and Wi-Fi indicators appear normal. If the customer still has issues, continue with support checks.",
-      color: "bg-[#F0FDF4] border-[#BBF7D0] text-[#166534]",
-      icon: CheckCircle2,
-    };
-  }
-
-  return {
-    title: "Diagnosis needs more information",
-    body: "The selected light pattern is unclear. Customer may need guided support from the team.",
-    color: "bg-[#F8FAFC] border-[#E2E8F0] text-[#475569]",
-    icon: Info,
-  };
-}
-
-type LightValue = "on" | "off" | "unknown";
-
-function getDiagnosisPattern(data: Record<string, LightValue>, issue: string) {
-  const powerOn = data.power === "on";
-  const ponOn = data.pon === "on";
-  const losRedOn = data.los === "on";
-  const internetOn = data.internet === "on";
-  const wifiOn = data.wifi === "on";
+  const powerOn = state.power;
+  const ponOn = state.pon;
+  const losRedOn = state.los;
+  const internetOn = state.internet;
+  const wifiOn = state.wifi;
+  const lanOn = state.lan1 || state.lan2;
 
   if (!powerOn) {
     return "zte_no_power";
@@ -152,34 +90,34 @@ function getDiagnosisPattern(data: Record<string, LightValue>, issue: string) {
     return "zte_los_red";
   }
 
-  if (!wifiOn && issue === "wifi") {
-    return "zte_wifi_disabled";
-  }
-
-  if (!wifiOn && internetOn) {
-    return "zte_wifi_disabled";
-  }
-
   if (powerOn && ponOn && !losRedOn && !internetOn) {
     return "zte_internet_off_noc";
   }
 
-  if (
-    issue === "slow" &&
-    powerOn &&
-    ponOn &&
-    !losRedOn &&
-    internetOn &&
-    wifiOn
-  ) {
-    return "zte_slow_speed_normal_lights";
+  if (powerOn && ponOn && internetOn && !wifiOn) {
+    return "zte_wifi_disabled";
   }
 
-  if (powerOn && ponOn && !losRedOn && internetOn) {
+  if (powerOn && ponOn && internetOn && wifiOn) {
     return "zte_normal_lights";
   }
 
+  if (powerOn && !ponOn && !losRedOn) {
+    return "zte_fiber_unclear";
+  }
+
+  if (powerOn && lanOn && !internetOn) {
+    return "zte_lan_but_no_internet";
+  }
+
   return "zte_unclear";
+}
+
+function routerLightsSummary(leds: LED[]) {
+  return leds
+    .filter(isOn)
+    .map((led) => led.label)
+    .join(",");
 }
 
 export function ZTEDiagnostic() {
@@ -188,189 +126,248 @@ export function ZTEDiagnostic() {
 
   const issue = searchParams.get("issue") ?? "no-internet";
 
-  const [lights, setLights] = useState<Record<string, LightValue>>({
-    power: "on",
-    pon: "on",
-    los: "off",
-    internet: issue === "no-internet" ? "off" : "on",
-    wifi: issue === "wifi" ? "off" : "on",
-    ethernet: "unknown",
-  });
+  const [leds, setLeds] = useState<LED[]>(initialLEDs);
+  const [activeLed, setActiveLed] = useState<string | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
 
-  const pattern = useMemo(() => {
-    return getDiagnosisPattern(lights, issue);
-  }, [lights, issue]);
+  const toggleLed = (id: string) => {
+    setActiveLed(id);
 
-  const preview = getPreview(pattern);
-  const PreviewIcon = preview.icon;
+    setLeds((prev) =>
+      prev.map((led) => {
+        if (led.id !== id) return led;
 
-  const setLight = (key: string, value: LightValue) => {
-    setLights((current) => ({
-      ...current,
-      [key]: value,
-    }));
+        if (isOn(led)) {
+          return { ...led, currentColor: "transparent" };
+        }
+
+        return {
+          ...led,
+          currentColor: id === "los" ? dangerColor : successColor,
+        };
+      })
+    );
   };
 
-const handleAnalyze = () => {
-  const pattern = getDiagnosisPattern(lights, issue);
+  const handleAnalyze = () => {
+    const pattern = getDiagnosisPattern(leds);
+    const activeLights = routerLightsSummary(leds);
 
-  navigate(`/troubleshoot/result?issue=${issue}&device=zte&pattern=${pattern}`);
-};
-  
+    navigate(
+      `/troubleshoot/result?issue=${issue}&device=zte&pattern=${pattern}&lights=${encodeURIComponent(
+        activeLights
+      )}`
+    );
+  };
+
+  const activeLEDs = leds.filter(isOn);
+
   return (
-    <Layout showBack backTo="/troubleshoot" title="ZTE ONT Check">
-      <div className="px-4 py-5 space-y-5">
-        <div>
-          <h1
-            style={{
-              fontFamily: "'Inter Tight', system-ui, sans-serif",
-              fontWeight: 800,
-            }}
-            className="text-[#0F172A] text-2xl"
-          >
-            White ZTE ONT Lights
-          </h1>
-
-          <p className="text-[#64748B] text-sm mt-1">
-            Select what the customer sees on the ZTE ONT. The app will suggest
-            the likely issue and next step.
-          </p>
-        </div>
-
-        {/* Healthy reference */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4">
-          <p className="text-[#0F172A] text-sm font-semibold mb-3">
-            Normal working indicators
-          </p>
-
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="flex items-center gap-2 text-[#475569]">
-              <span className="w-2 h-2 rounded-full bg-[#16A34A]" />
-              Power: Green
-            </div>
-
-            <div className="flex items-center gap-2 text-[#475569]">
-              <span className="w-2 h-2 rounded-full bg-[#16A34A]" />
-              PON: Green
-            </div>
-
-            <div className="flex items-center gap-2 text-[#475569]">
-              <span className="w-2 h-2 rounded-full bg-[#16A34A]" />
-              Internet: Green
-            </div>
-
-            <div className="flex items-center gap-2 text-[#475569]">
-              <span className="w-2 h-2 rounded-full bg-[#16A34A]" />
-              Wi-Fi: Green unless disabled
-            </div>
-
-            <div className="flex items-center gap-2 text-[#475569] col-span-2">
-              <span className="w-2 h-2 rounded-full bg-[#16A34A]" />
-              Ethernet: Green only when LAN cable is in use
-            </div>
-          </div>
-        </div>
-
-        {/* Light selector */}
-        <div className="space-y-3">
-          {lightQuestions.map(({ key, label, description, icon: Icon }) => (
-            <div
-              key={key}
-              className="bg-white border border-[#E2E8F0] rounded-2xl p-4"
+    <Layout showBack backTo="/report-issue" title="Check Router Lights">
+      <div className="px-4 py-5 space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1
+              style={{
+                fontFamily: "'Inter Tight', system-ui, sans-serif",
+                fontWeight: 800,
+              }}
+              className="text-[var(--color-text)] text-2xl"
             >
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-9 h-9 rounded-xl bg-[#EBF2FF] flex items-center justify-center">
-                  <Icon size={17} className="text-[#0057B8]" />
-                </div>
+              Tell us what lights you see
+            </h1>
 
-                <div className="flex-1">
-                  <p className="text-[#0F172A] text-sm font-semibold">{label}</p>
-                  <p className="text-[#94A3B8] text-xs">{description}</p>
-                </div>
+            <p className="text-[var(--color-muted)] text-sm mt-1">
+              Tap each router light that is currently on, red, or blinking.
+            </p>
+          </div>
 
+          <button
+            type="button"
+            onClick={() => setShowInfo(!showInfo)}
+            className="w-9 h-9 rounded-full bg-[var(--color-surface-soft)] flex items-center justify-center"
+          >
+            <Info size={16} className="text-[var(--color-primary)]" />
+          </button>
+        </div>
+
+        {showInfo && (
+          <div className="bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-xl p-4">
+            <p className="text-[var(--color-primary)] text-xs font-semibold mb-2">
+              Router light guide
+            </p>
+
+            {leds.map((led) => (
+              <div key={led.id} className="flex items-start gap-2 py-1">
                 <span
-                  className={`px-2 py-1 rounded-full border text-[10px] font-semibold ${lightStatusClass(
-                    lights[key]
-                  )}`}
+                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                  className="text-[10px] text-[var(--color-muted)] w-12"
                 >
-                  {lightStatusLabel(lights[key])}
+                  {led.label}
+                </span>
+
+                <span className="text-[var(--color-muted)] text-xs">
+                  {led.description}
                 </span>
               </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setLight(key, "on")}
-                  className={`py-2 rounded-xl text-xs font-semibold border ${
-                    lights[key] === "on"
-                      ? "border-[#16A34A] bg-[#F0FDF4] text-[#15803D]"
-                      : "border-[#E2E8F0] bg-white text-[#64748B]"
-                  }`}
-                >
-                  On
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setLight(key, "off")}
-                  className={`py-2 rounded-xl text-xs font-semibold border ${
-                    lights[key] === "off"
-                      ? "border-[#DC2626] bg-[#FEF2F2] text-[#DC2626]"
-                      : "border-[#E2E8F0] bg-white text-[#64748B]"
-                  }`}
-                >
-                  Off
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setLight(key, "unknown")}
-                  className={`py-2 rounded-xl text-xs font-semibold border ${
-                    lights[key] === "unknown"
-                      ? "border-[#64748B] bg-[#F8FAFC] text-[#475569]"
-                      : "border-[#E2E8F0] bg-white text-[#64748B]"
-                  }`}
-                >
-                  Not sure
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Diagnosis preview */}
-        <div className={`border rounded-2xl p-4 ${preview.color}`}>
-          <div className="flex items-start gap-3">
-            <PreviewIcon size={20} className="shrink-0 mt-0.5" />
-
-            <div>
-              <p className="text-sm font-bold">{preview.title}</p>
-              <p className="text-xs mt-1 leading-relaxed">{preview.body}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Slow speed note */}
-        {issue === "slow" && (
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4">
-            <p className="text-[#0F172A] text-sm font-semibold">
-              Speed test note
-            </p>
-
-            <p className="text-[#64748B] text-xs mt-1 leading-relaxed">
-              Since we do not yet have a reliable free speed test API integrated,
-              the customer can run a speed test manually and include the download,
-              upload, ping, and whether they tested on Wi-Fi or cable.
-            </p>
+            ))}
           </div>
         )}
+
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
+          <div className="flex justify-center py-3">
+            <div className="relative">
+              {/* Router body. These colours are part of the physical device illustration. */}
+              <div className="w-28 h-72 bg-gradient-to-b from-[#E2E8F0] to-[#CBD5E1] rounded-2xl border-2 border-[#94A3B8] shadow-xl relative overflow-hidden">
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-[#94A3B8]/50 rounded-full" />
+
+                <div className="absolute top-6 left-1/2 -translate-x-1/2 text-center">
+                  <p
+                    style={{
+                      fontFamily: "'Inter Tight', system-ui, sans-serif",
+                      fontWeight: 800,
+                    }}
+                    className="text-[#475569] text-[9px] tracking-widest"
+                  >
+                    ZTE
+                  </p>
+                </div>
+
+                <div className="absolute left-3 top-12 bottom-12 w-5 bg-[#1E293B] rounded-lg flex flex-col items-center justify-around py-2">
+                  {leds.map((led) => (
+                    <button
+                      key={led.id}
+                      type="button"
+                      onClick={() => toggleLed(led.id)}
+                      className="relative"
+                      aria-label={`Toggle ${led.label}`}
+                    >
+                      <div
+                        className="w-3 h-3 rounded-full border border-white/20 transition-all"
+                        style={{
+                          backgroundColor: isOn(led)
+                            ? led.currentColor
+                            : "#0F172A",
+                          boxShadow: isOn(led)
+                            ? `0 0 8px ${led.currentColor}`
+                            : "none",
+                        }}
+                      />
+                    </button>
+                  ))}
+                </div>
+
+                <div className="absolute right-3 top-16 space-y-2">
+                  {[...Array(6)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-3 h-0.5 bg-[#94A3B8]/40 rounded"
+                    />
+                  ))}
+                </div>
+
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="w-3 h-2 bg-[#0F172A] rounded-sm" />
+                  ))}
+                </div>
+              </div>
+
+              {/* LED labels beside device */}
+              <div className="absolute left-full ml-4 top-12 bottom-12 flex flex-col justify-around">
+                {leds.map((led) => {
+                  const selected = isOn(led);
+
+                  return (
+                    <button
+                      key={led.id}
+                      type="button"
+                      onClick={() => toggleLed(led.id)}
+                      className={`flex items-center gap-2 px-2 py-1 rounded-lg transition-all ${
+                        activeLed === led.id
+                          ? "bg-[var(--color-surface-soft)]"
+                          : ""
+                      }`}
+                    >
+                      <div
+                        className="w-2.5 h-2.5 rounded-full border flex-shrink-0"
+                        style={{
+                          backgroundColor: selected
+                            ? led.currentColor
+                            : "transparent",
+                          borderColor: selected
+                            ? led.currentColor
+                            : "var(--color-border)",
+                          boxShadow: selected
+                            ? `0 0 6px ${led.currentColor}`
+                            : "none",
+                        }}
+                      />
+
+                      <span
+                        style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                        className={`text-[11px] font-medium ${
+                          selected
+                            ? "text-[var(--color-text)]"
+                            : "text-[var(--color-muted)]"
+                        }`}
+                      >
+                        {led.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
+          <p className="text-[var(--color-text)] text-xs font-semibold mb-2">
+            Selected lights
+          </p>
+
+          <div className="flex flex-wrap gap-2">
+            {activeLEDs.map((led) => (
+              <span
+                key={led.id}
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  backgroundColor: `color-mix(in srgb, ${led.currentColor} 14%, transparent)`,
+                  color: led.currentColor,
+                  borderColor: `color-mix(in srgb, ${led.currentColor} 35%, transparent)`,
+                }}
+                className="px-2 py-0.5 rounded-full text-xs font-medium border"
+              >
+                {led.label}
+              </span>
+            ))}
+
+            {activeLEDs.length === 0 && (
+              <span className="text-[var(--color-muted)] text-xs">
+                No lights selected yet. Tap the lights you can see on your
+                router.
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-xl p-3">
+          <p className="text-[var(--color-muted)] text-xs">
+            <span className="font-semibold text-[var(--color-text)]">
+              Tip:
+            </span>{" "}
+            If LOS is red or blinking, it usually points to a fiber signal
+            problem.
+          </p>
+        </div>
 
         <button
           type="button"
           onClick={handleAnalyze}
-          className="w-full py-3 bg-[#0057B8] hover:bg-[#003D82] text-white rounded-xl font-semibold text-sm transition-colors"
+          className="w-full py-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white rounded-xl font-semibold text-sm transition-colors"
         >
-          Analyze ZTE Lights →
+          Continue →
         </button>
       </div>
     </Layout>
