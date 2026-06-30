@@ -96,6 +96,18 @@ const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [speedTesting, setSpeedTesting] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const patternParam = searchParams.get("pattern");
+  const lightsParam = searchParams.get("lights");
+  const sourceParam = searchParams.get("source");
+
+  const routerLightNote =
+  sourceParam === "router_lights"
+    ? `
+
+Router light check:
+Pattern: ${patternParam || "Not detected"}
+Selected lights: ${lightsParam || "None selected"}`
+    : "";
   
   const [submitted, setSubmitted] = useState<{
     mode: ReportMode;
@@ -233,7 +245,7 @@ const [profile, setProfile] = useState<CustomerProfile | null>(null);
         const ticketId = await createTicket(profile, {
           category: personalIssueType,
           title: selectedIssue?.label ?? "Customer Issue",
-          description: speedTest
+          description: `${description.trim()}${routerLightNote}`,
             ? `${description.trim()}\n\nSpeed test attached: ${speedTest.downloadMbps} Mbps download, ${speedTest.uploadMbps} Mbps upload, ${speedTest.latencyMs} ms latency, ${speedTest.connectedDevices} connected device(s), ${qualityLabel(speedTest.quality)}.`
             : description.trim(),
           priority: (selectedIssue?.priority ?? "medium") as TicketPriority,
