@@ -178,9 +178,9 @@ export function ReportIssue() {
     setPhotos((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const isSlowSpeedTicket =
-    mode === "ticket" && personalIssueType === "slow_speed";
-
+    const isSlowSpeedTicket =
+      mode === "ticket" && personalIssueType === "slow_speed";
+    
     const handleRunSpeedTest = async () => {
       setError("");
       setSpeedTesting(true);
@@ -188,8 +188,8 @@ export function ReportIssue() {
       try {
         const result = await runBrowserSpeedTest(connectedDevices);
         setSpeedTest(result);
-      } catch (error) {
-        console.error(error);
+      } catch (err) {
+        console.error("Speed test failed:", err);
         setError(
           "We could not complete the connection check, but you can still submit the report."
         );
@@ -197,26 +197,16 @@ export function ReportIssue() {
         setSpeedTesting(false);
       }
     };
-      useEffect(() => {
-    if (
-      mode === "ticket" &&
-      personalIssueType === "slow_speed" &&
-      !speedTest &&
-      !speedTesting
-    ) {
-      handleRunSpeedTest();
-    }
-  }, [mode, personalIssueType]);
-  
-    } catch (err) {
-      console.error("Speed test failed:", err);
-      setError(
-        "Speed test failed. Please try again or submit the ticket without it after checking your connection.",
-      );
-    } finally {
-      setSpeedTesting(false);
-    }
-  };
+    
+    useEffect(() => {
+      if (
+        isSlowSpeedTicket &&
+        !speedTest &&
+        !speedTesting
+      ) {
+        handleRunSpeedTest();
+      }
+    }, [mode, personalIssueType]);
 
   const handleSubmit = async () => {
     if (!profile) return;
