@@ -84,7 +84,20 @@ export function ReportIssue() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fileRef = useRef<HTMLInputElement>(null);
+  const handleIssueSelect = (issueType: string) => {
+  if (
+    issueType === "no_internet" ||
+    issueType === "los_light" ||
+    issueType === "router_issue"
+  ) {
+    navigate(`/troubleshoot/zte?issue=${issueType}`);
+    return;
+  }
 
+  setMode("ticket");
+  setPersonalIssueType(issueType);
+};
+  
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [mode, setMode] = useState<ReportMode>("ticket");
   const [personalIssueType, setPersonalIssueType] = useState("no_internet");
@@ -97,6 +110,21 @@ export function ReportIssue() {
   const [speedTesting, setSpeedTesting] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const handleRunSpeedTest = async () => {
+  ...
+};
+useEffect(() => {
+  if (
+    mode === "ticket" &&
+    personalIssueType === "slow_speed" &&
+    !speedTest &&
+    !speedTesting
+  ) {
+    handleRunSpeedTest();
+  }
+}, [mode, personalIssueType]);
+  
+  const [connectedDevices, setConnectedDevices] = useState(1);
   const [submitted, setSubmitted] = useState<{
     mode: ReportMode;
     id: string;
@@ -403,10 +431,13 @@ export function ReportIssue() {
                 <button
                   key={value}
                   type="button"
-                  onClick={() => {
-                    if (mode === "ticket") setPersonalIssueType(value);
-                    else setNetworkIssueType(value as IncidentType);
-                  }}
+                    onClick={() => {
+                      if (mode === "ticket") {
+                        handleIssueSelect(value);
+                      } else {
+                        setNetworkIssueType(value as IncidentType);
+                      }
+                    }}
                   className={`px-3 py-2.5 rounded-xl border text-xs font-medium text-left transition-all ${
                     selected
                       ? "border-[#0057B8] bg-[#EBF2FF] text-[#0057B8]"
