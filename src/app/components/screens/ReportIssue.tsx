@@ -111,32 +111,6 @@ export function ReportIssue() {
   const [speedTesting, setSpeedTesting] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const handleRunSpeedTest = async () => {
-  setSpeedTesting(true);
-  setMessage("");
-
-  try {
-    const result = await runBrowserSpeedTest(connectedDevices);
-    setSpeedTest(result);
-  } catch (error) {
-    console.error(error);
-    setMessage(
-      "We could not complete the connection check, but you can still submit the report."
-    );
-  } finally {
-    setSpeedTesting(false);
-  }
-};
-useEffect(() => {
-  if (
-    mode === "ticket" &&
-    personalIssueType === "slow_speed" &&
-    !speedTest &&
-    !speedTesting
-  ) {
-    handleRunSpeedTest();
-  }
-}, [mode, personalIssueType]);
   
   const [connectedDevices, setConnectedDevices] = useState(1);
   const [submitted, setSubmitted] = useState<{
@@ -207,18 +181,33 @@ useEffect(() => {
   const isSlowSpeedTicket =
     mode === "ticket" && personalIssueType === "slow_speed";
 
-  const handleRunSpeedTest = async () => {
-    setError("");
-    setSpeedTesting(true);
-
-    try {
-      const result = await runBrowserSpeedTest(connectedDevices);
-      setSpeedTest(result);
-      setDescription(
-        (current) =>
-          current ||
-          `I am experiencing slow internet. Speed test shows ${result.downloadMbps} Mbps download, ${result.uploadMbps} Mbps upload, ${result.latencyMs} ms latency with ${result.connectedDevices} connected device(s).`,
-      );
+    const handleRunSpeedTest = async () => {
+      setError("");
+      setSpeedTesting(true);
+    
+      try {
+        const result = await runBrowserSpeedTest(connectedDevices);
+        setSpeedTest(result);
+      } catch (error) {
+        console.error(error);
+        setError(
+          "We could not complete the connection check, but you can still submit the report."
+        );
+      } finally {
+        setSpeedTesting(false);
+      }
+    };
+      useEffect(() => {
+    if (
+      mode === "ticket" &&
+      personalIssueType === "slow_speed" &&
+      !speedTest &&
+      !speedTesting
+    ) {
+      handleRunSpeedTest();
+    }
+  }, [mode, personalIssueType]);
+  
     } catch (err) {
       console.error("Speed test failed:", err);
       setError(
