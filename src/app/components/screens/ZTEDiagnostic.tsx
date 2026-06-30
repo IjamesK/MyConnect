@@ -100,17 +100,6 @@ function routerLightsSummary(leds: LED[]) {
     .join(",");
 }
 
- const lights = searchParams.get("lights") ?? "";
-navigate(
-  `/report-issue?mode=ticket&type=${ticketTypeFromIssue(
-    issue,
-    pattern
-  )}&source=router_lights&pattern=${pattern}&lights=${encodeURIComponent(
-    lights
-  )}`
-);
-
-
 export function ZTEDiagnostic() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
