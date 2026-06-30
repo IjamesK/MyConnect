@@ -17,7 +17,7 @@ const dangerColor = "var(--color-danger)";
 const initialLEDs: LED[] = [
   {
     id: "power",
-    label: "PWR",
+    label: "POWER",
     normalState: "green",
     currentColor: "transparent",
     description: "Device power status",
@@ -38,14 +38,14 @@ const initialLEDs: LED[] = [
   },
   {
     id: "internet",
-    label: "INT",
+    label: "INTERNET",
     normalState: "green",
     currentColor: "transparent",
     description: "Internet connection status",
   },
   {
     id: "wifi",
-    label: "Wi-Fi",
+    label: "WiFi",
     normalState: "green",
     currentColor: "transparent",
     description: "Wireless network is active",
@@ -82,33 +82,13 @@ function getDiagnosisPattern(leds: LED[]) {
   const wifiOn = state.wifi;
   const lanOn = state.lan1 || state.lan2;
 
-  if (!powerOn) {
-    return "zte_no_power";
-  }
-
-  if (losRedOn) {
-    return "zte_los_red";
-  }
-
-  if (powerOn && ponOn && !losRedOn && !internetOn) {
-    return "zte_internet_off_noc";
-  }
-
-  if (powerOn && ponOn && internetOn && !wifiOn) {
-    return "zte_wifi_disabled";
-  }
-
-  if (powerOn && ponOn && internetOn && wifiOn) {
-    return "zte_normal_lights";
-  }
-
-  if (powerOn && !ponOn && !losRedOn) {
-    return "zte_fiber_unclear";
-  }
-
-  if (powerOn && lanOn && !internetOn) {
-    return "zte_lan_but_no_internet";
-  }
+  if (!powerOn) return "zte_no_power";
+  if (losRedOn) return "zte_los_red";
+  if (powerOn && ponOn && !losRedOn && !internetOn) return "zte_internet_off_noc";
+  if (powerOn && ponOn && internetOn && !wifiOn) return "zte_wifi_disabled";
+  if (powerOn && ponOn && internetOn && wifiOn) return "zte_normal_lights";
+  if (powerOn && !ponOn && !losRedOn) return "zte_fiber_unclear";
+  if (powerOn && lanOn && !internetOn) return "zte_lan_but_no_internet";
 
   return "zte_unclear";
 }
@@ -201,7 +181,7 @@ export function ZTEDiagnostic() {
               <div key={led.id} className="flex items-start gap-2 py-1">
                 <span
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                  className="text-[10px] text-[var(--color-muted)] w-12"
+                  className="text-[10px] text-[var(--color-muted)] w-16"
                 >
                   {led.label}
                 </span>
@@ -215,109 +195,74 @@ export function ZTEDiagnostic() {
         )}
 
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
-          <div className="flex justify-center py-3">
-            <div className="relative">
-              {/* Router body. These colours are part of the physical device illustration. */}
-              <div className="w-28 h-72 bg-gradient-to-b from-[#E2E8F0] to-[#CBD5E1] rounded-2xl border-2 border-[#94A3B8] shadow-xl relative overflow-hidden">
-                <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-[#94A3B8]/50 rounded-full" />
-
-                <div className="absolute top-6 left-1/2 -translate-x-1/2 text-center">
+          <div className="flex justify-center py-3 overflow-x-auto">
+            <div className="relative min-w-[360px]">
+              {/* Router body starts */}
+              <div className="w-[360px] h-[145px] bg-gradient-to-b from-[#E2E8F0] to-[#CBD5E1] rounded-2xl border-2 border-[#94A3B8] shadow-xl relative overflow-hidden">
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 text-center">
                   <p
                     style={{
                       fontFamily: "'Inter Tight', system-ui, sans-serif",
                       fontWeight: 800,
                     }}
-                    className="text-[#475569] text-[9px] tracking-widest"
+                    className="text-[#475569] text-[10px] tracking-[0.25em]"
                   >
                     ZTE
                   </p>
                 </div>
 
-                <div className="absolute left-3 top-12 bottom-12 w-5 bg-[#1E293B] rounded-lg flex flex-col items-center justify-around py-2">
-                  {leds.map((led) => (
-                    <button
-                      key={led.id}
-                      type="button"
-                      onClick={() => toggleLed(led.id)}
-                      className="relative"
-                      aria-label={`Toggle ${led.label}`}
-                    >
-                      <div
-                        className="w-3 h-3 rounded-full border border-white/20 transition-all"
-                        style={{
-                          backgroundColor: isOn(led)
-                            ? led.currentColor
-                            : "#0F172A",
-                          boxShadow: isOn(led)
-                            ? `0 0 8px ${led.currentColor}`
-                            : "none",
-                        }}
-                      />
-                    </button>
-                  ))}
-                </div>
+                <div className="absolute top-8 left-1/2 -translate-x-1/2 w-24 h-1.5 bg-[#94A3B8]/40 rounded-full" />
 
-                <div className="absolute right-3 top-16 space-y-2">
-                  {[...Array(6)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="w-3 h-0.5 bg-[#94A3B8]/40 rounded"
-                    />
-                  ))}
-                </div>
+                <div className="absolute left-1/2 -translate-x-1/2 top-[52px] flex items-start justify-center gap-3">
+                  {leds.map((led) => {
+                    const selected = isOn(led);
 
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="w-3 h-2 bg-[#0F172A] rounded-sm" />
-                  ))}
-                </div>
-              </div>
-
-              {/* LED labels beside device */}
-              <div className="absolute left-full ml-4 top-12 bottom-12 flex flex-col justify-around">
-                {leds.map((led) => {
-                  const selected = isOn(led);
-
-                  return (
-                    <button
-                      key={led.id}
-                      type="button"
-                      onClick={() => toggleLed(led.id)}
-                      className={`flex items-center gap-2 px-2 py-1 rounded-lg transition-all ${
-                        activeLed === led.id
-                          ? "bg-[var(--color-surface-soft)]"
-                          : ""
-                      }`}
-                    >
-                      <div
-                        className="w-2.5 h-2.5 rounded-full border flex-shrink-0"
-                        style={{
-                          backgroundColor: selected
-                            ? led.currentColor
-                            : "transparent",
-                          borderColor: selected
-                            ? led.currentColor
-                            : "var(--color-border)",
-                          boxShadow: selected
-                            ? `0 0 6px ${led.currentColor}`
-                            : "none",
-                        }}
-                      />
-
-                      <span
-                        style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                        className={`text-[11px] font-medium ${
-                          selected
-                            ? "text-[var(--color-text)]"
-                            : "text-[var(--color-muted)]"
+                    return (
+                      <button
+                        key={led.id}
+                        type="button"
+                        onClick={() => toggleLed(led.id)}
+                        className={`flex flex-col items-center gap-2 px-1.5 py-1 rounded-lg transition-all ${
+                          activeLed === led.id
+                            ? "bg-white/50"
+                            : "hover:bg-white/30"
                         }`}
+                        aria-label={`Toggle ${led.label}`}
                       >
-                        {led.label}
-                      </span>
-                    </button>
-                  );
-                })}
+                        <div
+                          className={`rounded-full border border-white/20 transition-all ${
+                            selected ? "w-4 h-4" : "w-3.5 h-3.5"
+                          }`}
+                          style={{
+                            backgroundColor: selected
+                              ? led.currentColor
+                              : "#0F172A",
+                            boxShadow: selected
+                              ? `0 0 9px ${led.currentColor}`
+                              : "none",
+                          }}
+                        />
+
+                        <span
+                          style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                          className={`text-[9px] font-bold whitespace-nowrap leading-none ${
+                            selected ? "text-[#0F172A]" : "text-[#64748B]"
+                          }`}
+                        >
+                          {led.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="absolute bottom-4 right-5 flex gap-1">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="w-4 h-2.5 bg-[#0F172A] rounded-sm" />
+                  ))}
+                </div>
               </div>
+              {/* Router body ends */}
             </div>
           </div>
         </div>
@@ -333,11 +278,10 @@ export function ZTEDiagnostic() {
                 key={led.id}
                 style={{
                   fontFamily: "'JetBrains Mono', monospace",
-                  backgroundColor: `color-mix(in srgb, ${led.currentColor} 14%, transparent)`,
                   color: led.currentColor,
-                  borderColor: `color-mix(in srgb, ${led.currentColor} 35%, transparent)`,
+                  borderColor: led.currentColor,
                 }}
-                className="px-2 py-0.5 rounded-full text-xs font-medium border"
+                className="px-2 py-0.5 rounded-full text-xs font-medium border bg-[var(--color-surface-soft)]"
               >
                 {led.label}
               </span>
