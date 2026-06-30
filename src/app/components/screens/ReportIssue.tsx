@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { runBrowserSpeedTest, type SpeedTestResult } from "../../../lib/speedTest";
 import { useNavigate, useSearchParams } from "react-router";
 import { Layout } from "../isp/Layout";
 import {
@@ -111,7 +112,20 @@ export function ReportIssue() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const handleRunSpeedTest = async () => {
-  ...
+  setSpeedTesting(true);
+  setMessage("");
+
+  try {
+    const result = await runBrowserSpeedTest(connectedDevices);
+    setSpeedTest(result);
+  } catch (error) {
+    console.error(error);
+    setMessage(
+      "We could not complete the connection check, but you can still submit the report."
+    );
+  } finally {
+    setSpeedTesting(false);
+  }
 };
 useEffect(() => {
   if (
