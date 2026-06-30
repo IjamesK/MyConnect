@@ -9,6 +9,7 @@ export const languageLabels: Record<AppLanguage, string> = {
 
 export const translations = {
   en: {
+    report: "Report",
     settings: "Settings",
     appSettings: "App Settings",
     chooseLanguage: "Choose language",
@@ -34,6 +35,7 @@ export const translations = {
   },
 
   sw: {
+    report: "Ripoti",
     settings: "Mipangilio",
     appSettings: "Mipangilio ya App",
     chooseLanguage: "Chagua lugha",
@@ -59,6 +61,7 @@ export const translations = {
   },
 
   lg: {
+    report: "Loopa",
     settings: "Enteekateeka",
     appSettings: "Enteekateeka za App",
     chooseLanguage: "Londa olulimi",
@@ -84,6 +87,7 @@ export const translations = {
   },
 
   fr: {
+    report: "Signaler",
     settings: "Paramètres",
     appSettings: "Paramètres de l'application",
     chooseLanguage: "Choisir la langue",
