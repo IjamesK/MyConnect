@@ -245,9 +245,13 @@ Selected lights: ${lightsParam || "None selected"}`
         const ticketId = await createTicket(profile, {
           category: personalIssueType,
           title: selectedIssue?.label ?? "Customer Issue",
-          description: `${description.trim()}${routerLightNote}`,
-            ? `${description.trim()}\n\nSpeed test attached: ${speedTest.downloadMbps} Mbps download, ${speedTest.uploadMbps} Mbps upload, ${speedTest.latencyMs} ms latency, ${speedTest.connectedDevices} connected device(s), ${qualityLabel(speedTest.quality)}.`
-            : description.trim(),
+          description: `${description.trim()}${
+            speedTest
+              ? `
+          
+          Speed test attached: ${speedTest.downloadMbps} Mbps download, ${speedTest.uploadMbps} Mbps upload, ${speedTest.latencyMs} ms latency, ${speedTest.connectedDevices} connected device(s), ${qualityLabel(speedTest.quality)}.`
+              : ""
+          }${routerLightNote}`,
           priority: (selectedIssue?.priority ?? "medium") as TicketPriority,
           workType:
             personalIssueType === "password_reset" ||
