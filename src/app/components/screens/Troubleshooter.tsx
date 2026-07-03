@@ -30,7 +30,7 @@ const selfHelpItems = [
         "Tip: Save the new details somewhere safe so you do not forget them.",
       action: "Request password reset",
       path: "/report-issue?mode=ticket&type=password_reset&source=self_help",
-    }
+    },
   {
     icon: Router,
     title: "Understand router lights",
