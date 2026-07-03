@@ -18,7 +18,7 @@ const selfHelpItems = [
       title: "How to change Wi-Fi password",
       body:
         "1. Make sure you are connected to your CanalBox router's Wi-Fi.\n\n" +
-        "2. Open your browser and go to my.canalbox.africa.\n\n" +
+        "2. Open your browser and go to MY.CANALBOX.AFRICA.\n\n" +
         "3. Enter your router serial number, then log in.\n\n" +
         "4. On the top-left corner, tap the drop-down menu.\n\n" +
         "5. Select My Box, then choose Wi-Fi.\n\n" +
