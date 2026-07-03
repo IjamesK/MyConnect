@@ -13,13 +13,24 @@ import {
 import { Layout } from "../isp/Layout";
 
 const selfHelpItems = [
-  {
-    icon: KeyRound,
-    title: "How to change Wi-Fi password",
-    body: "Approved step-by-step router instructions will appear here once you provide them.",
-    action: "Request password reset",
-    path: "/report-issue?mode=ticket&type=password_reset&source=self_help",
-  },
+    {
+      icon: KeyRound,
+      title: "How to change Wi-Fi password",
+      body:
+        "1. Make sure you are connected to your CanalBox router's Wi-Fi.\n\n" +
+        "2. Open your browser and go to my.canalbox.africa.\n\n" +
+        "3. Enter your router serial number, then log in.\n\n" +
+        "4. On the top-left corner, tap the drop-down menu.\n\n" +
+        "5. Select My Box, then choose Wi-Fi.\n\n" +
+        "6. Enter your new Wi-Fi name under SSID.\n\n" +
+        "7. Enter your new Wi-Fi password under New Passphrase.\n\n" +
+        "8. Make sure both the Wi-Fi name and password are at least 8 characters long.\n\n" +
+        "9. Save the changes. Your Wi-Fi will disconnect automatically.\n\n" +
+        "10. Reconnect using your new Wi-Fi name and password.\n\n" +
+        "Tip: Save the new details somewhere safe so you do not forget them.",
+      action: "Request password reset",
+      path: "/report-issue?mode=ticket&type=password_reset&source=self_help",
+    }
   {
     icon: Router,
     title: "Understand router lights",
@@ -106,7 +117,7 @@ export function Troubleshooter() {
                   <p className="text-[var(--color-text)] text-sm font-bold">
                     {title}
                   </p>
-                  <p className="text-[var(--color-muted)] text-xs mt-1 leading-relaxed">
+                  <p className="text-[var(--color-muted)] text-xs mt-1 leading-relaxed whitespace-pre-line">
                     {body}
                   </p>
                 </div>
