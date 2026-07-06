@@ -27,6 +27,7 @@ import {
 import {
   normalizeRouterType,
   routerName,
+  routerPatternLabel,
   type RouterLightCheck,
 } from "../../../lib/routerTypes";
 import { Layout } from "../isp/Layout";
@@ -34,31 +35,33 @@ import { Layout } from "../isp/Layout";
 type ReportMode = "ticket" | "incident";
 
 const personalIssueTypes = [
-  { label: "No Internet", value: "no_internet", priority: "high" },
-  { label: "Slow Speed", value: "slow_speed", priority: "medium" },
-  { label: "LOS Light Red", value: "los_light", priority: "high" },
-  { label: "Router / Wi-Fi Issue", value: "router_issue", priority: "medium" },
+  { icon: "📶", label: "No Internet", value: "no_internet", priority: "high" },
+  { icon: "🐢", label: "Slow Speed", value: "slow_speed", priority: "medium" },
+  { icon: "🔴", label: "LOS Light Red", value: "los_light", priority: "high" },
+  { icon: "📡", label: "Router / Wi-Fi Issue", value: "router_issue", priority: "medium" },
   {
+    icon: "💳",
     label: "Payment Not Reflected",
     value: "payment_not_reflected",
     priority: "medium",
   },
   {
+    icon: "↩️",
     label: "Paid on Wrong Router",
     value: "wrong_router_payment",
     priority: "medium",
   },
-  { label: "Wi-Fi Password Reset", value: "password_reset", priority: "low" },
-  { label: "Other Account Issue", value: "other", priority: "low" },
+  { icon: "🔑", label: "Wi-Fi Password Reset", value: "password_reset", priority: "low" },
+  { icon: "📝", label: "Other Account Issue", value: "other", priority: "low" },
 ] as const;
 
 const networkIssueTypes = [
-  { label: "Knocked Pole", value: "knocked_pole" },
-  { label: "Cable Cut / Vandalism", value: "fiber_cut" },
-  { label: "Damaged Cabinet", value: "damaged_cabinet" },
-  { label: "Area Outage", value: "area_outage" },
-  { label: "Road Construction Damage", value: "outage" },
-  { label: "Other Network Issue", value: "other" },
+  { icon: "🪵", label: "Knocked Pole", value: "knocked_pole" },
+  { icon: "✂️", label: "Cable Cut / Vandalism", value: "fiber_cut" },
+  { icon: "🔧", label: "Damaged Cabinet", value: "damaged_cabinet" },
+  { icon: "📡", label: "Area Outage", value: "area_outage" },
+  { icon: "🏗️", label: "Road Construction Damage", value: "outage" },
+  { icon: "⚠️", label: "Other Network Issue", value: "other" },
 ] as const;
 
 function isPersonalIssueType(value: string) {
@@ -202,6 +205,15 @@ export function ReportIssue() {
       setMode("ticket");
     }
 
+    if (modeParam === "incident") {
+      setMode("incident");
+    }
+
+    if (typeParam && networkIssueTypes.some((item) => item.value === typeParam)) {
+      setMode("incident");
+      setNetworkIssueType(typeParam as IncidentType);
+    }
+
     if (typeParam && isPersonalIssueType(typeParam)) {
       setMode("ticket");
       setPersonalIssueType(typeParam);
@@ -287,7 +299,7 @@ export function ReportIssue() {
             : "";
 
         const routerLightNote = routerLightCheck
-          ? `\n\nRouter light check:\nRouter type: ${routerLightCheck.routerName}\nPattern: ${routerLightCheck.pattern}\nSelected lights: ${
+          ? `\n\nRouter light check:\nRouter type: ${routerLightCheck.routerName}\nIssue detected: ${routerPatternLabel(routerLightCheck.pattern)}\nSelected lights: ${
               routerLightCheck.selectedLights.length > 0
                 ? routerLightCheck.selectedLights.join(", ")
                 : "None selected"
@@ -486,7 +498,7 @@ export function ReportIssue() {
           </p>
 
           <div className="grid grid-cols-2 gap-2">
-            {activeIssueTypes.map(({ label, value }) => {
+            {activeIssueTypes.map(({ icon, label, value }) => {
               const selected =
                 mode === "ticket"
                   ? personalIssueType === value
@@ -506,6 +518,7 @@ export function ReportIssue() {
                       : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted)] hover:border-[var(--color-primary)]"
                   }`}
                 >
+                  <span className="mr-1.5">{icon}</span>
                   {label}
                 </button>
               );
@@ -523,7 +536,7 @@ export function ReportIssue() {
                 Router light check complete
               </p>
               <p className="text-[var(--color-muted)] text-xs mt-1">
-                {routerLightCheck.routerName} · {routerLightCheck.pattern}
+                {routerLightCheck.routerName} · {routerPatternLabel(routerLightCheck.pattern)}
               </p>
               <p className="text-[var(--color-primary)] text-xs mt-1 font-medium">
                 Lights selected: {routerLightCheck.selectedLights.length > 0 ? routerLightCheck.selectedLights.join(", ") : "None selected"}
@@ -579,7 +592,7 @@ export function ReportIssue() {
 
             <label className="block">
               <span className="text-[var(--color-text)] text-xs font-semibold">
-                Users or devices currently connected
+                Devices currently connected to your router
               </span>
               <div className="mt-2 flex items-center gap-2">
                 <Smartphone size={15} className="text-[var(--color-muted)]" />

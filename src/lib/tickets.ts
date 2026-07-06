@@ -79,6 +79,11 @@ export type CustomerTicket = {
   updatedAt?: Timestamp | null;
 };
 
+function ticketStatusLabel(status: TicketStatus) {
+  if (status === "in_progress") return "in progress";
+  return status.replace("_", " ");
+}
+
 function inferWorkType(category: string): TicketWorkType {
   if (category === "password_reset" || category === "payment_not_reflected") {
     return "remote_support";
@@ -232,13 +237,13 @@ export async function updateTicketStatus(data: {
   eta?: string;
   workType?: TicketWorkType;
 }) {
-  const cleanStatus = data.status.replace("_", " ");
+  const cleanStatus = ticketStatusLabel(data.status);
 
   const updatePayload: Record<string, unknown> = {
     status: data.status,
     updatedAt: serverTimestamp(),
     updates: arrayUnion({
-      text: data.note || `Ticket status changed to ${cleanStatus}.`,
+      text: data.note || `Ticket is now ${cleanStatus}.`,
       by: "Support Team",
       status: data.status,
       createdAt: Timestamp.now(),
@@ -271,7 +276,7 @@ export async function updateTicketStatus(data: {
     customerUid: data.customerUid,
     type: "ticket",
     title: "Ticket Updated",
-    body: data.note || `Your ticket status changed to ${cleanStatus}.`,
+    body: data.note || `Your ticket is now ${cleanStatus}. We’ll keep you updated.`,
     action: `/ticket/${data.ticketId}`,
     relatedId: data.ticketId,
   });

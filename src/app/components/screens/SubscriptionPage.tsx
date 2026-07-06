@@ -192,14 +192,22 @@ export function SubscriptionPage() {
         </div>
 
         {/* Renew CTA */}
-        <button
-          type="button"
-          onClick={() => navigate("/renewal")}
-          className="w-full py-3 bg-[#16A34A] hover:bg-[#15803D] text-white rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2"
-        >
-          <RefreshCw size={16} />
-          Renew Package · {formatCurrency(profile.packagePrice)}
-        </button>
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => navigate("/renewal")}
+            className="w-full py-3 bg-[#16A34A] hover:bg-[#15803D] text-white rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+          >
+            <RefreshCw size={16} />
+            Renew Package · {formatCurrency(profile.packagePrice)}
+          </button>
+
+          <div className="bg-white border border-[#E2E8F0] rounded-xl px-3 py-2 flex items-center justify-center gap-2 text-xs text-[#64748B]">
+            <span className="font-semibold text-[#0F172A]">Pay with:</span>
+            <span className="px-2 py-1 rounded-full bg-[#FFFBEB] text-[#B45309] font-semibold">MTN MoMo</span>
+            <span className="px-2 py-1 rounded-full bg-[#FEF2F2] text-[#DC2626] font-semibold">Airtel Money</span>
+          </div>
+        </div>
 
         {/* Account info */}
         <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 space-y-3">

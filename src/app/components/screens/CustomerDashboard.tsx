@@ -318,6 +318,37 @@ export function CustomerDashboard() {
           </div>
         </div>
 
+        {/* Quick actions */}
+        <div>
+          <p className="text-[var(--color-text)] text-sm font-semibold mb-3">
+            Quick Actions
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            {quickActions.map(
+              ({ icon: Icon, label, sublabel, color, path }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => navigate(path)}
+                  className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-3 min-h-[96px] flex flex-col gap-2 text-left hover:shadow-md transition-shadow active:scale-95"
+                >
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center ${color}`}
+                  >
+                    <Icon size={18} />
+                  </div>
+                  <div>
+                    <p className="text-[var(--color-text)] text-sm font-semibold">
+                      {label}
+                    </p>
+                    <p className="text-[var(--color-muted)] text-xs mt-0.5">{sublabel}</p>
+                  </div>
+                </button>
+              ),
+            )}
+          </div>
+        </div>
+
         {/* Renewal warning */}
         {daysLeft <= 7 && (
           <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-xl px-4 py-3 flex items-center gap-3">
@@ -350,7 +381,7 @@ export function CustomerDashboard() {
               <button
                 type="button"
                 onClick={() => navigate("/service-status")}
-                className="text-[var(--color-primary)] text-xs font-semibold"
+                className="px-3 py-1.5 rounded-full bg-[var(--color-surface-soft)] text-[var(--color-primary)] text-xs font-bold"
               >
                 View all
               </button>
@@ -435,37 +466,6 @@ export function CustomerDashboard() {
             <p className="text-[var(--color-muted)] text-xs mt-1 leading-relaxed">
               {currentTip.body}
             </p>
-          </div>
-        </div>
-
-        {/* Quick actions */}
-        <div>
-          <p className="text-[var(--color-text)] text-sm font-semibold mb-3">
-            Quick Actions
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            {quickActions.map(
-              ({ icon: Icon, label, sublabel, color, path }) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => navigate(path)}
-                  className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 flex flex-col gap-2.5 text-left hover:shadow-md transition-shadow active:scale-95"
-                >
-                  <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center ${color}`}
-                  >
-                    <Icon size={18} />
-                  </div>
-                  <div>
-                    <p className="text-[var(--color-text)] text-sm font-semibold">
-                      {label}
-                    </p>
-                    <p className="text-[var(--color-muted)] text-xs mt-0.5">{sublabel}</p>
-                  </div>
-                </button>
-              ),
-            )}
           </div>
         </div>
 

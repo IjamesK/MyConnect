@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import {
   AlertTriangle,
@@ -17,6 +17,8 @@ import {
   markNotificationRead,
   type AppNotification,
 } from "../../../lib/notifications";
+
+type NotificationFilter = "all" | "unread" | "tickets" | "network";
 
 function getNotificationIcon(type: AppNotification["type"]) {
   if (type === "ticket") return MessageSquare;
@@ -50,12 +52,42 @@ function formatNotificationTime(notification: AppNotification) {
   return `${diffDays}d ago`;
 }
 
+function displayNotificationBody(
+  notification: AppNotification,
+  profile: CustomerProfile | null
+) {
+  const area = profile?.area || "your area";
+  const body = notification.body || "";
+  const lower = body.toLowerCase();
+
+  if (lower.includes("status changed to resolved")) {
+    return `Maintenance in ${area} has been resolved. Your service should be back to normal.`;
+  }
+
+  if (lower.includes("status changed to active")) {
+    return `Scheduled maintenance in ${area} is now active. Please follow the ETA shown on Network Status.`;
+  }
+
+  if (lower.includes("status changed to monitoring")) {
+    return `Our team is monitoring the network update in ${area}. We will notify you when it is resolved.`;
+  }
+
+  if (lower.includes("your ticket status changed to")) {
+    return body
+      .replace("Your ticket status changed to", "Your ticket is now")
+      .replace(".", ". We’ll keep you updated.");
+  }
+
+  return body;
+}
+
 export function NotificationsCenter() {
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<NotificationFilter>("all");
 
   useEffect(() => {
     const savedProfile = localStorage.getItem("customerProfile");
@@ -114,6 +146,32 @@ export function NotificationsCenter() {
     (notification) => notification.unread
   ).length;
 
+  const filteredNotifications = useMemo(() => {
+    if (filter === "unread") {
+      return notifications.filter((notification) => notification.unread);
+    }
+
+    if (filter === "tickets") {
+      return notifications.filter((notification) => notification.type === "ticket");
+    }
+
+    if (filter === "network") {
+      return notifications.filter(
+        (notification) =>
+          notification.type === "incident" || notification.type === "maintenance"
+      );
+    }
+
+    return notifications;
+  }, [filter, notifications]);
+
+  const filterTabs: { key: NotificationFilter; label: string }[] = [
+    { key: "all", label: "All" },
+    { key: "unread", label: "Unread" },
+    { key: "tickets", label: "Tickets" },
+    { key: "network", label: "Network" },
+  ];
+
   return (
     <Layout showBack backTo="/dashboard" title="Notifications" notificationCount={unreadCount}>
       <div className="px-4 py-5 space-y-4">
@@ -161,6 +219,25 @@ export function NotificationsCenter() {
           </div>
         </div>
 
+        {notifications.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {filterTabs.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setFilter(tab.key)}
+                className={`px-3 py-2 rounded-full text-xs font-semibold whitespace-nowrap border transition-all ${
+                  filter === tab.key
+                    ? "bg-[#E5007D] text-white border-[#E5007D]"
+                    : "bg-white text-[#64748B] border-[#E2E8F0]"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {loading ? (
           <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 text-center text-[#64748B] text-sm">
             Loading notifications...
@@ -179,9 +256,13 @@ export function NotificationsCenter() {
               Ticket and network updates will appear here.
             </p>
           </div>
+        ) : filteredNotifications.length === 0 ? (
+          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 text-center text-[#64748B] text-sm">
+            No notifications in this filter.
+          </div>
         ) : (
           <div className="space-y-3">
-            {notifications.map((notification) => {
+            {filteredNotifications.map((notification) => {
               const Icon = getNotificationIcon(notification.type);
 
               return (
@@ -215,7 +296,7 @@ export function NotificationsCenter() {
                     </div>
 
                     <p className="text-[#64748B] text-xs mt-1 leading-relaxed">
-                      {notification.body}
+                      {displayNotificationBody(notification, profile)}
                     </p>
 
                     <div className="flex items-center gap-1.5 text-[#94A3B8] text-xs mt-2">

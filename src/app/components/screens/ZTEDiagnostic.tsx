@@ -122,6 +122,9 @@ export function ZTEDiagnostic() {
         )}
 
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
+          <p className="text-[var(--color-muted)] text-[11px] mb-2 text-right">
+            Scroll to see all lights →
+          </p>
           <div className="flex justify-start py-3 overflow-x-auto">
             <div className={`relative ${deviceWidth}`}>
               {/* Router body starts */}
@@ -174,9 +177,9 @@ export function ZTEDiagnostic() {
                         aria-label={`Toggle ${light.label}`}
                       >
                         <div
-                          className={`${selected ? "w-4 h-4" : "w-3.5 h-3.5"} rounded-full border border-white/20 transition-all`}
+                          className={`${selected ? "w-4 h-4 border-white/20" : "w-3.5 h-3.5 border-dashed border-[#94A3B8]/70"} rounded-full border transition-all`}
                           style={{
-                            backgroundColor: selected ? color : isBlackOnt ? "#020617" : "#0F172A",
+                            backgroundColor: selected ? color : isBlackOnt ? "#475569" : "#CBD5E1",
                             boxShadow: selected ? `0 0 9px ${color}` : "none",
                           }}
                         />
@@ -254,7 +257,7 @@ export function ZTEDiagnostic() {
         <button
           type="button"
           onClick={handleContinue}
-          className="w-full py-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white rounded-xl font-semibold text-sm transition-colors"
+          className="w-full py-3 bg-[#E5007D] hover:bg-[#BE0067] text-white rounded-xl font-semibold text-sm transition-colors"
         >
           Continue →
         </button>

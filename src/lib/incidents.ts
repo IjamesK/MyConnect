@@ -92,7 +92,59 @@ export type PublicIncident = {
   updatedAt?: Timestamp | null;
   startsAt?: Timestamp | null;
   estimatedResolution?: string;
+  statusNote?: string;
 };
+
+export function formatIncidentReference(incident: Pick<PublicIncident, "id" | "createdAt">) {
+  const year = incident.createdAt?.toDate?.().getFullYear?.() ?? new Date().getFullYear();
+  const cleaned = (incident.id || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  let hash = 0;
+
+  for (const char of cleaned) {
+    hash = (hash * 31 + char.charCodeAt(0)) % 10000;
+  }
+
+  return `INC-${year}-${String(hash).padStart(4, "0")}`;
+}
+
+function formatIncidentAreasForCustomer(incident: PublicIncident) {
+  const area = incident.affectedAreas?.[0];
+  const district = incident.affectedDistricts?.[0];
+
+  if (area && district) return `${area}, ${district}`;
+  if (area) return area;
+  if (district) return district;
+  return "your area";
+}
+
+function buildIncidentNotificationBody(incident: PublicIncident, status: IncidentStatus, note?: string) {
+  if (note?.trim()) return note.trim();
+
+  const area = formatIncidentAreasForCustomer(incident);
+  const eta = incident.estimatedResolution ? ` ETA: ${incident.estimatedResolution}.` : "";
+
+  if (status === "resolved") {
+    return `${incident.title} in ${area} has been resolved. Your service should be back to normal.`;
+  }
+
+  if (status === "active") {
+    return `${incident.title} in ${area} is now active.${eta}`;
+  }
+
+  if (status === "monitoring") {
+    return `${incident.title} in ${area} is being monitored by our team.${eta}`;
+  }
+
+  if (status === "scheduled") {
+    return `${incident.title} is scheduled for ${area}.${eta}`;
+  }
+
+  if (status === "cancelled") {
+    return `${incident.title} in ${area} has been cancelled.`;
+  }
+
+  return `${incident.title} in ${area} has a new update.${eta}`;
+}
 
 function areaKey(district: string, area: string) {
   return `${district.trim().toLowerCase()}/${area.trim().toLowerCase()}`;
@@ -422,9 +474,7 @@ export async function updateIncidentStatus(data: {
     incidentId: data.incidentId,
     type: incident.type,
     title,
-    body:
-      data.note ||
-      `${incident.title} status changed to ${data.status.replace("_", " ")}.`,
+    body: buildIncidentNotificationBody(incident, data.status, data.note),
     affectedAreaKeys: incident.affectedAreaKeys ?? [],
   });
 }

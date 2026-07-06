@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Layout } from "../isp/Layout";
 import {
+  formatIncidentReference,
   listenToPublicIncident,
   type PublicIncident,
 } from "../../../lib/incidents";
@@ -190,16 +191,28 @@ export function OutageDetails() {
         </div>
 
         <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-4">
-          <p className="text-[#94A3B8] text-xs">
-            Incident ID
-          </p>
+          <p className="text-[#94A3B8] text-xs">Incident Reference</p>
           <p
             style={{ fontFamily: "'JetBrains Mono', monospace" }}
             className="text-[#475569] text-xs mt-1"
           >
-            {incident.id}
+            {formatIncidentReference(incident)}
           </p>
         </div>
+
+        {incident.status !== "resolved" && incident.status !== "cancelled" && (
+          <button
+            type="button"
+            onClick={() =>
+              navigate(
+                `/report-issue?mode=incident&type=area_outage&source=outage_details&incident=${incident.id}`
+              )
+            }
+            className="w-full py-3 bg-[#E5007D] text-white rounded-xl text-sm font-semibold hover:bg-[#BE0067] active:scale-95 transition-all"
+          >
+            Report this is still ongoing
+          </button>
+        )}
       </div>
     </Layout>
   );

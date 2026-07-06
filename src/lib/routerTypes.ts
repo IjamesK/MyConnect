@@ -196,6 +196,29 @@ export function diagnoseRouterLights(
   return fallbackIssue || "zte_unclear";
 }
 
+export function routerPatternLabel(pattern?: string | null) {
+  if (!pattern || pattern === "not_detected") return "Light check captured";
+
+  const labels: Record<string, string> = {
+    zte_los_red: "Loss of Signal — Fibre Issue",
+    zte_internet_off_noc: "Internet Light Off — Remote Check Needed",
+    zte_wifi_disabled: "Wi-Fi Disabled",
+    zte_no_power: "Router Power Issue",
+    zte_fiber_unclear: "Fibre Signal Unclear",
+    zte_normal_lights: "Router Lights Look Normal",
+    zte_unclear: "Router Light Pattern Unclear",
+    alc_no_power: "ONT Power Issue",
+    alc_auth_issue: "ONT Authentication Issue",
+    alc_link_issue: "Fibre Link Issue",
+    alc_internet_down: "Internet Down — ONT Online",
+    alc_wifi_disabled: "Wi-Fi Disabled",
+    alc_normal_lights: "ONT Lights Look Normal",
+    alc_unclear: "ONT Light Pattern Unclear",
+  };
+
+  return labels[pattern] ?? pattern.replaceAll("_", " ");
+}
+
 export function ticketTypeFromRouterPattern(issue: string, pattern: string) {
   if (pattern === "zte_los_red") return "los_light";
   if (pattern === "zte_internet_off_noc") return "no_internet";

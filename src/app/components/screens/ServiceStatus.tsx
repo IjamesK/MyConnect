@@ -292,6 +292,22 @@ export function ServiceStatus() {
     );
   }, [customerIncidents]);
 
+  const customerActiveIncidentIds = useMemo(() => {
+    return new Set(customerActiveIncidents.map((incident) => incident.id));
+  }, [customerActiveIncidents]);
+
+  const otherActiveOutages = useMemo(() => {
+    return activeOutages.filter(
+      (incident) => !customerActiveIncidentIds.has(incident.id)
+    );
+  }, [activeOutages, customerActiveIncidentIds]);
+
+  const otherPlannedWork = useMemo(() => {
+    return plannedWork.filter(
+      (incident) => !customerActiveIncidentIds.has(incident.id)
+    );
+  }, [plannedWork, customerActiveIncidentIds]);
+
   const areaStatus = useMemo(() => {
     const highSeverity = customerActiveIncidents.some(
       (incident) => incident.status === "active" && incident.severity === "high"
@@ -435,14 +451,17 @@ export function ServiceStatus() {
           </div>
         )}
 
-        {!loading && activeOutages.length > 0 && (
+        {!loading && otherActiveOutages.length > 0 && (
           <div>
-            <h3 className="text-[#0F172A] text-sm font-semibold mb-3">
-              Active Outages & Incidents
+            <h3 className="text-[#0F172A] text-sm font-semibold mb-1">
+              Other Active Outages & Incidents
             </h3>
+            <p className="text-[#94A3B8] text-xs mb-3">
+              These are active network updates outside your main area section.
+            </p>
 
             <div className="space-y-3">
-              {activeOutages.map((incident) => (
+              {otherActiveOutages.map((incident) => (
                 <IncidentCard
                   key={incident.id}
                   incident={incident}
@@ -453,14 +472,14 @@ export function ServiceStatus() {
           </div>
         )}
 
-        {!loading && plannedWork.length > 0 && (
+        {!loading && otherPlannedWork.length > 0 && (
           <div>
             <h3 className="text-[#0F172A] text-sm font-semibold mb-3">
               Planned Maintenance & Upgrades
             </h3>
 
             <div className="space-y-3">
-              {plannedWork.map((incident) => (
+              {otherPlannedWork.map((incident) => (
                 <IncidentCard
                   key={incident.id}
                   incident={incident}
@@ -472,8 +491,8 @@ export function ServiceStatus() {
         )}
 
         {!loading &&
-          activeOutages.length === 0 &&
-          plannedWork.length === 0 &&
+          otherActiveOutages.length === 0 &&
+          otherPlannedWork.length === 0 &&
           customerActiveIncidents.length === 0 && (
             <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 text-center">
               <div className="w-14 h-14 rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] flex items-center justify-center mx-auto mb-3">

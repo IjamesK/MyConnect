@@ -25,6 +25,7 @@ import {
   type CustomerTicket,
   type TicketStatus,
 } from "../../../lib/tickets";
+import { routerPatternLabel } from "../../../lib/routerTypes";
 
 function statusForBadge(status: TicketStatus) {
   if (status === "resolved" || status === "closed") return "resolved";
@@ -254,7 +255,7 @@ export function TicketTracking() {
             {ticket.title || formatCategory(ticket.category)}
           </h1>
 
-          <p className="text-[#64748B] text-sm mt-2 leading-relaxed">
+          <p className="text-[#64748B] text-sm mt-2 leading-relaxed whitespace-pre-line">
             {ticket.description}
           </p>
 
@@ -356,7 +357,7 @@ export function TicketTracking() {
 
             <div className="space-y-1 text-xs text-[var(--color-muted)]">
               <p>Router: {ticket.routerLightCheck.routerName}</p>
-              <p>Pattern: {ticket.routerLightCheck.pattern}</p>
+              <p>Issue detected: {routerPatternLabel(ticket.routerLightCheck.pattern)}</p>
               <p>
                 Selected lights: {ticket.routerLightCheck.selectedLights?.length
                   ? ticket.routerLightCheck.selectedLights.join(", ")
@@ -402,8 +403,14 @@ export function TicketTracking() {
                 Field Technician · {ticket.area || "Service Area"}
               </p>
 
-              <p className="text-[#E5007D] text-xs mt-0.5 font-medium">
-                ETA: {ticket.eta || "Not yet assigned"}
+              <p
+                className={`text-xs mt-0.5 font-medium ${
+                  ticket.eta ? "text-[#E5007D]" : "text-[#64748B]"
+                }`}
+              >
+                {ticket.eta
+                  ? `ETA: ${ticket.eta}`
+                  : "Our team is working on this — ETA will be updated shortly."}
               </p>
             </div>
 
@@ -509,7 +516,7 @@ export function TicketTracking() {
                     </span>
                   </div>
 
-                  <p className="text-[#475569] text-sm">{update.text}</p>
+                  <p className="text-[#475569] text-sm whitespace-pre-line">{update.text}</p>
                 </div>
               ))
             )}

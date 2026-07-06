@@ -22,6 +22,7 @@ import {
   type TicketStatus,
   type TicketWorkType,
 } from "../../../lib/tickets";
+import { routerPatternLabel } from "../../../lib/routerTypes";
 
 function statusBadgeClass(status: TicketStatus) {
   if (status === "open") {
@@ -453,7 +454,7 @@ export function StaffTickets() {
                             </div>
                             <div className="text-[var(--color-muted)] text-xs space-y-1">
                               <p>Router: {ticket.routerLightCheck.routerName}</p>
-                              <p>Pattern: {ticket.routerLightCheck.pattern}</p>
+                              <p>Issue detected: {routerPatternLabel(ticket.routerLightCheck.pattern)}</p>
                               <p>
                                 Lights: {ticket.routerLightCheck.selectedLights?.length
                                   ? ticket.routerLightCheck.selectedLights.join(", ")
