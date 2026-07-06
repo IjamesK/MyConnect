@@ -657,7 +657,7 @@ export function ReportIssue() {
                 Tap to add photos
               </p>
               <p className="text-[var(--color-muted)] text-xs">
-                Photos preview locally for now; storage upload comes later.
+               Photos will be attached to your ticket.
               </p>
             </button>
           )}
