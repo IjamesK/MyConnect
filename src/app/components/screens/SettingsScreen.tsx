@@ -179,12 +179,6 @@ export function SettingsScreen() {
           <p className="text-[var(--color-text)] text-sm font-semibold">
             Note
           </p>
-
-          <p className="text-[var(--color-muted)] text-xs mt-1 leading-relaxed">
-            Some older pages may still use fixed colors or English-only text. We
-            can gradually update them so the entire app follows the selected
-            theme and language.
-          </p>
         </div>
       </div>
     </Layout>
