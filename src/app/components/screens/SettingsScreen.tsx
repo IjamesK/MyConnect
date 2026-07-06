@@ -174,12 +174,6 @@ export function SettingsScreen() {
             })}
           </div>
         </div>
-
-        <div className="bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-2xl p-4">
-          <p className="text-[var(--color-text)] text-sm font-semibold">
-            Note
-          </p>
-        </div>
       </div>
     </Layout>
   );
