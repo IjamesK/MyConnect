@@ -4,13 +4,20 @@ import {
   AlertTriangle,
   Camera,
   CheckCircle,
+  Construction,
+  CreditCard,
+  FileText,
   Gauge,
+  KeyRound,
   MapPin,
+  RadioTower,
   RefreshCw,
   Router,
+  Scissors,
   Smartphone,
   Upload,
   WifiOff,
+  Wrench,
   X,
 } from "lucide-react";
 import type { CustomerProfile } from "../../../lib/auth";
@@ -35,33 +42,33 @@ import { Layout } from "../isp/Layout";
 type ReportMode = "ticket" | "incident";
 
 const personalIssueTypes = [
-  { icon: "📶", label: "No Internet", value: "no_internet", priority: "high" },
-  { icon: "🐢", label: "Slow Speed", value: "slow_speed", priority: "medium" },
-  { icon: "🔴", label: "LOS Light Red", value: "los_light", priority: "high" },
-  { icon: "📡", label: "Router / Wi-Fi Issue", value: "router_issue", priority: "medium" },
+  { icon: WifiOff, label: "No Internet", value: "no_internet", priority: "high" },
+  { icon: Gauge, label: "Slow Speed", value: "slow_speed", priority: "medium" },
+  { icon: AlertTriangle, label: "LOS Light Red", value: "los_light", priority: "high" },
+  { icon: Router, label: "Router / Wi-Fi Issue", value: "router_issue", priority: "medium" },
   {
-    icon: "💳",
+    icon: CreditCard,
     label: "Payment Not Reflected",
     value: "payment_not_reflected",
     priority: "medium",
   },
   {
-    icon: "↩️",
+    icon: RefreshCw,
     label: "Paid on Wrong Router",
     value: "wrong_router_payment",
     priority: "medium",
   },
-  { icon: "🔑", label: "Wi-Fi Password Reset", value: "password_reset", priority: "low" },
-  { icon: "📝", label: "Other Account Issue", value: "other", priority: "low" },
+  { icon: KeyRound, label: "Wi-Fi Password Reset", value: "password_reset", priority: "low" },
+  { icon: FileText, label: "Other Account Issue", value: "other", priority: "low" },
 ] as const;
 
 const networkIssueTypes = [
-  { icon: "🪵", label: "Knocked Pole", value: "knocked_pole" },
-  { icon: "✂️", label: "Cable Cut / Vandalism", value: "fiber_cut" },
-  { icon: "🔧", label: "Damaged Cabinet", value: "damaged_cabinet" },
-  { icon: "📡", label: "Area Outage", value: "area_outage" },
-  { icon: "🏗️", label: "Road Construction Damage", value: "outage" },
-  { icon: "⚠️", label: "Other Network Issue", value: "other" },
+  { icon: RadioTower, label: "Knocked Pole", value: "knocked_pole" },
+  { icon: Scissors, label: "Cable Cut / Vandalism", value: "fiber_cut" },
+  { icon: Wrench, label: "Damaged Cabinet", value: "damaged_cabinet" },
+  { icon: WifiOff, label: "Area Outage", value: "area_outage" },
+  { icon: Construction, label: "Road Construction Damage", value: "outage" },
+  { icon: AlertTriangle, label: "Other Network Issue", value: "other" },
 ] as const;
 
 function isPersonalIssueType(value: string) {
@@ -498,7 +505,7 @@ export function ReportIssue() {
           </p>
 
           <div className="grid grid-cols-2 gap-2">
-            {activeIssueTypes.map(({ icon, label, value }) => {
+            {activeIssueTypes.map(({ icon: Icon, label, value }) => {
               const selected =
                 mode === "ticket"
                   ? personalIssueType === value
@@ -512,14 +519,22 @@ export function ReportIssue() {
                     if (mode === "ticket") handleIssueSelect(value);
                     else setNetworkIssueType(value as IncidentType);
                   }}
-                  className={`px-3 py-2.5 rounded-xl border text-xs font-medium text-left transition-all ${
+                  className={`px-3 py-2.5 rounded-xl border text-xs font-medium text-left transition-all flex items-center gap-2 ${
                     selected
                       ? "border-[var(--color-primary)] bg-[var(--color-surface-soft)] text-[var(--color-primary)]"
                       : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted)] hover:border-[var(--color-primary)]"
                   }`}
                 >
-                  <span className="mr-1.5">{icon}</span>
-                  {label}
+                  <span
+                    className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                      selected
+                        ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                        : "bg-[var(--color-surface-soft)] text-[var(--color-muted)]"
+                    }`}
+                  >
+                    <Icon size={15} strokeWidth={2.3} />
+                  </span>
+                  <span className="leading-snug">{label}</span>
                 </button>
               );
             })}
