@@ -66,6 +66,10 @@ function ticketProgress(status: TicketStatus) {
 }
 
 const internetTips = [
+    {
+    title: "How to use ethernet",
+    body: "For faster connectivity on devices that support ethernet conncetion, use the ethernet cable provided (Yellow Cable) to connect the device to our router",
+  },
   {
     title: "Use 5GHz when close to the router",
     body: "5GHz is usually faster when you are in the same room. Use 2.4GHz when you are farther away or behind walls.",
