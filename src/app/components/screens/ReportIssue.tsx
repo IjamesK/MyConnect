@@ -1,7 +1,16 @@
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+} from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import {
   AlertTriangle,
+  ArrowLeft,
   Camera,
   CheckCircle,
   Construction,
@@ -48,6 +57,8 @@ import {
 import { Layout } from "../isp/Layout";
 
 type ReportMode = "ticket" | "incident";
+type NetworkIssueValue = IncidentType | "";
+type ConnectedDeviceValue = number | "";
 
 const personalIssueTypes = [
   { icon: WifiOff, label: "No Internet", value: "no_internet", priority: "high" },
@@ -133,7 +144,11 @@ function issueNeedsRouterLights(issueType: string) {
   );
 }
 
-function buildRouterLightCheck(profile: CustomerProfile | null, pattern: string | null, lights: string | null): RouterLightCheck | null {
+function buildRouterLightCheck(
+  profile: CustomerProfile | null,
+  pattern: string | null,
+  lights: string | null,
+): RouterLightCheck | null {
   if (!pattern && !lights) return null;
 
   const routerType = normalizeRouterType(profile?.routerType);
@@ -174,10 +189,29 @@ function formatCoordinate(value: number | null) {
   return value.toFixed(6);
 }
 
+function SectionCard({ children }: { children: ReactNode }) {
+  return (
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
+      {children}
+    </div>
+  );
+}
+
+function issueLabel(mode: ReportMode, value: string) {
+  if (mode === "ticket") {
+    return personalIssueTypes.find((item) => item.value === value)?.label ?? "Customer Issue";
+  }
+
+  return networkIssueTypes.find((item) => item.value === value)?.label ?? "Network Incident";
+}
+
 export function ReportIssue() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fileRef = useRef<HTMLInputElement>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<maplibregl.Map | null>(null);
+  const markerRef = useRef<maplibregl.Marker | null>(null);
 
   const patternParam = searchParams.get("pattern");
   const lightsParam = searchParams.get("lights");
@@ -187,16 +221,16 @@ export function ReportIssue() {
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [mode, setMode] = useState<ReportMode>("ticket");
   const [personalIssueType, setPersonalIssueType] = useState("");
-  const [networkIssueType, setNetworkIssueType] =
-    useState<IncidentType>("knocked_pole");
+  const [networkIssueType, setNetworkIssueType] = useState<NetworkIssueValue>("");
   const [description, setDescription] = useState("");
   const [locationNote, setLocationNote] = useState("");
-  const [connectedDevices, setConnectedDevices] = useState(3);
+  const [connectedDevices, setConnectedDevices] = useState<ConnectedDeviceValue>("");
   const [newMoveAddress, setNewMoveAddress] = useState("");
   const [newMoveLandmark, setNewMoveLandmark] = useState("");
   const [eligibilityCheck, setEligibilityCheck] =
     useState<MoveEligibilityCheck | null>(null);
   const [checkingEligibility, setCheckingEligibility] = useState(false);
+  const [showPinAdjuster, setShowPinAdjuster] = useState(false);
   const [speedTest, setSpeedTest] = useState<SpeedTestResult | null>(null);
   const [speedTesting, setSpeedTesting] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
@@ -211,20 +245,27 @@ export function ReportIssue() {
   const routerLightCheck = buildRouterLightCheck(
     profile,
     patternParam,
-    lightsParam
+    lightsParam,
   );
 
-  const selectedRouterType = normalizeRouterType(profile?.routerType);
-  const selectedRouterName = routerName(selectedRouterType);
+  const hasSelectedIssue =
+    mode === "ticket" ? Boolean(personalIssueType) : Boolean(networkIssueType);
   const isSlowSpeedTicket =
     mode === "ticket" && personalIssueType === "slow_speed";
   const isMoveEligibilityTicket =
     mode === "ticket" && personalIssueType === "move_eligibility";
+  const shouldShowPhotos =
+    mode === "incident" ||
+    personalIssueType === "payment_not_reflected" ||
+    personalIssueType === "wrong_router_payment" ||
+    personalIssueType === "other";
+  const shouldShowLocationNote = mode === "incident";
 
   const handleIssueSelect = (issueType: string) => {
     setError("");
     setSpeedTest(null);
     setEligibilityCheck(null);
+    setShowPinAdjuster(false);
 
     if (issueNeedsRouterLights(issueType)) {
       navigate(`/troubleshoot/zte?issue=${issueType}`);
@@ -233,6 +274,25 @@ export function ReportIssue() {
 
     setMode("ticket");
     setPersonalIssueType(issueType);
+    setNetworkIssueType("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const resetSelection = () => {
+    setError("");
+    setStatusMessage("");
+    setPersonalIssueType("");
+    setNetworkIssueType("");
+    setDescription("");
+    setLocationNote("");
+    setConnectedDevices("");
+    setNewMoveAddress("");
+    setNewMoveLandmark("");
+    setEligibilityCheck(null);
+    setShowPinAdjuster(false);
+    setPhotos([]);
+    setSpeedTest(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -268,11 +328,13 @@ export function ReportIssue() {
     if (typeParam && networkIssueTypes.some((item) => item.value === typeParam)) {
       setMode("incident");
       setNetworkIssueType(typeParam as IncidentType);
+      setPersonalIssueType("");
     }
 
     if (typeParam && isPersonalIssueType(typeParam)) {
       setMode("ticket");
       setPersonalIssueType(typeParam);
+      setNetworkIssueType("");
 
       if (source === "self_help" || source === "troubleshooter") {
         const prefilledText = getPrefilledDescription(typeParam);
@@ -280,6 +342,65 @@ export function ReportIssue() {
       }
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!showPinAdjuster || !mapContainerRef.current || !eligibilityCheck?.currentLatitude || !eligibilityCheck.currentLongitude) {
+      return;
+    }
+
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+      markerRef.current = null;
+    }
+
+    const initialLatitude = eligibilityCheck.currentLatitude;
+    const initialLongitude = eligibilityCheck.currentLongitude;
+
+    const map = new maplibregl.Map({
+      container: mapContainerRef.current,
+      style: "https://tiles.openfreemap.org/styles/liberty",
+      center: [initialLongitude, initialLatitude],
+      zoom: 17,
+    });
+
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+
+    const marker = new maplibregl.Marker({ draggable: true })
+      .setLngLat([initialLongitude, initialLatitude])
+      .addTo(map);
+
+    marker.on("dragend", () => {
+      const position = marker.getLngLat();
+      setEligibilityCheck((current) =>
+        current
+          ? {
+              ...current,
+              statusLabel: "Location adjusted",
+              summary: "Your adjusted location has been captured. Our team will check service availability and update you.",
+              currentLatitude: position.lat,
+              currentLongitude: position.lng,
+              accuracyMeters: null,
+              checkedAt: new Date().toISOString(),
+              locationSource: "gps_adjusted",
+              recommendedAction: "Copy and paste coordinates to Mapbox to test eligibility.",
+            }
+          : current,
+      );
+    });
+
+    mapInstanceRef.current = map;
+    markerRef.current = marker;
+
+    return () => {
+      marker.remove();
+      map.remove();
+      if (mapInstanceRef.current === map) {
+        mapInstanceRef.current = null;
+        markerRef.current = null;
+      }
+    };
+  }, [showPinAdjuster, eligibilityCheck?.currentLatitude, eligibilityCheck?.currentLongitude]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files ?? []) as File[];
@@ -303,9 +424,10 @@ export function ReportIssue() {
   const handleRunEligibilityCheck = async () => {
     setError("");
     setEligibilityCheck(null);
+    setShowPinAdjuster(false);
 
     if (!newMoveAddress.trim() && !newMoveLandmark.trim()) {
-      setError("Please add the new area, building name, or nearby landmark before capturing coordinates.");
+      setError("Please add the new place, building name, or nearby landmark before capturing coordinates.");
       return;
     }
 
@@ -322,7 +444,7 @@ export function ReportIssue() {
 
     try {
       setCheckingEligibility(true);
-      setStatusMessage("Capturing coordinates at this location...");
+      setStatusMessage("Capturing your location...");
 
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -343,7 +465,7 @@ export function ReportIssue() {
       setEligibilityCheck(result);
       setStatusMessage("");
     } catch (err) {
-      console.error("Eligibility check failed:", err);
+      console.error("Location capture failed:", err);
       setEligibilityCheck(
         createManualEligibilityReview({
           newAddress: newMoveAddress.trim(),
@@ -368,6 +490,19 @@ export function ReportIssue() {
       return;
     }
 
+    if (mode === "incident" && !networkIssueType) {
+      setError("Please select the network incident type.");
+      return;
+    }
+
+    if (mode === "ticket" && personalIssueType === "slow_speed") {
+      const devices = Number(connectedDevices);
+      if (!connectedDevices || Number.isNaN(devices) || devices < 1) {
+        setError("Please enter the number of devices currently connected to your router.");
+        return;
+      }
+    }
+
     if (mode === "ticket" && personalIssueType === "move_eligibility") {
       if (!newMoveAddress.trim() && !newMoveLandmark.trim()) {
         setError("Please add the new location, building name, or nearby landmark.");
@@ -390,17 +525,18 @@ export function ReportIssue() {
 
       if (mode === "ticket") {
         const selectedIssue = personalIssueTypes.find(
-          (item) => item.value === personalIssueType
+          (item) => item.value === personalIssueType,
         );
 
         let capturedSpeedTest: SpeedTestResult | null = null;
 
         if (personalIssueType === "slow_speed") {
+          const devices = Math.max(1, Number(connectedDevices));
           setSpeedTesting(true);
           setStatusMessage("Checking your connection and attaching the result...");
 
           try {
-            capturedSpeedTest = await runBrowserSpeedTest(connectedDevices);
+            capturedSpeedTest = await runBrowserSpeedTest(devices);
             setSpeedTest(capturedSpeedTest);
           } catch (err) {
             console.error("Speed test failed:", err);
@@ -412,9 +548,7 @@ export function ReportIssue() {
 
         const moveDescription =
           personalIssueType === "move_eligibility"
-            ? `Customer is moving and wants CanalBox to check service eligibility for a new location.
-New place: ${newMoveAddress.trim() || "Not provided"}
-Nearby landmark: ${newMoveLandmark.trim() || "Not provided"}`
+            ? `Customer is moving and wants CanalBox to check service eligibility for a new location.\nNew place: ${newMoveAddress.trim() || "Not provided"}\nNearby landmark: ${newMoveLandmark.trim() || "Not provided"}`
             : "";
 
         const baseDescription =
@@ -427,8 +561,8 @@ Nearby landmark: ${newMoveLandmark.trim() || "Not provided"}`
         const speedNote =
           personalIssueType === "slow_speed"
             ? capturedSpeedTest
-              ? `\n\nAutomatic speed test attached: ${capturedSpeedTest.downloadMbps} Mbps download, ${capturedSpeedTest.uploadMbps} Mbps upload, ${capturedSpeedTest.latencyMs} ms latency, ${capturedSpeedTest.connectedDevices} connected device(s), ${qualityLabel(capturedSpeedTest.quality)}.`
-              : `\n\nAutomatic speed test was attempted but could not be completed. Customer was asked to stay connected to CanalBox Wi-Fi. Reported connected devices: ${connectedDevices}.`
+              ? `\n\nAutomatic connection check attached:\nDownload: ${capturedSpeedTest.downloadMbps} Mbps\nUpload: ${capturedSpeedTest.uploadMbps} Mbps\nLatency: ${capturedSpeedTest.latencyMs} ms\nDevices connected: ${capturedSpeedTest.connectedDevices}\nResult: ${qualityLabel(capturedSpeedTest.quality)}.`
+              : `\n\nAutomatic connection check was attempted but could not be completed. Customer was asked to stay connected to CanalBox Wi-Fi. Reported connected devices: ${connectedDevices}.`
             : "";
 
         const routerLightNote = routerLightCheck
@@ -440,15 +574,7 @@ Nearby landmark: ${newMoveLandmark.trim() || "Not provided"}`
           : "";
 
         const eligibilityNote = eligibilityCheck
-          ? `
-
-Move location check:
-Status: ${eligibilityCheck.statusLabel}
-Summary: ${eligibilityCheck.summary}
-New place: ${eligibilityCheck.newAddress || "Not provided"}
-Landmark: ${eligibilityCheck.landmark || "Not provided"}
-Coordinates: ${formatCoordinate(eligibilityCheck.currentLatitude)}, ${formatCoordinate(eligibilityCheck.currentLongitude)}
-Staff action: ${eligibilityCheck.recommendedAction}`
+          ? `\n\nMove location check:\nStatus: ${eligibilityCheck.statusLabel}\nNew place: ${eligibilityCheck.newAddress || "Not provided"}\nLandmark: ${eligibilityCheck.landmark || "Not provided"}\nCoordinates: ${formatCoordinate(eligibilityCheck.currentLatitude)}, ${formatCoordinate(eligibilityCheck.currentLongitude)}.`
           : "";
 
         setStatusMessage("Creating your support ticket...");
@@ -481,11 +607,11 @@ Staff action: ${eligibilityCheck.recommendedAction}`
       }
 
       const selectedIncident = networkIssueTypes.find(
-        (item) => item.value === networkIssueType
+        (item) => item.value === networkIssueType,
       );
 
       const reportId = await createIncidentReport(profile, {
-        type: networkIssueType,
+        type: networkIssueType as IncidentType,
         title: selectedIncident?.label ?? "Network Incident",
         description: description.trim(),
         photoCount: photos.length,
@@ -501,6 +627,94 @@ Staff action: ${eligibilityCheck.recommendedAction}`
       setStatusMessage("");
     }
   };
+
+  const renderAccountLocation = () => (
+    <SectionCard>
+      <div className="flex items-center gap-3">
+        <MapPin size={16} className="text-[var(--color-primary)] shrink-0" />
+
+        <div className="flex-1">
+          <p className="text-[var(--color-text)] text-sm font-medium">
+            {profile?.area}, {profile?.district}
+          </p>
+
+          <p className="text-[var(--color-muted)] text-xs">
+            {profile?.customerNumber} · {profile?.routerSerial}
+          </p>
+        </div>
+      </div>
+    </SectionCard>
+  );
+
+  const renderPhotoPicker = () => (
+    <SectionCard>
+      <p className="text-[var(--color-text)] text-sm font-semibold mb-2">
+        Attach Photos <span className="text-[var(--color-muted)] font-normal">(up to 5)</span>
+      </p>
+
+      {photos.length > 0 && (
+        <div className="flex gap-2 flex-wrap mb-3">
+          {photos.map((src, i) => (
+            <div
+              key={src}
+              className="relative w-20 h-20 rounded-xl overflow-hidden border border-[var(--color-border)]"
+            >
+              <img src={src} alt="Upload" className="w-full h-full object-cover" />
+
+              <button
+                type="button"
+                onClick={() => removePhoto(i)}
+                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center"
+              >
+                <X size={10} className="text-white" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      {photos.length < 5 && (
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="w-full border-2 border-dashed border-[var(--color-border)] rounded-xl py-5 flex flex-col items-center gap-2 hover:border-[var(--color-primary)] hover:bg-[var(--color-surface-soft)] transition-colors"
+        >
+          <Camera size={22} className="text-[var(--color-muted)]" />
+          <p className="text-[var(--color-muted)] text-sm font-medium">
+            Tap to add photos
+          </p>
+          <p className="text-[var(--color-muted)] text-xs">
+            Photos will be attached to your ticket.
+          </p>
+        </button>
+      )}
+    </SectionCard>
+  );
+
+  const renderTextArea = (label: string, placeholder: string, required = false) => (
+    <SectionCard>
+      <p className="text-[var(--color-text)] text-sm font-semibold mb-2">
+        {label} {!required && <span className="text-[var(--color-muted)] font-normal">(optional)</span>}
+      </p>
+
+      <textarea
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        rows={4}
+        placeholder={placeholder}
+        className="w-full px-3 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition resize-none"
+      />
+    </SectionCard>
+  );
 
   if (!profile) {
     return (
@@ -539,7 +753,7 @@ Staff action: ${eligibilityCheck.recommendedAction}`
 
           <p className="text-[var(--color-muted)] text-sm mb-4">
             {isMoveRequest
-              ? "Your move request has been sent with location details. Staff will use the coordinates to confirm eligibility and update you."
+              ? "Your move request has been sent with location details. Staff will confirm availability and update you."
               : isTicket
                 ? "Your request has been sent to support. You will receive updates as the ticket progresses."
                 : "Your network incident report has been sent to admin for approval."}
@@ -568,188 +782,258 @@ Staff action: ${eligibilityCheck.recommendedAction}`
     );
   }
 
-  const activeIssueTypes =
-    mode === "ticket" ? personalIssueTypes : networkIssueTypes;
+  if (!hasSelectedIssue) {
+    const activeIssueTypes = mode === "ticket" ? personalIssueTypes : networkIssueTypes;
 
-  return (
-    <Layout showBack backTo="/dashboard" title="Report">
-      <div className="px-4 py-5 space-y-5">
-        <div>
-          <h1
-            style={{
-              fontFamily: "'Inter Tight', system-ui, sans-serif",
-              fontWeight: 800,
-            }}
-            className="text-[var(--color-text)] text-2xl"
-          >
-            Report a Problem
-          </h1>
+    return (
+      <Layout showBack backTo="/dashboard" title="Report">
+        <div className="px-4 py-5 space-y-5">
+          <div>
+            <h1
+              style={{
+                fontFamily: "'Inter Tight', system-ui, sans-serif",
+                fontWeight: 800,
+              }}
+              className="text-[var(--color-text)] text-2xl"
+            >
+              Report a Problem
+            </h1>
 
-          <p className="text-[var(--color-muted)] text-sm mt-1">
-            Choose the problem. MyConnect will collect the useful technical details quietly.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setMode("ticket");
-              setError("");
-            }}
-            className={`p-3 rounded-2xl border-2 text-left transition-all ${
-              mode === "ticket"
-                ? "border-[var(--color-primary)] bg-[var(--color-surface-soft)]"
-                : "border-[var(--color-border)] bg-[var(--color-surface)]"
-            }`}
-          >
-            <WifiOff
-              size={20}
-              className={
-                mode === "ticket"
-                  ? "text-[var(--color-primary)]"
-                  : "text-[var(--color-muted)]"
-              }
-            />
-            <p className="text-[var(--color-text)] text-sm font-semibold mt-2">
-              My Connection
+            <p className="text-[var(--color-muted)] text-sm mt-1">
+              Choose the problem first. The next page will only show what is needed.
             </p>
-            <p className="text-[var(--color-muted)] text-xs mt-0.5">
-              Private support ticket
-            </p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setMode("incident");
-              setError("");
-            }}
-            className={`p-3 rounded-2xl border-2 text-left transition-all ${
-              mode === "incident"
-                ? "border-[var(--color-primary)] bg-[var(--color-surface-soft)]"
-                : "border-[var(--color-border)] bg-[var(--color-surface)]"
-            }`}
-          >
-            <AlertTriangle
-              size={20}
-              className={
-                mode === "incident"
-                  ? "text-[var(--color-primary)]"
-                  : "text-[var(--color-muted)]"
-              }
-            />
-            <p className="text-[var(--color-text)] text-sm font-semibold mt-2">
-              Network Incident
-            </p>
-            <p className="text-[var(--color-muted)] text-xs mt-0.5">
-              Admin approval first
-            </p>
-          </button>
-        </div>
-
-        <div>
-          <p className="text-[var(--color-text)] text-sm font-semibold mb-2">
-            {mode === "ticket" ? "What is the problem?" : "Incident Type"}
-          </p>
+          </div>
 
           <div className="grid grid-cols-2 gap-2">
-            {activeIssueTypes.map(({ icon: Icon, label, value }) => {
-              const selected =
+            <button
+              type="button"
+              onClick={() => {
+                setMode("ticket");
+                setError("");
+              }}
+              className={`p-3 rounded-2xl border-2 text-left transition-all ${
                 mode === "ticket"
-                  ? personalIssueType === value
-                  : networkIssueType === value;
+                  ? "border-[var(--color-primary)] bg-[var(--color-surface-soft)]"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)]"
+              }`}
+            >
+              <WifiOff
+                size={20}
+                className={
+                  mode === "ticket"
+                    ? "text-[var(--color-primary)]"
+                    : "text-[var(--color-muted)]"
+                }
+              />
+              <p className="text-[var(--color-text)] text-sm font-semibold mt-2">
+                My Connection
+              </p>
+              <p className="text-[var(--color-muted)] text-xs mt-0.5">
+                Private support ticket
+              </p>
+            </button>
 
-              return (
+            <button
+              type="button"
+              onClick={() => {
+                setMode("incident");
+                setError("");
+              }}
+              className={`p-3 rounded-2xl border-2 text-left transition-all ${
+                mode === "incident"
+                  ? "border-[var(--color-primary)] bg-[var(--color-surface-soft)]"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)]"
+              }`}
+            >
+              <AlertTriangle
+                size={20}
+                className={
+                  mode === "incident"
+                    ? "text-[var(--color-primary)]"
+                    : "text-[var(--color-muted)]"
+                }
+              />
+              <p className="text-[var(--color-text)] text-sm font-semibold mt-2">
+                Network Incident
+              </p>
+              <p className="text-[var(--color-muted)] text-xs mt-0.5">
+                Admin approval first
+              </p>
+            </button>
+          </div>
+
+          <div>
+            <p className="text-[var(--color-text)] text-sm font-semibold mb-2">
+              {mode === "ticket" ? "What is the problem?" : "What did you see?"}
+            </p>
+
+            <div className="grid grid-cols-2 gap-2">
+              {activeIssueTypes.map(({ icon: Icon, label, value }) => (
                 <button
                   key={value}
                   type="button"
                   onClick={() => {
                     if (mode === "ticket") handleIssueSelect(value);
-                    else setNetworkIssueType(value as IncidentType);
+                    else {
+                      setNetworkIssueType(value as IncidentType);
+                      setPersonalIssueType("");
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
                   }}
-                  className={`px-3 py-2.5 rounded-xl border text-xs font-medium text-left transition-all flex items-center gap-2 ${
-                    selected
-                      ? "border-[var(--color-primary)] bg-[var(--color-surface-soft)] text-[var(--color-primary)]"
-                      : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted)] hover:border-[var(--color-primary)]"
-                  }`}
+                  className="px-3 py-3 rounded-xl border text-xs font-medium text-left transition-all flex items-center gap-2 border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted)] hover:border-[var(--color-primary)]"
                 >
-                  <span
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                      selected
-                        ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                        : "bg-[var(--color-surface-soft)] text-[var(--color-muted)]"
-                    }`}
-                  >
-                    <Icon size={15} strokeWidth={2.3} />
+                  <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-[var(--color-surface-soft)] text-[var(--color-primary)]">
+                    <Icon size={16} strokeWidth={2.3} />
                   </span>
-                  <span className="leading-snug">{label}</span>
+                  <span className="leading-snug text-[var(--color-text)]">{label}</span>
                 </button>
-              );
-            })}
+              ))}
+            </div>
           </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  const selectedTitle = issueLabel(mode, mode === "ticket" ? personalIssueType : networkIssueType);
+
+  return (
+    <Layout showBack backTo="/dashboard" title="Report">
+      <div className="px-4 py-5 space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[var(--color-muted)] text-xs font-semibold uppercase tracking-wide">
+              {mode === "ticket" ? "My Connection" : "Network Incident"}
+            </p>
+            <h1
+              style={{
+                fontFamily: "'Inter Tight', system-ui, sans-serif",
+                fontWeight: 800,
+              }}
+              className="text-[var(--color-text)] text-2xl mt-1"
+            >
+              {selectedTitle}
+            </h1>
+          </div>
+
+          <button
+            type="button"
+            onClick={resetSelection}
+            className="px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-muted)] text-xs font-semibold flex items-center gap-1 shrink-0"
+          >
+            <ArrowLeft size={13} />
+            Change
+          </button>
         </div>
 
         {cameFromRouterLights && routerLightCheck && (
-          <div className="bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-2xl p-4 flex gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[var(--color-surface)] flex items-center justify-center shrink-0">
-              <Router size={20} className="text-[var(--color-primary)]" />
+          <SectionCard>
+            <div className="flex gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center shrink-0">
+                <Router size={20} className="text-[var(--color-primary)]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[var(--color-text)] text-sm font-bold">
+                  Router light check complete
+                </p>
+                <p className="text-[var(--color-muted)] text-xs mt-1">
+                  {routerLightCheck.routerName} · {routerPatternLabel(routerLightCheck.pattern)}
+                </p>
+                <p className="text-[var(--color-primary)] text-xs mt-1 font-medium">
+                  Lights selected: {routerLightCheck.selectedLights.length > 0 ? routerLightCheck.selectedLights.join(", ") : "None selected"}
+                </p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[var(--color-text)] text-sm font-bold">
-                Router light check complete
-              </p>
-              <p className="text-[var(--color-muted)] text-xs mt-1">
-                {routerLightCheck.routerName} · {routerPatternLabel(routerLightCheck.pattern)}
-              </p>
-              <p className="text-[var(--color-primary)] text-xs mt-1 font-medium">
-                Lights selected: {routerLightCheck.selectedLights.length > 0 ? routerLightCheck.selectedLights.join(", ") : "None selected"}
-              </p>
-            </div>
-          </div>
+          </SectionCard>
         )}
 
-        <div>
-          <p className="text-[var(--color-text)] text-sm font-semibold mb-2">
-            Account Location
-          </p>
+        {isSlowSpeedTicket && (
+          <SectionCard>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center shrink-0">
+                <Gauge size={20} className="text-[var(--color-primary)]" />
+              </div>
 
-          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-3 flex items-center gap-3">
-            <MapPin size={16} className="text-[var(--color-primary)] shrink-0" />
-
-            <div className="flex-1">
-              <p className="text-[var(--color-text)] text-sm font-medium">
-                {profile.area}, {profile.district}
-              </p>
-
-              <p className="text-[var(--color-muted)] text-xs">
-                {profile.customerNumber} · {profile.routerSerial}
-              </p>
+              <div className="flex-1">
+                <p className="text-[var(--color-text)] text-sm font-bold">
+                  Connection check will run automatically
+                </p>
+                <p className="text-[var(--color-muted)] text-xs mt-0.5 leading-relaxed">
+                  Make sure you are connected to your CanalBox Wi-Fi. When you submit, we’ll check the connection and attach the result.
+                </p>
+              </div>
             </div>
-          </div>
 
-          <input
-            type="text"
-            value={locationNote}
-            onChange={(e) => setLocationNote(e.target.value)}
-            placeholder="Optional: add nearby landmark or exact spot"
-            className="mt-2 w-full px-3 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition"
-          />
-        </div>
+            <label className="block">
+              <span className="text-[var(--color-text)] text-xs font-semibold">
+                Devices currently connected to your router
+              </span>
+
+              <div className="mt-2 grid grid-cols-5 gap-2">
+                {[1, 2, 3, 4, 5].map((count) => (
+                  <button
+                    key={count}
+                    type="button"
+                    onClick={() => {
+                      setConnectedDevices(count);
+                      setSpeedTest(null);
+                    }}
+                    className={`py-2 rounded-xl border text-xs font-semibold ${
+                      connectedDevices === count
+                        ? "border-[var(--color-primary)] bg-[var(--color-surface-soft)] text-[var(--color-primary)]"
+                        : "border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-muted)]"
+                    }`}
+                  >
+                    {count}{count === 5 ? "+" : ""}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-2 flex items-center gap-2">
+                <Smartphone size={15} className="text-[var(--color-muted)]" />
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={connectedDevices}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setConnectedDevices(value === "" ? "" : Math.max(1, Number(value)));
+                    setSpeedTest(null);
+                  }}
+                  placeholder="Type number if more than 5"
+                  className="w-full px-3 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
+                />
+              </div>
+            </label>
+
+            {speedTesting && (
+              <div className="mt-4 bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-xl p-3">
+                <div className="flex items-center gap-2 text-[var(--color-primary)] text-xs font-semibold mb-2">
+                  <RefreshCw size={14} className="animate-spin" />
+                  Checking connection...
+                </div>
+                <div className="h-2 rounded-full bg-[var(--color-border)] overflow-hidden">
+                  <div className="h-full w-2/3 rounded-full bg-[var(--color-primary)] animate-pulse" />
+                </div>
+              </div>
+            )}
+          </SectionCard>
+        )}
 
         {isMoveEligibilityTicket && (
-          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 space-y-4">
-            <div className="flex items-start gap-3">
+          <SectionCard>
+            <div className="flex items-start gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center shrink-0">
                 <MapPinned size={20} className="text-[var(--color-primary)]" />
               </div>
 
               <div className="flex-1">
                 <p className="text-[var(--color-text)] text-sm font-bold">
-                  Capture new-place coordinates
+                  Capture new-location coordinates
                 </p>
                 <p className="text-[var(--color-muted)] text-xs mt-0.5 leading-relaxed">
-                  Stand at the place you are moving to, then allow location access. MyConnect will attach your exact GPS coordinates so staff can test the location in CanalBox Mapbox.
+                  Stand at the place you are moving to. We’ll capture the coordinates and staff will confirm availability.
                 </p>
               </div>
             </div>
@@ -764,13 +1048,14 @@ Staff action: ${eligibilityCheck.recommendedAction}`
                 onChange={(e) => {
                   setNewMoveAddress(e.target.value);
                   setEligibilityCheck(null);
+                  setShowPinAdjuster(false);
                 }}
                 placeholder="e.g. Kiwatule, Najjera, Kira, Seeta..."
                 className="mt-2 w-full px-3 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition"
               />
             </label>
 
-            <label className="block">
+            <label className="block mt-3">
               <span className="text-[var(--color-text)] text-xs font-semibold">
                 Nearby landmark or building name
               </span>
@@ -780,6 +1065,7 @@ Staff action: ${eligibilityCheck.recommendedAction}`
                 onChange={(e) => {
                   setNewMoveLandmark(e.target.value);
                   setEligibilityCheck(null);
+                  setShowPinAdjuster(false);
                 }}
                 placeholder="e.g. near Total, opposite school, apartment name"
                 className="mt-2 w-full px-3 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition"
@@ -790,158 +1076,110 @@ Staff action: ${eligibilityCheck.recommendedAction}`
               type="button"
               onClick={handleRunEligibilityCheck}
               disabled={checkingEligibility}
-              className="w-full py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] disabled:bg-[var(--color-primary)]/60 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+              className="mt-4 w-full py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] disabled:bg-[var(--color-primary)]/60 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
             >
               {checkingEligibility ? (
                 <RefreshCw size={15} className="animate-spin" />
               ) : (
                 <LocateFixed size={15} />
               )}
-              {checkingEligibility ? "Capturing coordinates..." : "Capture my current coordinates"}
+              {checkingEligibility ? "Capturing location..." : "Capture my location"}
             </button>
 
             {eligibilityCheck && (
-              <div className={`rounded-xl border px-3 py-3 text-xs ${eligibilityToneClass(eligibilityCheck.status)}`}>
+              <div className={`mt-4 rounded-xl border px-3 py-3 text-xs ${eligibilityToneClass(eligibilityCheck.status)}`}>
                 <p className="font-bold text-sm">{eligibilityCheck.statusLabel}</p>
                 <p className="mt-1 leading-relaxed">{eligibilityCheck.summary}</p>
-                <div className="mt-2 grid grid-cols-2 gap-2 opacity-90">
-                  <p>Accuracy: {eligibilityCheck.accuracyMeters ? `${Math.round(eligibilityCheck.accuracyMeters)} m` : "Manual review"}</p>
-                  <p>Use in Mapbox: {formatCoordinate(eligibilityCheck.currentLatitude)}, {formatCoordinate(eligibilityCheck.currentLongitude)}</p>
+                <div className="mt-2 space-y-1 opacity-90">
+                  <p>Coordinates: {formatCoordinate(eligibilityCheck.currentLatitude)}, {formatCoordinate(eligibilityCheck.currentLongitude)}</p>
+                  {typeof eligibilityCheck.accuracyMeters === "number" && (
+                    <p>Accuracy: about {Math.round(eligibilityCheck.accuracyMeters)} m</p>
+                  )}
                 </div>
-              </div>
-            )}
-          </div>
-        )}
 
-        {isSlowSpeedTicket && (
-          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center shrink-0">
-                <Gauge size={20} className="text-[var(--color-primary)]" />
-              </div>
-
-              <div className="flex-1">
-                <p className="text-[var(--color-text)] text-sm font-bold">
-                  Connection check will run automatically
-                </p>
-                <p className="text-[var(--color-muted)] text-xs mt-0.5 leading-relaxed">
-                  Make sure you are connected to your CanalBox Wi-Fi. When you submit, we’ll check the connection and attach the result to your ticket.
-                </p>
-              </div>
-            </div>
-
-            <label className="block">
-              <span className="text-[var(--color-text)] text-xs font-semibold">
-                Devices currently connected to your router
-              </span>
-              <div className="mt-2 flex items-center gap-2">
-                <Smartphone size={15} className="text-[var(--color-muted)]" />
-                <input
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={connectedDevices}
-                  onChange={(e) => {
-                    setConnectedDevices(Math.max(1, Number(e.target.value) || 1));
-                    setSpeedTest(null);
-                  }}
-                  className="w-full px-3 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
-                />
-              </div>
-            </label>
-
-            {speedTesting && (
-              <div className="bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-xl p-3">
-                <div className="flex items-center gap-2 text-[var(--color-primary)] text-xs font-semibold mb-2">
-                  <RefreshCw size={14} className="animate-spin" />
-                  Checking connection...
-                </div>
-                <div className="h-2 rounded-full bg-[var(--color-border)] overflow-hidden">
-                  <div className="h-full w-2/3 rounded-full bg-[var(--color-primary)] animate-pulse" />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div>
-          <p className="text-[var(--color-text)] text-sm font-semibold mb-2">
-            Attach Photos <span className="text-[var(--color-muted)] font-normal">(up to 5)</span>
-          </p>
-
-          {photos.length > 0 && (
-            <div className="flex gap-2 flex-wrap mb-3">
-              {photos.map((src, i) => (
-                <div
-                  key={src}
-                  className="relative w-20 h-20 rounded-xl overflow-hidden border border-[var(--color-border)]"
-                >
-                  <img src={src} alt="Upload" className="w-full h-full object-cover" />
-
+                {eligibilityCheck.currentLatitude && eligibilityCheck.currentLongitude && (
                   <button
                     type="button"
-                    onClick={() => removePhoto(i)}
-                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center"
+                    onClick={() => setShowPinAdjuster((current) => !current)}
+                    className="mt-3 text-xs font-semibold underline underline-offset-4"
                   >
-                    <X size={10} className="text-white" />
+                    {showPinAdjuster ? "Hide map" : "Adjust pin manually"}
                   </button>
+                )}
+              </div>
+            )}
+
+            {showPinAdjuster && eligibilityCheck?.currentLatitude && eligibilityCheck.currentLongitude && (
+              <div className="mt-4 space-y-2">
+                <div ref={mapContainerRef} className="h-64 w-full rounded-xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-bg)]" />
+                <p className="text-[var(--color-muted)] text-xs leading-relaxed">
+                  Drag the pin only if the captured point is clearly wrong. You can also submit without adjusting.
+                </p>
+              </div>
+            )}
+          </SectionCard>
+        )}
+
+        {mode === "ticket" && !isMoveEligibilityTicket && renderAccountLocation()}
+
+        {mode === "incident" && (
+          <>
+            <SectionCard>
+              <p className="text-[var(--color-text)] text-sm font-semibold mb-2">
+                Location details
+              </p>
+              <div className="bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-xl p-3 flex items-center gap-3 mb-2">
+                <MapPin size={16} className="text-[var(--color-primary)] shrink-0" />
+                <div className="flex-1">
+                  <p className="text-[var(--color-text)] text-sm font-medium">
+                    {profile.area}, {profile.district}
+                  </p>
+                  <p className="text-[var(--color-muted)] text-xs">
+                    {profile.customerNumber} · {profile.routerSerial}
+                  </p>
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+              <input
+                type="text"
+                value={locationNote}
+                onChange={(e) => setLocationNote(e.target.value)}
+                placeholder="Add nearby landmark or exact spot"
+                className="w-full px-3 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition"
+              />
+            </SectionCard>
+            {renderPhotoPicker()}
+            {renderTextArea("What happened?", "Describe what you saw, e.g. pole knocked down near Total station.", true)}
+          </>
+        )}
 
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={handleFileChange}
-          />
+        {mode === "ticket" && personalIssueType === "payment_not_reflected" && (
+          <>
+            {renderTextArea("Payment details", "Add transaction ID, amount paid, payment method, and date.", false)}
+            {renderPhotoPicker()}
+          </>
+        )}
 
-          {photos.length < 5 && (
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="w-full border-2 border-dashed border-[var(--color-border)] rounded-xl py-6 flex flex-col items-center gap-2 hover:border-[var(--color-primary)] hover:bg-[var(--color-surface-soft)] transition-colors"
-            >
-              <Camera size={24} className="text-[var(--color-muted)]" />
-              <p className="text-[var(--color-muted)] text-sm font-medium">
-                Tap to add photos
-              </p>
-              <p className="text-[var(--color-muted)] text-xs">
-               Photos will be attached to your ticket.
-              </p>
-            </button>
-          )}
+        {mode === "ticket" && personalIssueType === "wrong_router_payment" && (
+          <>
+            {renderTextArea("Payment details", "Add correct customer/router number, wrong customer/router number, transaction ID, and amount paid.", false)}
+            {renderPhotoPicker()}
+          </>
+        )}
 
-          <div className="mt-2 bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-xl p-3 flex items-start gap-2">
-            <Upload size={12} className="text-[var(--color-primary)] mt-0.5 shrink-0" />
-            <p className="text-[var(--color-muted)] text-xs">
-              {mode === "ticket"
-                ? "This will create a private support ticket for your account."
-                : "This will go to admin for approval before appearing as a public network incident."}
-            </p>
-          </div>
-        </div>
+        {mode === "ticket" && personalIssueType === "password_reset" && (
+          renderTextArea("Extra note", "Optional: add anything support should know before helping with the password reset.", false)
+        )}
 
-        <div>
-          <p className="text-[var(--color-text)] text-sm font-semibold mb-2">
-            Additional Details
-          </p>
+        {mode === "ticket" && personalIssueType === "other" && (
+          <>
+            {renderTextArea("What do you need help with?", "Explain the account issue so support can understand it quickly.", true)}
+            {renderPhotoPicker()}
+          </>
+        )}
 
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={4}
-            placeholder={
-              mode === "ticket"
-                ? "Optional: add anything else support should know."
-                : "Describe what you saw, e.g. pole knocked down near Total station."
-            }
-            className="w-full px-3 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition resize-none"
-          />
-        </div>
+        {mode === "ticket" && personalIssueType !== "payment_not_reflected" && personalIssueType !== "wrong_router_payment" && personalIssueType !== "password_reset" && personalIssueType !== "other" && !isSlowSpeedTicket && !isMoveEligibilityTicket && (
+          renderTextArea("Extra details", "Optional: add anything else support should know.", false)
+        )}
 
         {(error || statusMessage) && (
           <div

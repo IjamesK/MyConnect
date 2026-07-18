@@ -20,6 +20,7 @@ export type MoveEligibilityCheck = {
   recommendedAction: string;
   checkedAt: string;
   source: "browser_geolocation" | "manual_review";
+  locationSource?: "gps" | "gps_adjusted" | "manual";
 };
 
 export function eligibilityStatusTone(status: EligibilityStatus) {
@@ -38,9 +39,9 @@ export async function runMoveEligibilityCheck(data: {
 }): Promise<MoveEligibilityCheck> {
   return {
     status: "coordinates_captured",
-    statusLabel: "Coordinates captured",
+    statusLabel: "Location captured",
     summary:
-      "The customer's exact GPS coordinates have been attached to this move request. Staff should enter these coordinates into the CanalBox Mapbox eligibility tool to confirm service availability.",
+      "Your new location has been captured. Our team will check service availability and update you.",
     currentLatitude: data.latitude,
     currentLongitude: data.longitude,
     accuracyMeters: data.accuracyMeters ?? null,
@@ -49,10 +50,10 @@ export async function runMoveEligibilityCheck(data: {
     nearestZoneName: null,
     nearestDistanceMeters: null,
     matchedZoneId: null,
-    recommendedAction:
-      "Copy the latitude and longitude into the CanalBox Mapbox eligibility tool, then update this ticket with the eligibility result or site-survey decision.",
+    recommendedAction: "Copy and paste coordinates to Mapbox to test eligibility.",
     checkedAt: new Date().toISOString(),
     source: "browser_geolocation",
+    locationSource: "gps",
   };
 }
 
@@ -62,9 +63,9 @@ export function createManualEligibilityReview(data: {
 }): MoveEligibilityCheck {
   return {
     status: "location_needed",
-    statusLabel: "Coordinates not captured",
+    statusLabel: "Location not captured",
     summary:
-      "The customer's live GPS coordinates were not captured. Staff should contact the customer or ask them to submit again while standing at the new location.",
+      "Location was not captured. Please try again while standing at the new place or contact support for help.",
     currentLatitude: null,
     currentLongitude: null,
     accuracyMeters: null,
@@ -73,9 +74,9 @@ export function createManualEligibilityReview(data: {
     nearestZoneName: null,
     nearestDistanceMeters: null,
     matchedZoneId: null,
-    recommendedAction:
-      "Ask the customer to allow location access at the new place, or schedule a manual site survey if GPS capture is not possible.",
+    recommendedAction: "Ask the customer to submit coordinates again or schedule a manual site survey.",
     checkedAt: new Date().toISOString(),
     source: "manual_review",
+    locationSource: "manual",
   };
 }

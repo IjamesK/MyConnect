@@ -3,6 +3,7 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
+  Copy,
   Gauge,
   Download,
   Upload,
@@ -145,6 +146,27 @@ export function StaffTickets() {
   const resolvedTickets = useMemo(() => {
     return tickets.filter((ticket) => ticket.status === "resolved");
   }, [tickets]);
+
+
+  const handleCopyCoordinates = async (ticket: CustomerTicket) => {
+    const lat = ticket.eligibilityCheck?.currentLatitude;
+    const lng = ticket.eligibilityCheck?.currentLongitude;
+
+    if (typeof lat !== "number" || typeof lng !== "number") {
+      setMessage("No coordinates available for this move request.");
+      return;
+    }
+
+    const coordinates = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+
+    try {
+      await navigator.clipboard.writeText(coordinates);
+      setMessage("Coordinates copied. Paste them into Mapbox to test eligibility.");
+    } catch (error) {
+      console.error("Failed to copy coordinates:", error);
+      window.prompt("Copy these coordinates:", coordinates);
+    }
+  };
 
   const handleAssignTechnician = async (ticket: CustomerTicket) => {
     const technicianName = window.prompt("Technician name:");
@@ -477,21 +499,29 @@ export function StaffTickets() {
 
                         {ticket.eligibilityCheck && (
                           <div className="mt-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3">
-                            <div className="flex items-center gap-2 mb-2">
-                              <MapPinned size={14} className="text-[#0057B8]" />
-                              <p className="text-[#0F172A] text-xs font-semibold">
-                                Move Location Evidence
-                              </p>
-                              <span className="text-[#94A3B8] text-[10px]">
-                                {ticket.eligibilityCheck.statusLabel}
-                              </span>
+                            <div className="flex items-center justify-between gap-3 mb-2">
+                              <div className="flex items-center gap-2">
+                                <MapPinned size={14} className="text-[#0057B8]" />
+                                <p className="text-[#0F172A] text-xs font-semibold">
+                                  Move Location Evidence
+                                </p>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => handleCopyCoordinates(ticket)}
+                                className="px-2 py-1 bg-[#EBF2FF] text-[#0057B8] rounded-lg text-[10px] font-semibold flex items-center gap-1"
+                              >
+                                <Copy size={11} />
+                                Copy
+                              </button>
                             </div>
 
                             <div className="text-[#64748B] text-xs space-y-1">
-                              <p>New place: {ticket.eligibilityCheck.newAddress || "Not provided"}</p>
+                              <p>New location: {ticket.eligibilityCheck.newAddress || "Not provided"}</p>
                               <p>Landmark: {ticket.eligibilityCheck.landmark || "Not provided"}</p>
                               <p>Coordinates: {formatCoordinate(ticket.eligibilityCheck.currentLatitude)}, {formatCoordinate(ticket.eligibilityCheck.currentLongitude)}</p>
-                              <p>Mapbox action: {ticket.eligibilityCheck.recommendedAction}</p>
+                              <p>Action: Copy and paste coordinates to Mapbox to test eligibility.</p>
                             </div>
                           </div>
                         )}

@@ -218,7 +218,7 @@ export function SubscriptionPage() {
               Moving to a new place?
             </p>
             <p className="text-[#64748B] text-xs mt-1 leading-relaxed">
-              Send your new-location coordinates so staff can test the place in the CanalBox Mapbox eligibility tool.
+              Send your new-location coordinates so staff can confirm service availability.
             </p>
             <button
               type="button"
