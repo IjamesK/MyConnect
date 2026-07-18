@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Layout } from "../isp/Layout";
-import { CheckCircle, Zap, RefreshCw } from "lucide-react";
+import { CheckCircle, MapPinned, Zap, RefreshCw } from "lucide-react";
 import type { CustomerProfile } from "../../../lib/auth";
 
 function formatCurrency(amount: number) {
@@ -206,6 +206,27 @@ export function SubscriptionPage() {
             <span className="font-semibold text-[#0F172A]">Pay with:</span>
             <span className="px-2 py-1 rounded-full bg-[#FFFBEB] text-[#B45309] font-semibold">MTN MoMo</span>
             <span className="px-2 py-1 rounded-full bg-[#FEF2F2] text-[#DC2626] font-semibold">Airtel Money</span>
+          </div>
+        </div>
+
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#EBF2FF] flex items-center justify-center shrink-0">
+            <MapPinned size={18} className="text-[#0057B8]" />
+          </div>
+          <div className="flex-1">
+            <p className="text-[#0F172A] text-sm font-semibold">
+              Moving to a new place?
+            </p>
+            <p className="text-[#64748B] text-xs mt-1 leading-relaxed">
+              Send your new-location coordinates so staff can test the place in the CanalBox Mapbox eligibility tool.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate("/report-issue?mode=ticket&type=move_eligibility")}
+              className="mt-3 px-3 py-2 bg-[#E5007D] text-white rounded-xl text-xs font-semibold"
+            >
+              Send move location
+            </button>
           </div>
         </div>
 

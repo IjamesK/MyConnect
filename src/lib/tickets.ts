@@ -17,6 +17,7 @@ import type { CustomerProfile } from "./auth";
 import { createCustomerNotification } from "./notifications";
 import type { SpeedTestResult } from "./speedTest";
 import type { RouterLightCheck } from "./routerTypes";
+import type { MoveEligibilityCheck } from "./eligibility";
 
 export type TicketStatus =
   | "open"
@@ -31,7 +32,8 @@ export type TicketPriority = "low" | "medium" | "high";
 export type TicketWorkType =
   | "remote_support"
   | "technician"
-  | "monitoring";
+  | "monitoring"
+  | "site_survey";
 
 export type TicketUpdate = {
   text: string;
@@ -42,6 +44,7 @@ export type TicketUpdate = {
 
 export type TicketSpeedTest = SpeedTestResult;
 export type TicketRouterLightCheck = RouterLightCheck;
+export type TicketEligibilityCheck = MoveEligibilityCheck;
 
 export type CustomerTicket = {
   id: string;
@@ -72,6 +75,7 @@ export type CustomerTicket = {
   locationNote?: string;
   speedTest?: TicketSpeedTest | null;
   routerLightCheck?: TicketRouterLightCheck | null;
+  eligibilityCheck?: TicketEligibilityCheck | null;
 
   updates?: TicketUpdate[];
 
@@ -85,8 +89,12 @@ function ticketStatusLabel(status: TicketStatus) {
 }
 
 function inferWorkType(category: string): TicketWorkType {
-  if (category === "password_reset" || category === "payment_not_reflected") {
+  if (category === "password_reset" || category === "payment_not_reflected" || category === "wrong_router_payment") {
     return "remote_support";
+  }
+
+  if (category === "move_eligibility") {
+    return "site_survey";
   }
 
   if (
@@ -112,6 +120,7 @@ export async function createTicket(
     locationNote?: string;
     speedTest?: TicketSpeedTest | null;
     routerLightCheck?: TicketRouterLightCheck | null;
+    eligibilityCheck?: TicketEligibilityCheck | null;
   }
 ) {
   const workType = data.workType ?? inferWorkType(data.category);
@@ -143,6 +152,7 @@ export async function createTicket(
     locationNote: data.locationNote ?? "",
     speedTest: data.speedTest ?? null,
     routerLightCheck: data.routerLightCheck ?? null,
+    eligibilityCheck: data.eligibilityCheck ?? null,
 
     updates: [
       {
@@ -160,8 +170,11 @@ export async function createTicket(
   await createCustomerNotification({
     customerUid: profile.uid,
     type: "ticket",
-    title: "Ticket Created",
-    body: `Your ticket has been submitted. Reference: ${ticketRef.id}`,
+    title: data.category === "move_eligibility" ? "Move Request Created" : "Ticket Created",
+    body:
+      data.category === "move_eligibility"
+        ? `Your move request has been submitted with location details. Reference: ${ticketRef.id}`
+        : `Your ticket has been submitted. Reference: ${ticketRef.id}`,
     action: `/ticket/${ticketRef.id}`,
     relatedId: ticketRef.id,
   });

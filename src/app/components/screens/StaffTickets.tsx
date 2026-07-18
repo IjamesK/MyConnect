@@ -8,6 +8,7 @@ import {
   Upload,
   Timer,
   MapPin,
+  MapPinned,
   Phone,
   Search,
   Ticket,
@@ -81,10 +82,17 @@ function formatLocation(ticket: CustomerTicket) {
   return "Location not set";
 }
 
+
+function formatCoordinate(value: number | null | undefined) {
+  if (typeof value !== "number") return "Not captured";
+  return value.toFixed(6);
+}
+
 function workTypeLabel(workType?: TicketWorkType) {
   if (workType === "technician") return "Technician Visit";
   if (workType === "remote_support") return "Remote Support";
   if (workType === "monitoring") return "Monitoring";
+  if (workType === "site_survey") return "Site Survey";
   return "Not classified";
 }
 
@@ -114,6 +122,9 @@ export function StaffTickets() {
         ticket.phone?.toLowerCase().includes(cleanSearch) ||
         ticket.title?.toLowerCase().includes(cleanSearch) ||
         ticket.description?.toLowerCase().includes(cleanSearch) ||
+        ticket.eligibilityCheck?.newAddress?.toLowerCase().includes(cleanSearch) ||
+        ticket.eligibilityCheck?.landmark?.toLowerCase().includes(cleanSearch) ||
+        ticket.eligibilityCheck?.statusLabel?.toLowerCase().includes(cleanSearch) ||
         ticket.area?.toLowerCase().includes(cleanSearch) ||
         ticket.district?.toLowerCase().includes(cleanSearch);
 
@@ -460,6 +471,27 @@ export function StaffTickets() {
                                   ? ticket.routerLightCheck.selectedLights.join(", ")
                                   : "None selected"}
                               </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {ticket.eligibilityCheck && (
+                          <div className="mt-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <MapPinned size={14} className="text-[#0057B8]" />
+                              <p className="text-[#0F172A] text-xs font-semibold">
+                                Move Location Evidence
+                              </p>
+                              <span className="text-[#94A3B8] text-[10px]">
+                                {ticket.eligibilityCheck.statusLabel}
+                              </span>
+                            </div>
+
+                            <div className="text-[#64748B] text-xs space-y-1">
+                              <p>New place: {ticket.eligibilityCheck.newAddress || "Not provided"}</p>
+                              <p>Landmark: {ticket.eligibilityCheck.landmark || "Not provided"}</p>
+                              <p>Coordinates: {formatCoordinate(ticket.eligibilityCheck.currentLatitude)}, {formatCoordinate(ticket.eligibilityCheck.currentLongitude)}</p>
+                              <p>Mapbox action: {ticket.eligibilityCheck.recommendedAction}</p>
                             </div>
                           </div>
                         )}

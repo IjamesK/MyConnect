@@ -9,6 +9,7 @@ import {
   Timer,
   Loader2,
   MapPin,
+  MapPinned,
   MessageSquare,
   Phone,
   Send,
@@ -54,6 +55,8 @@ function formatCategory(category: string) {
   if (category === "los_light") return "LOS Light Red";
   if (category === "payment_not_reflected") return "Payment Not Reflected";
   if (category === "router_issue") return "Router Issue";
+  if (category === "wrong_router_payment") return "Wrong Router Payment";
+  if (category === "move_eligibility") return "Move / Location Check";
   return "Customer Issue";
 }
 
@@ -80,9 +83,11 @@ function buildTimeline(ticket: CustomerTicket) {
   const progressLabel =
     ticket.workType === "technician"
       ? "Technician Working"
-      : ticket.workType === "monitoring"
-        ? "Under Monitoring"
-        : "Remote Support";
+      : ticket.workType === "site_survey"
+        ? "Site Survey Review"
+        : ticket.workType === "monitoring"
+          ? "Under Monitoring"
+          : "Remote Support";
 
   return [
     {
@@ -110,6 +115,11 @@ function buildTimeline(ticket: CustomerTicket) {
       active: false,
     },
   ];
+}
+
+function formatCoordinate(value: number | null | undefined) {
+  if (typeof value !== "number") return "Not captured";
+  return value.toFixed(6);
 }
 
 export function TicketTracking() {
@@ -213,7 +223,11 @@ export function TicketTracking() {
   }
 
   const isTechnicianTicket =
-    ticket.workType === "technician" || Boolean(ticket.assignedTechnicianName);
+    ticket.workType === "technician" ||
+    ticket.workType === "site_survey" ||
+    Boolean(ticket.assignedTechnicianName);
+  const isSiteSurveyTicket =
+    ticket.workType === "site_survey" || ticket.category === "move_eligibility";
 
   const isPasswordReset = ticket.category === "password_reset";
 
@@ -367,6 +381,30 @@ export function TicketTracking() {
           </div>
         )}
 
+        {ticket.eligibilityCheck && (
+          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <MapPinned size={18} className="text-[#0057B8]" />
+              <p className="text-[#0F172A] text-sm font-semibold">
+                Move Location Check
+              </p>
+            </div>
+
+            <div className="space-y-2 text-xs text-[#64748B]">
+              <p className="text-[#0F172A] text-sm font-bold">
+                {ticket.eligibilityCheck.statusLabel}
+              </p>
+              <p className="leading-relaxed">{ticket.eligibilityCheck.summary}</p>
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#F1F5F9]">
+                <p>New place: {ticket.eligibilityCheck.newAddress || "Not provided"}</p>
+                <p>Landmark: {ticket.eligibilityCheck.landmark || "Not provided"}</p>
+                <p>Coordinates: {formatCoordinate(ticket.eligibilityCheck.currentLatitude)}, {formatCoordinate(ticket.eligibilityCheck.currentLongitude)}</p>
+                <p>Accuracy: {ticket.eligibilityCheck.accuracyMeters ? `${Math.round(ticket.eligibilityCheck.accuracyMeters)} m` : "Manual review"}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Password reset notice */}
         {isPasswordReset && (
           <div className="bg-[#EBF2FF] border border-[#BFDBFE] rounded-2xl p-4">
@@ -396,11 +434,11 @@ export function TicketTracking() {
 
             <div className="flex-1">
               <p className="text-[#0F172A] text-sm font-semibold">
-                {ticket.assignedTechnicianName || "Technician pending"}
+                {ticket.assignedTechnicianName || (isSiteSurveyTicket ? "Site survey pending" : "Technician pending")}
               </p>
 
               <p className="text-[#64748B] text-xs">
-                Field Technician · {ticket.area || "Service Area"}
+                {isSiteSurveyTicket ? "Coverage / Move Review" : "Field Technician"} · {ticket.area || "Service Area"}
               </p>
 
               <p

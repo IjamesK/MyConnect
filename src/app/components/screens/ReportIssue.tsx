@@ -9,7 +9,9 @@ import {
   FileText,
   Gauge,
   KeyRound,
+  LocateFixed,
   MapPin,
+  MapPinned,
   RadioTower,
   RefreshCw,
   Router,
@@ -31,6 +33,12 @@ import {
   runBrowserSpeedTest,
   type SpeedTestResult,
 } from "../../../lib/speedTest";
+import {
+  createManualEligibilityReview,
+  eligibilityStatusTone,
+  runMoveEligibilityCheck,
+  type MoveEligibilityCheck,
+} from "../../../lib/eligibility";
 import {
   normalizeRouterType,
   routerName,
@@ -56,6 +64,12 @@ const personalIssueTypes = [
     icon: RefreshCw,
     label: "Paid on Wrong Router",
     value: "wrong_router_payment",
+    priority: "medium",
+  },
+  {
+    icon: MapPinned,
+    label: "Moving / Location Check",
+    value: "move_eligibility",
     priority: "medium",
   },
   { icon: KeyRound, label: "Wi-Fi Password Reset", value: "password_reset", priority: "low" },
@@ -104,6 +118,10 @@ function getPrefilledDescription(type: string) {
     return "I paid on the wrong router/customer account and need help correcting the payment.";
   }
 
+  if (type === "move_eligibility") {
+    return "I am moving to a new place and would like CanalBox to confirm if the new location is eligible for service.";
+  }
+
   return "";
 }
 
@@ -133,6 +151,29 @@ function buildRouterLightCheck(profile: CustomerProfile | null, pattern: string 
   };
 }
 
+function eligibilityToneClass(status: MoveEligibilityCheck["status"]) {
+  const tone = eligibilityStatusTone(status);
+
+  if (tone === "success") {
+    return "bg-green-50 text-green-700 border-green-200";
+  }
+
+  if (tone === "warning") {
+    return "bg-amber-50 text-amber-700 border-amber-200";
+  }
+
+  if (tone === "danger") {
+    return "bg-red-50 text-red-700 border-red-200";
+  }
+
+  return "bg-[var(--color-surface-soft)] text-[var(--color-muted)] border-[var(--color-border)]";
+}
+
+function formatCoordinate(value: number | null) {
+  if (typeof value !== "number") return "Not captured";
+  return value.toFixed(6);
+}
+
 export function ReportIssue() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -151,6 +192,11 @@ export function ReportIssue() {
   const [description, setDescription] = useState("");
   const [locationNote, setLocationNote] = useState("");
   const [connectedDevices, setConnectedDevices] = useState(3);
+  const [newMoveAddress, setNewMoveAddress] = useState("");
+  const [newMoveLandmark, setNewMoveLandmark] = useState("");
+  const [eligibilityCheck, setEligibilityCheck] =
+    useState<MoveEligibilityCheck | null>(null);
+  const [checkingEligibility, setCheckingEligibility] = useState(false);
   const [speedTest, setSpeedTest] = useState<SpeedTestResult | null>(null);
   const [speedTesting, setSpeedTesting] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
@@ -172,10 +218,13 @@ export function ReportIssue() {
   const selectedRouterName = routerName(selectedRouterType);
   const isSlowSpeedTicket =
     mode === "ticket" && personalIssueType === "slow_speed";
+  const isMoveEligibilityTicket =
+    mode === "ticket" && personalIssueType === "move_eligibility";
 
   const handleIssueSelect = (issueType: string) => {
     setError("");
     setSpeedTest(null);
+    setEligibilityCheck(null);
 
     if (issueNeedsRouterLights(issueType)) {
       navigate(`/troubleshoot/zte?issue=${issueType}`);
@@ -251,6 +300,63 @@ export function ReportIssue() {
     setPhotos((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  const handleRunEligibilityCheck = async () => {
+    setError("");
+    setEligibilityCheck(null);
+
+    if (!newMoveAddress.trim() && !newMoveLandmark.trim()) {
+      setError("Please add the new area, building name, or nearby landmark before capturing coordinates.");
+      return;
+    }
+
+    if (!("geolocation" in navigator)) {
+      setEligibilityCheck(
+        createManualEligibilityReview({
+          newAddress: newMoveAddress.trim(),
+          landmark: newMoveLandmark.trim(),
+        }),
+      );
+      setError("This device cannot share live location. Please use a phone/browser that allows GPS location, or contact support for a manual site survey.");
+      return;
+    }
+
+    try {
+      setCheckingEligibility(true);
+      setStatusMessage("Capturing coordinates at this location...");
+
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        });
+      });
+
+      const result = await runMoveEligibilityCheck({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracyMeters: position.coords.accuracy,
+        newAddress: newMoveAddress.trim(),
+        landmark: newMoveLandmark.trim(),
+      });
+
+      setEligibilityCheck(result);
+      setStatusMessage("");
+    } catch (err) {
+      console.error("Eligibility check failed:", err);
+      setEligibilityCheck(
+        createManualEligibilityReview({
+          newAddress: newMoveAddress.trim(),
+          landmark: newMoveLandmark.trim(),
+        }),
+      );
+      setError("Location permission was not completed. Please allow location access while you are standing at the new place, then try again.");
+    } finally {
+      setCheckingEligibility(false);
+      setStatusMessage("");
+    }
+  };
+
   const handleSubmit = async () => {
     if (!profile) return;
 
@@ -260,6 +366,18 @@ export function ReportIssue() {
     if (mode === "ticket" && !personalIssueType) {
       setError("Please select the problem you are experiencing.");
       return;
+    }
+
+    if (mode === "ticket" && personalIssueType === "move_eligibility") {
+      if (!newMoveAddress.trim() && !newMoveLandmark.trim()) {
+        setError("Please add the new location, building name, or nearby landmark.");
+        return;
+      }
+
+      if (!eligibilityCheck?.currentLatitude || !eligibilityCheck?.currentLongitude) {
+        setError("Please capture your GPS coordinates while you are standing at the new location before submitting.");
+        return;
+      }
     }
 
     if (mode === "incident" && !description.trim()) {
@@ -292,8 +410,16 @@ export function ReportIssue() {
           }
         }
 
+        const moveDescription =
+          personalIssueType === "move_eligibility"
+            ? `Customer is moving and wants CanalBox to check service eligibility for a new location.
+New place: ${newMoveAddress.trim() || "Not provided"}
+Nearby landmark: ${newMoveLandmark.trim() || "Not provided"}`
+            : "";
+
         const baseDescription =
           description.trim() ||
+          moveDescription ||
           getPrefilledDescription(personalIssueType) ||
           selectedIssue?.label ||
           "Customer issue";
@@ -313,12 +439,24 @@ export function ReportIssue() {
             }`
           : "";
 
+        const eligibilityNote = eligibilityCheck
+          ? `
+
+Move location check:
+Status: ${eligibilityCheck.statusLabel}
+Summary: ${eligibilityCheck.summary}
+New place: ${eligibilityCheck.newAddress || "Not provided"}
+Landmark: ${eligibilityCheck.landmark || "Not provided"}
+Coordinates: ${formatCoordinate(eligibilityCheck.currentLatitude)}, ${formatCoordinate(eligibilityCheck.currentLongitude)}
+Staff action: ${eligibilityCheck.recommendedAction}`
+          : "";
+
         setStatusMessage("Creating your support ticket...");
 
         const ticketId = await createTicket(profile, {
           category: personalIssueType,
           title: selectedIssue?.label ?? "Customer Issue",
-          description: `${baseDescription}${speedNote}${routerLightNote}`,
+          description: `${baseDescription}${speedNote}${routerLightNote}${eligibilityNote}`,
           priority: (selectedIssue?.priority ?? "medium") as TicketPriority,
           workType:
             personalIssueType === "password_reset" ||
@@ -327,11 +465,15 @@ export function ReportIssue() {
               ? "remote_support"
               : personalIssueType === "slow_speed"
                 ? "monitoring"
-                : "technician",
+                : personalIssueType === "move_eligibility"
+                  ? "site_survey"
+                  : "technician",
           photoCount: photos.length,
           locationNote: locationNote.trim(),
           speedTest: personalIssueType === "slow_speed" ? capturedSpeedTest : null,
           routerLightCheck,
+          eligibilityCheck:
+            personalIssueType === "move_eligibility" ? eligibilityCheck : null,
         });
 
         setSubmitted({ mode: "ticket", id: ticketId });
@@ -372,6 +514,7 @@ export function ReportIssue() {
 
   if (submitted) {
     const isTicket = submitted.mode === "ticket";
+    const isMoveRequest = isTicket && personalIssueType === "move_eligibility";
 
     return (
       <Layout showBack backTo="/dashboard" title="Report">
@@ -387,13 +530,19 @@ export function ReportIssue() {
             }}
             className="text-[var(--color-text)] text-xl mb-2"
           >
-            {isTicket ? "Ticket Created" : "Incident Sent for Review"}
+            {isMoveRequest
+              ? "Move Request Created"
+              : isTicket
+                ? "Ticket Created"
+                : "Incident Sent for Review"}
           </h2>
 
           <p className="text-[var(--color-muted)] text-sm mb-4">
-            {isTicket
-              ? "Your issue has been sent to support. You will receive updates as the ticket progresses."
-              : "Your network incident report has been sent to admin for approval."}
+            {isMoveRequest
+              ? "Your move request has been sent with location details. Staff will use the coordinates to confirm eligibility and update you."
+              : isTicket
+                ? "Your request has been sent to support. You will receive updates as the ticket progresses."
+                : "Your network incident report has been sent to admin for approval."}
           </p>
 
           <p
@@ -588,6 +737,82 @@ export function ReportIssue() {
           />
         </div>
 
+        {isMoveEligibilityTicket && (
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center shrink-0">
+                <MapPinned size={20} className="text-[var(--color-primary)]" />
+              </div>
+
+              <div className="flex-1">
+                <p className="text-[var(--color-text)] text-sm font-bold">
+                  Capture new-place coordinates
+                </p>
+                <p className="text-[var(--color-muted)] text-xs mt-0.5 leading-relaxed">
+                  Stand at the place you are moving to, then allow location access. MyConnect will attach your exact GPS coordinates so staff can test the location in CanalBox Mapbox.
+                </p>
+              </div>
+            </div>
+
+            <label className="block">
+              <span className="text-[var(--color-text)] text-xs font-semibold">
+                New place / area
+              </span>
+              <input
+                type="text"
+                value={newMoveAddress}
+                onChange={(e) => {
+                  setNewMoveAddress(e.target.value);
+                  setEligibilityCheck(null);
+                }}
+                placeholder="e.g. Kiwatule, Najjera, Kira, Seeta..."
+                className="mt-2 w-full px-3 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-[var(--color-text)] text-xs font-semibold">
+                Nearby landmark or building name
+              </span>
+              <input
+                type="text"
+                value={newMoveLandmark}
+                onChange={(e) => {
+                  setNewMoveLandmark(e.target.value);
+                  setEligibilityCheck(null);
+                }}
+                placeholder="e.g. near Total, opposite school, apartment name"
+                className="mt-2 w-full px-3 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition"
+              />
+            </label>
+
+            <button
+              type="button"
+              onClick={handleRunEligibilityCheck}
+              disabled={checkingEligibility}
+              className="w-full py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] disabled:bg-[var(--color-primary)]/60 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+            >
+              {checkingEligibility ? (
+                <RefreshCw size={15} className="animate-spin" />
+              ) : (
+                <LocateFixed size={15} />
+              )}
+              {checkingEligibility ? "Capturing coordinates..." : "Capture my current coordinates"}
+            </button>
+
+            {eligibilityCheck && (
+              <div className={`rounded-xl border px-3 py-3 text-xs ${eligibilityToneClass(eligibilityCheck.status)}`}>
+                <p className="font-bold text-sm">{eligibilityCheck.statusLabel}</p>
+                <p className="mt-1 leading-relaxed">{eligibilityCheck.summary}</p>
+                <div className="mt-2 grid grid-cols-2 gap-2 opacity-90">
+                  <p>Accuracy: {eligibilityCheck.accuracyMeters ? `${Math.round(eligibilityCheck.accuracyMeters)} m` : "Manual review"}</p>
+                  <p>Use in Mapbox: {formatCoordinate(eligibilityCheck.currentLatitude)}, {formatCoordinate(eligibilityCheck.currentLongitude)}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {isSlowSpeedTicket && (
           <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 space-y-4">
             <div className="flex items-start gap-3">
@@ -741,9 +966,11 @@ export function ReportIssue() {
             ? speedTesting
               ? "Checking connection..."
               : "Submitting..."
-            : mode === "ticket"
-              ? "Submit Ticket"
-              : "Submit Incident for Review"}
+            : isMoveEligibilityTicket
+              ? "Submit Move Request"
+              : mode === "ticket"
+                ? "Submit Ticket"
+                : "Submit Incident for Review"}
         </button>
       </div>
     </Layout>
