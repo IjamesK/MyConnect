@@ -21,18 +21,26 @@ import {
   LocateFixed,
   MapPin,
   MapPinned,
+  MessageSquare,
   RadioTower,
   RefreshCw,
   Router,
   Scissors,
   Smartphone,
+  Send,
   Upload,
   WifiOff,
   Wrench,
   X,
 } from "lucide-react";
 import type { CustomerProfile } from "../../../lib/auth";
-import { createTicket, type TicketPriority } from "../../../lib/tickets";
+import {
+  addTicketCustomerComment,
+  createTicket,
+  findActiveRelatedTicket,
+  type RelatedTicketBlock,
+  type TicketPriority,
+} from "../../../lib/tickets";
 import {
   createIncidentReport,
   type IncidentType,
@@ -236,6 +244,10 @@ export function ReportIssue() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+  const [duplicateBlock, setDuplicateBlock] = useState<RelatedTicketBlock | null>(null);
+  const [duplicateUpdateText, setDuplicateUpdateText] = useState("");
+  const [addingDuplicateUpdate, setAddingDuplicateUpdate] = useState(false);
+  const [duplicateUpdateSent, setDuplicateUpdateSent] = useState(false);
   const [submitted, setSubmitted] = useState<{
     mode: ReportMode;
     id: string;
@@ -263,6 +275,9 @@ export function ReportIssue() {
 
   const handleIssueSelect = (issueType: string) => {
     setError("");
+    setDuplicateBlock(null);
+    setDuplicateUpdateText("");
+    setDuplicateUpdateSent(false);
     setSpeedTest(null);
     setEligibilityCheck(null);
     setShowPinAdjuster(false);
@@ -281,6 +296,9 @@ export function ReportIssue() {
   const resetSelection = () => {
     setError("");
     setStatusMessage("");
+    setDuplicateBlock(null);
+    setDuplicateUpdateText("");
+    setDuplicateUpdateSent(false);
     setPersonalIssueType("");
     setNetworkIssueType("");
     setDescription("");
@@ -479,6 +497,80 @@ export function ReportIssue() {
     }
   };
 
+
+  const formatTicketTime = (value?: { toDate?: () => Date } | null) => {
+    const date = value?.toDate?.();
+
+    if (!date) return "Recently";
+
+    return date.toLocaleString([], {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const buildDefaultDuplicateUpdate = () => {
+    const updateParts = [
+      `Customer tried to report: ${issueLabel("ticket", personalIssueType)}.`,
+    ];
+
+    if (description.trim()) {
+      updateParts.push(description.trim());
+    }
+
+    if (personalIssueType === "slow_speed" && connectedDevices) {
+      updateParts.push(`Reported connected devices: ${connectedDevices}.`);
+    }
+
+    if (personalIssueType === "move_eligibility" && (newMoveAddress.trim() || newMoveLandmark.trim())) {
+      updateParts.push(`New place: ${newMoveAddress.trim() || "Not provided"}.`);
+      updateParts.push(`Landmark: ${newMoveLandmark.trim() || "Not provided"}.`);
+    }
+
+    if (eligibilityCheck?.currentLatitude && eligibilityCheck?.currentLongitude) {
+      updateParts.push(
+        `Coordinates: ${formatCoordinate(eligibilityCheck.currentLatitude)}, ${formatCoordinate(eligibilityCheck.currentLongitude)}.`,
+      );
+    }
+
+    if (routerLightCheck) {
+      updateParts.push(`Router light check: ${routerPatternLabel(routerLightCheck.pattern)}.`);
+    }
+
+    return updateParts.join("\n");
+  };
+
+  const handleAddDuplicateUpdate = async () => {
+    if (!profile || !duplicateBlock) return;
+
+    const cleanUpdate = duplicateUpdateText.trim();
+
+    if (!cleanUpdate) {
+      setError("Please add a short update before sending it to support.");
+      return;
+    }
+
+    try {
+      setError("");
+      setAddingDuplicateUpdate(true);
+      await addTicketCustomerComment({
+        ticketId: duplicateBlock.ticket.id,
+        by: profile.fullName || "Customer",
+        text: cleanUpdate,
+      });
+      setDuplicateUpdateSent(true);
+      setDuplicateUpdateText("");
+      setStatusMessage("Update added to the existing ticket.");
+    } catch (err) {
+      console.error("Add duplicate update failed:", err);
+      setError("Failed to add the update. Please check your connection and try again.");
+    } finally {
+      setAddingDuplicateUpdate(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!profile) return;
 
@@ -527,6 +619,17 @@ export function ReportIssue() {
         const selectedIssue = personalIssueTypes.find(
           (item) => item.value === personalIssueType,
         );
+
+        setStatusMessage("Checking for existing related tickets...");
+        const relatedTicket = await findActiveRelatedTicket(profile.uid, personalIssueType);
+
+        if (relatedTicket) {
+          setDuplicateBlock(relatedTicket);
+          setDuplicateUpdateText((current) => current || buildDefaultDuplicateUpdate());
+          setDuplicateUpdateSent(false);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          return;
+        }
 
         let capturedSpeedTest: SpeedTestResult | null = null;
 
@@ -721,6 +824,125 @@ export function ReportIssue() {
       <Layout showBack backTo="/dashboard" title="Report">
         <div className="px-4 py-10 text-center text-[var(--color-muted)] text-sm">
           Loading account details...
+        </div>
+      </Layout>
+    );
+  }
+
+  if (duplicateBlock) {
+    return (
+      <Layout showBack backTo="/report-issue" title="Report">
+        <div className="px-4 py-5 space-y-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+            <div className="flex gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center shrink-0">
+                <AlertTriangle size={20} className="text-amber-600" />
+              </div>
+
+              <div className="flex-1">
+                <h1
+                  style={{
+                    fontFamily: "'Inter Tight', system-ui, sans-serif",
+                    fontWeight: 800,
+                  }}
+                  className="text-amber-800 text-xl"
+                >
+                  {duplicateBlock.title}
+                </h1>
+
+                <p className="text-amber-700 text-sm mt-2 leading-relaxed">
+                  {duplicateBlock.message}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <SectionCard>
+            <p className="text-[var(--color-muted)] text-xs font-semibold uppercase tracking-wide">
+              Existing ticket
+            </p>
+            <p className="text-[var(--color-text)] text-base font-bold mt-1">
+              {duplicateBlock.ticket.title}
+            </p>
+            <p className="text-[var(--color-muted)] text-xs mt-1">
+              Status: {duplicateBlock.ticket.status.replace("_", " ")} · Opened {formatTicketTime(duplicateBlock.ticket.createdAt)}
+            </p>
+            <p
+              style={{ fontFamily: "'JetBrains Mono', monospace" }}
+              className="text-[var(--color-muted)] text-xs mt-2"
+            >
+              Reference: {duplicateBlock.ticket.id}
+            </p>
+
+            <button
+              type="button"
+              onClick={() => navigate(`/ticket/${duplicateBlock.ticket.id}`)}
+              className="mt-4 w-full py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold"
+            >
+              View Existing Ticket
+            </button>
+          </SectionCard>
+
+          <SectionCard>
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-9 h-9 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center shrink-0">
+                <MessageSquare size={18} className="text-[var(--color-primary)]" />
+              </div>
+              <div>
+                <p className="text-[var(--color-text)] text-sm font-bold">
+                  Add update instead
+                </p>
+                <p className="text-[var(--color-muted)] text-xs mt-0.5">
+                  This will be added to the existing ticket. No new duplicate ticket will be created.
+                </p>
+              </div>
+            </div>
+
+            <textarea
+              value={duplicateUpdateText}
+              onChange={(e) => {
+                setDuplicateUpdateText(e.target.value);
+                setDuplicateUpdateSent(false);
+              }}
+              rows={4}
+              placeholder={duplicateBlock.suggestedUpdate}
+              className="w-full px-3 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition resize-none"
+            />
+
+            <button
+              type="button"
+              onClick={handleAddDuplicateUpdate}
+              disabled={addingDuplicateUpdate}
+              className="mt-3 w-full py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] disabled:bg-[var(--color-primary)]/60 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+            >
+              {addingDuplicateUpdate ? (
+                <RefreshCw size={15} className="animate-spin" />
+              ) : (
+                <Send size={15} />
+              )}
+              {addingDuplicateUpdate ? "Adding update..." : "Add Update"}
+            </button>
+          </SectionCard>
+
+          {(error || statusMessage || duplicateUpdateSent) && (
+            <div
+              className={`text-xs rounded-lg px-3 py-2 border ${
+                error
+                  ? "bg-red-50 text-red-600 border-red-200"
+                  : "bg-green-50 text-green-700 border-green-200"
+              }`}
+            >
+              {error || statusMessage || "Update added to the existing ticket."}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={resetSelection}
+            className="w-full py-2.5 rounded-xl border border-[var(--color-border)] text-[var(--color-muted)] text-sm font-semibold"
+          >
+            Choose Different Problem
+          </button>
         </div>
       </Layout>
     );

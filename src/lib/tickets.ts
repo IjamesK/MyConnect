@@ -3,6 +3,8 @@ import {
   arrayUnion,
   collection,
   doc,
+  getDocs,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -83,6 +85,13 @@ export type CustomerTicket = {
   updatedAt?: Timestamp | null;
 };
 
+export type RelatedTicketBlock = {
+  ticket: CustomerTicket;
+  title: string;
+  message: string;
+  suggestedUpdate: string;
+};
+
 function ticketStatusLabel(status: TicketStatus) {
   if (status === "in_progress") return "in progress";
   return status.replace("_", " ");
@@ -106,6 +115,132 @@ function inferWorkType(category: string): TicketWorkType {
   }
 
   return "monitoring";
+}
+
+const CLOSED_TICKET_STATUSES = new Set(["resolved", "closed", "cancelled"]);
+const INTERNET_TICKET_CATEGORIES = new Set([
+  "no_internet",
+  "los_light",
+  "router_issue",
+  "slow_speed",
+]);
+const PAYMENT_TICKET_CATEGORIES = new Set([
+  "payment_not_reflected",
+  "wrong_router_payment",
+]);
+
+function ticketCategoryLabel(category: string) {
+  if (category === "no_internet") return "No Internet";
+  if (category === "los_light") return "LOS Light Red";
+  if (category === "router_issue") return "Router / Wi-Fi Issue";
+  if (category === "slow_speed") return "Slow Speed";
+  if (category === "payment_not_reflected") return "Payment Not Reflected";
+  if (category === "wrong_router_payment") return "Paid on Wrong Router";
+  if (category === "password_reset") return "Wi-Fi Password Reset";
+  if (category === "move_eligibility") return "Moving / Location Check";
+  if (category === "other") return "Other Account Issue";
+  return "Customer Issue";
+}
+
+function isActiveTicket(status: string) {
+  return !CLOSED_TICKET_STATUSES.has(status);
+}
+
+function isRelatedTicket(existingCategory: string, newCategory: string) {
+  if (INTERNET_TICKET_CATEGORIES.has(existingCategory) && INTERNET_TICKET_CATEGORIES.has(newCategory)) {
+    return true;
+  }
+
+  if (PAYMENT_TICKET_CATEGORIES.has(existingCategory) && PAYMENT_TICKET_CATEGORIES.has(newCategory)) {
+    return existingCategory === newCategory;
+  }
+
+  if (newCategory === "move_eligibility") {
+    return existingCategory === "move_eligibility";
+  }
+
+  if (newCategory === "password_reset") {
+    return existingCategory === "password_reset";
+  }
+
+  return existingCategory === newCategory && newCategory !== "other";
+}
+
+function buildRelatedTicketBlock(ticket: CustomerTicket, newCategory: string): RelatedTicketBlock {
+  const existingLabel = ticketCategoryLabel(ticket.category);
+  const newLabel = ticketCategoryLabel(newCategory);
+
+  if (INTERNET_TICKET_CATEGORIES.has(ticket.category) && INTERNET_TICKET_CATEGORIES.has(newCategory)) {
+    const restoredCopy = ticket.status === "monitoring"
+      ? "Your connection is still under monitoring, so this should be added as an update to the current ticket."
+      : "Please track the current ticket or add an update if anything has changed.";
+
+    return {
+      ticket,
+      title: "Open connection ticket found",
+      message: `You already have an open ${existingLabel} ticket. A new ${newLabel} ticket will not be created because it is related to the same connection issue. ${restoredCopy}`,
+      suggestedUpdate: `Customer tried to report ${newLabel}.`,
+    };
+  }
+
+  if (PAYMENT_TICKET_CATEGORIES.has(ticket.category) && PAYMENT_TICKET_CATEGORIES.has(newCategory)) {
+    return {
+      ticket,
+      title: "Open payment ticket found",
+      message: `You already have an open ${existingLabel} ticket. Please add any new payment details to the existing ticket instead of creating another one.`,
+      suggestedUpdate: `Customer has additional details for ${newLabel}.`,
+    };
+  }
+
+  if (newCategory === "move_eligibility") {
+    return {
+      ticket,
+      title: "Open move request found",
+      message: "You already have an open move/location request. Please track that request or add an update if the new location details changed.",
+      suggestedUpdate: "Customer has additional details for the move/location request.",
+    };
+  }
+
+  if (newCategory === "password_reset") {
+    return {
+      ticket,
+      title: "Open password request found",
+      message: "You already have an open Wi-Fi password request. Please track that ticket or add an update if support needs more information.",
+      suggestedUpdate: "Customer has additional details for the Wi-Fi password request.",
+    };
+  }
+
+  return {
+    ticket,
+    title: "Open related ticket found",
+    message: `You already have an open ${existingLabel} ticket. Please track the existing ticket or add an update instead of creating another one.`,
+    suggestedUpdate: `Customer tried to report ${newLabel}.`,
+  };
+}
+
+export async function findActiveRelatedTicket(
+  customerUid: string,
+  newCategory: string,
+): Promise<RelatedTicketBlock | null> {
+  const ticketsQuery = query(
+    collection(db, "tickets"),
+    where("customerUid", "==", customerUid),
+    orderBy("createdAt", "desc"),
+    limit(30),
+  );
+
+  const snapshot = await getDocs(ticketsQuery);
+
+  const relatedTicket = snapshot.docs
+    .map((docSnap) => ({
+      id: docSnap.id,
+      ...docSnap.data(),
+    }) as CustomerTicket)
+    .find((ticket) =>
+      isActiveTicket(ticket.status) && isRelatedTicket(ticket.category, newCategory),
+    );
+
+  return relatedTicket ? buildRelatedTicketBlock(relatedTicket, newCategory) : null;
 }
 
 export async function createTicket(

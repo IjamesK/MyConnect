@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { CheckCircle, Languages, Palette } from "lucide-react";
+import { CheckCircle, KeyRound, Languages, Palette, ShieldCheck } from "lucide-react";
+import { useNavigate } from "react-router";
 import { Layout } from "../isp/Layout";
 import {
   applyTheme,
@@ -29,6 +30,7 @@ const themeDescriptions: Record<ThemeName, string> = {
 };
 
 export function SettingsScreen() {
+  const navigate = useNavigate();
   const [selectedTheme, setSelectedTheme] = useState<ThemeName>("canalbox");
   const [selectedLanguage, setSelectedLanguage] = useState<AppLanguage>("en");
 
@@ -135,6 +137,44 @@ export function SettingsScreen() {
               );
             })}
           </div>
+        </div>
+
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center">
+              <ShieldCheck size={20} className="text-[var(--color-primary)]" />
+            </div>
+
+            <div>
+              <p className="text-[var(--color-text)] text-sm font-bold">
+                Account Security
+              </p>
+              <p className="text-[var(--color-muted)] text-xs">
+                Manage your login password.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => navigate("/settings/change-password")}
+            className="w-full p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] text-left transition-all hover:border-[var(--color-primary)] hover:bg-[var(--color-surface-soft)]"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center shrink-0">
+                <KeyRound size={18} className="text-[var(--color-primary)]" />
+              </div>
+
+              <div className="flex-1">
+                <p className="text-[var(--color-text)] text-sm font-semibold">
+                  Change Password
+                </p>
+                <p className="text-[var(--color-muted)] text-xs mt-0.5">
+                  Use your old password to set a new one.
+                </p>
+              </div>
+            </div>
+          </button>
         </div>
 
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">

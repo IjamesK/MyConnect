@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { SettingsScreen } from "./components/screens/SettingsScreen";
+import { ChangePassword } from "./components/screens/ChangePassword";
 import { applyTheme, getSavedTheme } from "../lib/theme";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
@@ -39,6 +40,16 @@ export default function App() {
   element={
     <ProtectedRoute allowedRoles={["customer", "staff", "admin"]}>
       <SettingsScreen />
+    </ProtectedRoute>
+  }
+/>
+        
+
+<Route
+  path="/settings/change-password"
+  element={
+    <ProtectedRoute allowedRoles={["customer", "staff", "admin"]}>
+      <ChangePassword />
     </ProtectedRoute>
   }
 />

@@ -2,6 +2,9 @@ import {
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
   type User,
 } from "firebase/auth";
 
@@ -48,6 +51,18 @@ export async function signIn(email: string, password: string) {
   }
 
   return profile;
+}
+
+export async function changePassword(currentPassword: string, newPassword: string) {
+  const user = auth.currentUser;
+
+  if (!user || !user.email) {
+    throw new Error("AUTH_REQUIRED");
+  }
+
+  const credential = EmailAuthProvider.credential(user.email, currentPassword);
+  await reauthenticateWithCredential(user, credential);
+  await updatePassword(user, newPassword);
 }
 
 export async function signOut() {
