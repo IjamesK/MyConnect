@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Lightbulb,
   RefreshCw,
+  MapPinned,
   ShieldCheck,
   TicketCheck,
   TrendingUp,
@@ -181,17 +182,12 @@ export function CustomerDashboard() {
       color: "bg-[var(--color-surface-soft)] text-[var(--color-primary)]",
       path: "/report-issue",
     },
-    {
-      icon: Activity,
-      label: "Network Status",
-      sublabel:
-        activeIncidents.length > 0
-          ? `${activeIncidents.length} network update${
-              activeIncidents.length === 1 ? "" : "s"
-            }`
-          : "View area status",
+        {
+      icon: MapPinned,
+      label: "Move / Eligibility",
+      sublabel: "Check new location",
       color: "bg-[var(--color-surface-soft)] text-[var(--color-primary)]",
-      path: "/service-status",
+      path: "/report-issue?mode=ticket&type=move_eligibility",
     },
     {
       icon: Wrench,
