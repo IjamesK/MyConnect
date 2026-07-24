@@ -110,6 +110,7 @@ export function RenewalInstructions() {
 
   const steps = method === "momo" ? momoSteps : airtelSteps;
   const amountDue = formatCurrency(profile.packagePrice);
+  const paymentLink = getCanalBoxPaymentLink(serialNumber || profile.routerSerial);
 
   return (
     <Layout showBack backTo="/subscription" title="Renew Package">
@@ -248,23 +249,20 @@ export function RenewalInstructions() {
                 Secure payment for {profile.packageName} — {amountDue}
               </p>
             </div>
-
-            <button
-              type="button"
-              className="w-full py-3 bg-[#E5007D] hover:bg-[#BE0067] text-white rounded-xl font-semibold text-sm transition-colors active:scale-95"
-              onClick={() => {
-                const paymentLink = getCanalBoxPaymentLink(serialNumber);
-            
-                if (!paymentLink) {
-                  alert("Payment link is not available for this router serial number.");
-                  return;
-                }
-            
-                window.open(paymentLink, "_blank", "noopener,noreferrer");
-              }}
-            >
-              Proceed to PayLink →
-            </button>
+              <a
+                href={paymentLink || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => {
+                  if (!paymentLink) {
+                    e.preventDefault();
+                    alert("Payment link is not available for this router serial number.");
+                  }
+                }}
+                className="block w-full py-3 bg-[#E5007D] hover:bg-[#BE0067] text-white rounded-xl font-semibold text-sm transition-colors active:scale-95 text-center"
+              >
+                Proceed to PayLink →
+              </a>
           </div>
         ) : (
           <div>
