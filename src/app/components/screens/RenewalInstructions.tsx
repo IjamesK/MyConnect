@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Layout } from "../isp/Layout";
+import { getCanalBoxPaymentLink } from "../../../lib/payments";
 import {
   CheckCircle,
   Copy,
@@ -83,7 +84,7 @@ export function RenewalInstructions() {
     try {
       const parsedProfile = JSON.parse(savedProfile) as CustomerProfile;
       setProfile(parsedProfile);
-      setSerialNumber(parsedProfile.routerSerial);
+      setSerialNumber(parsedProfile.routerSerial ?? "");
     } catch (error) {
       console.error("Failed to load customer profile:", error);
       localStorage.removeItem("customerProfile");
@@ -251,7 +252,16 @@ export function RenewalInstructions() {
             <button
               type="button"
               className="w-full py-3 bg-[#E5007D] hover:bg-[#BE0067] text-white rounded-xl font-semibold text-sm transition-colors active:scale-95"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => {
+                const paymentLink = getCanalBoxPaymentLink(serialNumber);
+            
+                if (!paymentLink) {
+                  alert("Payment link is not available for this router serial number.");
+                  return;
+                }
+            
+                window.open(paymentLink, "_blank", "noopener,noreferrer");
+              }}
             >
               Proceed to PayLink →
             </button>
