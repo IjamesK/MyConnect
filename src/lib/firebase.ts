@@ -1,17 +1,17 @@
-import { initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyA1b9og8GWoLaydbhkEudBBxpsvFjDAikY",
-  authDomain: "myconnec-canalbox.firebaseapp.com",
-  projectId: "myconnec-canalbox",
-  storageBucket: "myconnec-canalbox.firebasestorage.app",
-  messagingSenderId: "164009090286",
-  appId: "1:164009090286:web:8888e673b2a60c5189a7ff",
-  measurementId: "G-NXQWLGV521"
-}
+  apiKey: "AIzaSyCkQbvEG-XLRXEaep8VIPDd0PSgE-YFrJM",
+  authDomain: "ijkjames.firebaseapp.com",
+  projectId: "ijkjames",
+  storageBucket: "ijkjames.firebasestorage.app",
+  messagingSenderId: "132640703063",
+  appId: "1:132640703063:web:f2102cdbde230be9fbd912"
+};
 
-const app = initializeApp(firebaseConfig)
-export const auth = getAuth(app)
-export const db = getFirestore(app)
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
