@@ -2,8 +2,34 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Layout } from "../isp/Layout";
 import { CheckCircle, MapPinned, Zap, RefreshCw, Users, Sparkles } from "lucide-react";
-import { INTERNET_PACKAGES } from "../../../lib/packages";
+
 import type { CustomerProfile } from "../../../lib/auth";
+
+
+const INTERNET_PACKAGES = [
+  {
+    name: "GO", speedMbps: 50, monthlyPriceUGX: 69000, deviceRange: "3–5",
+    tagline: "Everyday browsing and streaming",
+    features: ["Browsing, social media and video calls", "HD streaming and home Wi-Fi", "Great for individuals and smaller households"],
+  },
+  {
+    name: "FIT", speedMbps: 100, monthlyPriceUGX: 90000, deviceRange: "5–8",
+    tagline: "Balanced speed for a busy home",
+    features: ["Work-from-home and video calls", "Streaming across multiple screens", "Ideal for families and shared spaces"],
+    highlight: true,
+  },
+  {
+    name: "START", speedMbps: 200, monthlyPriceUGX: 110000, deviceRange: "8–12",
+    tagline: "Power up connected households",
+    features: ["Multiple HD or 4K streams", "Online gaming and large downloads", "Great for larger homes and teams"],
+  },
+  {
+    name: "PREMIUM", speedMbps: 300, monthlyPriceUGX: 200000, deviceRange: "12–20",
+    tagline: "Top-tier connectivity for heavy use",
+    features: ["High-bandwidth use across many devices", "4K streaming, calls and gaming", "For large families and busy workspaces"],
+  },
+];
+
 
 function formatCurrency(amount: number) {
   return `UGX ${amount.toLocaleString()}`;
