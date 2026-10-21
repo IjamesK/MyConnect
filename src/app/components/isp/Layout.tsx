@@ -14,6 +14,7 @@ import type { CustomerProfile } from "../../../lib/auth";
 import { signOut } from "../../../lib/auth";
 import { listenToUnreadNotificationCount } from "../../../lib/notifications";
 import { useTranslation } from "../../../lib/useTranslation";
+import { AIChatWidget } from "./AIChatWidget";
 
 interface LayoutProps {
   children: ReactNode;
@@ -190,6 +191,8 @@ export function Layout({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto pb-28">{children}</div>
+
+        <AIChatWidget />
 
         {/* Bottom nav */}
         <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-sm z-[9999] bg-[var(--color-surface)] border-t border-[var(--color-border)] pointer-events-auto">

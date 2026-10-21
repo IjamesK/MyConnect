@@ -57,17 +57,9 @@ export function LoginScreen() {
         setMessage("Please enter a valid email address.");
       } else if (errorCode === "auth/invalid-credential") {
         setMessage("Invalid email or password.");
-     } else {
-  console.error("Firebase login error:", err);
-
-  setMessage(
-    errorCode
-      ? `Firebase error: ${errorCode}`
-      : err instanceof Error
-        ? `Login error: ${err.message}`
-        : "Unknown login error"
-  );
-}
+      } else {
+        setMessage("Login failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
