@@ -1,373 +1,125 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Layout } from "../isp/Layout";
-import { CheckCircle, MapPinned, Zap, RefreshCw, Users, Sparkles } from "lucide-react";
-
+import { ArrowRight, Bot, CheckCircle2, ChevronDown, X, Zap, Users, RefreshCw } from "lucide-react";
 import type { CustomerProfile } from "../../../lib/auth";
 
+type InternetPlan = {
+  name: string;
+  speedMbps: number;
+  monthlyPriceUGX: number;
+  deviceRange: string;
+  tagline: string;
+  features: string[];
+};
 
-const INTERNET_PACKAGES = [
-  {
-    name: "GO", speedMbps: 50, monthlyPriceUGX: 69000, deviceRange: "3–5",
-    tagline: "Everyday browsing and streaming",
-    features: ["Browsing, social media and video calls", "HD streaming and home Wi-Fi", "Great for individuals and smaller households"],
-  },
-  {
-    name: "FIT", speedMbps: 100, monthlyPriceUGX: 90000, deviceRange: "5–8",
-    tagline: "Balanced speed for a busy home",
-    features: ["Work-from-home and video calls", "Streaming across multiple screens", "Ideal for families and shared spaces"],
-    highlight: true,
-  },
-  {
-    name: "START", speedMbps: 200, monthlyPriceUGX: 110000, deviceRange: "8–12",
-    tagline: "Power up connected households",
-    features: ["Multiple HD or 4K streams", "Online gaming and large downloads", "Great for larger homes and teams"],
-  },
-  {
-    name: "PREMIUM", speedMbps: 300, monthlyPriceUGX: 200000, deviceRange: "12–20",
-    tagline: "Top-tier connectivity for heavy use",
-    features: ["High-bandwidth use across many devices", "4K streaming, calls and gaming", "For large families and busy workspaces"],
-  },
+const INTERNET_PACKAGES: InternetPlan[] = [
+  { name: "GO", speedMbps: 50, monthlyPriceUGX: 69000, deviceRange: "3–5", tagline: "Everyday essentials", features: ["Browsing and social media", "Video calls and HD streaming", "Ideal for lighter home use"] },
+  { name: "FIT", speedMbps: 100, monthlyPriceUGX: 90000, deviceRange: "5–8", tagline: "For connected families", features: ["Work and online classes", "Multiple HD streams", "Balanced everyday household use"] },
+  { name: "START", speedMbps: 200, monthlyPriceUGX: 110000, deviceRange: "8–12", tagline: "More room for everyone", features: ["4K streaming on compatible devices", "Gaming and larger downloads", "Busy homes and small teams"] },
+  { name: "PREMIUM", speedMbps: 300, monthlyPriceUGX: 200000, deviceRange: "12–20", tagline: "For heavy internet use", features: ["Many concurrent connected devices", "High-bandwidth streaming and work", "Larger households and workspaces"] },
 ];
 
-
-function formatCurrency(amount: number) {
-  return `UGX ${amount.toLocaleString()}`;
-}
-
-function getPlanName(packageName: string) {
-  return packageName.split(" ")[0] || packageName;
-}
-
-function getPlanSpeed(packageName: string) {
-  const planName = getPlanName(packageName);
-  return packageName.replace(planName, "").trim() || "Active Plan";
-}
+const formatCurrency = (amount: number) => `UGX ${amount.toLocaleString("en-UG")}`;
 
 export function SubscriptionPage() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
+  const [selected, setSelected] = useState<InternetPlan | null>(null);
+  const [assistantPending, setAssistantPending] = useState(false);
 
   useEffect(() => {
-    const savedProfile = localStorage.getItem("customerProfile");
-
-    if (!savedProfile) {
-      navigate("/", { replace: true });
-      return;
-    }
-
-    try {
-      setProfile(JSON.parse(savedProfile));
-    } catch (error) {
-      console.error("Failed to load customer profile:", error);
-      localStorage.removeItem("customerProfile");
-      navigate("/", { replace: true });
-    }
+    const saved = localStorage.getItem("customerProfile");
+    if (!saved) { navigate("/", { replace: true }); return; }
+    try { setProfile(JSON.parse(saved)); }
+    catch { localStorage.removeItem("customerProfile"); navigate("/", { replace: true }); }
   }, [navigate]);
 
-  if (!profile) {
-    return (
-      <Layout title="Subscription" showBack backTo="/dashboard">
-        <div className="px-4 py-10 text-center text-[#64748B] text-sm">
-          Loading subscription details...
-        </div>
-      </Layout>
-    );
+  useEffect(() => {
+    if (!selected) return;
+    const dismissOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setSelected(null); };
+    document.addEventListener("keydown", dismissOnEscape);
+    return () => document.removeEventListener("keydown", dismissOnEscape);
+  }, [selected]);
+
+  function askAssistant(plan: InternetPlan) {
+    // Future AI widget contract: listen for "myconnect:open-ai", call
+    // event.preventDefault(), then open chat using event.detail.prompt.
+    const event = new CustomEvent("myconnect:open-ai", {
+      cancelable: true,
+      detail: { topic: "package", packageName: plan.name, prompt: `Tell me more about the ${plan.name} package (${plan.speedMbps} Mbps, ${formatCurrency(plan.monthlyPriceUGX)}/month).` },
+    });
+    window.dispatchEvent(event);
+    if (event.defaultPrevented) { setSelected(null); return; }
+    setAssistantPending(true);
   }
 
-  const currentPlanName = getPlanName(profile.packageName);
-  const currentPlanSpeed = getPlanSpeed(profile.packageName);
+  if (!profile) return <Layout title="Subscription" showBack backTo="/dashboard"><p className="px-4 py-10 text-sm text-[#64748B]">Loading subscription...</p></Layout>;
 
-  const listedCurrentPlan = INTERNET_PACKAGES.find(
-    (plan) => plan.name.toLowerCase() === currentPlanName.toLowerCase()
-  );
-  // Display the saved subscription as-is until the customer record is updated.
-  // Published package prices do not automatically change a customer's bill.
-  const packages = INTERNET_PACKAGES;
-
-  const billingHistory = [
-    {
-      date: "Current Cycle",
-      amount: profile.packagePrice.toLocaleString(),
-      method: "Pending / Latest",
-      status: profile.accountStatus === "active" ? "Active" : profile.accountStatus,
-    },
-  ];
+  const planName = profile.packageName.split(" ")[0] || profile.packageName;
+  const currentPlan = INTERNET_PACKAGES.find((plan) => plan.name.toLowerCase() === planName.toLowerCase());
 
   return (
     <Layout title="Subscription" showBack backTo="/dashboard">
-      <div className="px-4 py-5 space-y-5">
-        <h1
-          style={{ fontFamily: "'Inter Tight', system-ui, sans-serif", fontWeight: 800 }}
-          className="text-[#0F172A] text-2xl"
-        >
-          Subscription
-        </h1>
-
-        {/* Current plan hero */}
-        <div className="bg-[#E5007D] rounded-2xl p-5 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/10 -translate-y-6 translate-x-6" />
-
-          <p className="text-white/80 text-xs uppercase tracking-wide">
-            Current Package
-          </p>
-
-          <div className="flex items-end justify-between mt-1 mb-4">
-            <div>
-              <p
-                style={{ fontFamily: "'Inter Tight', system-ui, sans-serif", fontWeight: 800 }}
-                className="text-3xl"
-              >
-                {currentPlanName}
-              </p>
-
-              <div className="flex items-center gap-1.5 mt-1">
-                <Zap size={12} className="text-[#FCD34D]" />
-                <span className="text-white/80 text-sm">
-                  {currentPlanSpeed}
-                </span>
-              </div>
-            </div>
-
-            <div className="text-right">
-              <p className="text-white/80 text-xs">Monthly</p>
-              <p
-                style={{ fontFamily: "'Inter Tight', system-ui, sans-serif", fontWeight: 700 }}
-                className="text-xl"
-              >
-                {formatCurrency(profile.packagePrice)}
-              </p>
-            </div>
-          </div>
-
-          <div className="border-t border-white/20 pt-3 pb-3 grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <p className="text-white/80 text-[10px] uppercase tracking-wide">
-                Customer No.
-              </p>
-              <p className="font-semibold text-[#FCD34D]">
-                {profile.customerNumber}
-              </p>
-            </div>
-
-            <div className="text-right">
-              <p className="text-white/80 text-[10px] uppercase tracking-wide">
-                Area
-              </p>
-              <p className="font-semibold">{profile.area}</p>
-            </div>
-
-            <div>
-              <p className="text-white/80 text-[10px] uppercase tracking-wide">
-                Router SN
-              </p>
-              <p
-                style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                className="font-semibold"
-              >
-                {profile.routerSerial}
-              </p>
-            </div>
-
-            <div className="text-right">
-              <p className="text-white/80 text-[10px] uppercase tracking-wide">
-                Expiry
-              </p>
-              <p className="font-semibold">{profile.expiryDate}</p>
-            </div>
-
-            <div>
-              <p className="text-white/80 text-[10px] uppercase tracking-wide">
-                Router Model
-              </p>
-              <p className="font-semibold">{profile.routerModel}</p>
-            </div>
-
-            <div className="text-right">
-              <p className="text-white/80 text-[10px] uppercase tracking-wide">
-                Status
-              </p>
-              <p className="font-semibold capitalize">{profile.accountStatus}</p>
-            </div>
+      <div className="px-4 py-4 space-y-4 pb-24">
+        <div className="rounded-2xl bg-[#E5007D] p-4 text-white">
+          <p className="text-[11px] uppercase tracking-wide text-white/80">Your current subscription</p>
+          <div className="flex items-end justify-between gap-3 mt-1">
+            <div><h1 className="text-2xl font-extrabold">{profile.packageName}</h1><p className="text-xs text-white/85 mt-1">{profile.accountStatus} · Expires {profile.expiryDate}</p></div>
+            <div className="text-right shrink-0"><p className="text-[10px] text-white/80">Current monthly bill</p><p className="text-lg font-extrabold">{formatCurrency(profile.packagePrice)}</p></div>
           </div>
         </div>
 
-        {/* Renew CTA */}
-        <div className="space-y-2">
-          <button
-            type="button"
-            onClick={() => navigate("/renewal")}
-            className="w-full py-3 bg-[#16A34A] hover:bg-[#15803D] text-white rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2"
-          >
-            <RefreshCw size={16} />
-            Renew Package · {formatCurrency(profile.packagePrice)}
-          </button>
+        <button type="button" onClick={() => navigate("/renewal")} className="w-full py-2.5 rounded-xl bg-[#16A34A] text-white font-semibold text-sm flex items-center justify-center gap-2"><RefreshCw size={15}/> Renew current package</button>
 
-          <div className="bg-white border border-[#E2E8F0] rounded-xl px-3 py-2 flex items-center justify-center gap-2 text-xs text-[#64748B]">
-            <span className="font-semibold text-[#0F172A]">Pay with:</span>
-            <span className="px-2 py-1 rounded-full bg-[#FFFBEB] text-[#B45309] font-semibold">MTN MoMo</span>
-            <span className="px-2 py-1 rounded-full bg-[#FEF2F2] text-[#DC2626] font-semibold">Airtel Money</span>
+        <section aria-labelledby="packages-heading" className="space-y-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <div><p className="text-[10px] uppercase font-bold tracking-wider text-[#E5007D]">Explore plans</p><h2 id="packages-heading" className="font-extrabold text-xl text-[#0F172A]">Available packages</h2></div>
+            <span className="text-xs rounded-full bg-[#FCE7F3] px-3 py-1 font-semibold text-[#BE0067]">4 packages</span>
           </div>
-        </div>
-
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#EBF2FF] flex items-center justify-center shrink-0">
-            <MapPinned size={18} className="text-[#0057B8]" />
-          </div>
-          <div className="flex-1">
-            <p className="text-[#0F172A] text-sm font-semibold">
-              Moving to a new place?
-            </p>
-            <p className="text-[#64748B] text-xs mt-1 leading-relaxed">
-              Send your new-location coordinates so staff can confirm service availability.
-            </p>
-            <button
-              type="button"
-              onClick={() => navigate("/report-issue?mode=ticket&type=move_eligibility")}
-              className="mt-3 px-3 py-2 bg-[#E5007D] text-white rounded-xl text-xs font-semibold"
-            >
-              Send move location
-            </button>
-          </div>
-        </div>
-
-        {/* Account info */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 space-y-3">
-          <p className="text-[#0F172A] text-sm font-semibold">
-            Account Information
-          </p>
-
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <p className="text-[#94A3B8] text-xs">Customer</p>
-              <p className="text-[#0F172A] font-medium">{profile.fullName}</p>
-            </div>
-
-            <div>
-              <p className="text-[#94A3B8] text-xs">Phone</p>
-              <p className="text-[#0F172A] font-medium">{profile.phone}</p>
-            </div>
-
-            <div>
-              <p className="text-[#94A3B8] text-xs">District</p>
-              <p className="text-[#0F172A] font-medium">{profile.district}</p>
-            </div>
-
-            <div>
-              <p className="text-[#94A3B8] text-xs">Address</p>
-              <p className="text-[#0F172A] font-medium">{profile.address}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Usage meter */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[#0F172A] text-sm font-semibold">
-              Data Usage This Month
-            </p>
-            <span className="text-[#64748B] text-xs">Unlimited</span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-3 bg-[#F1F5F9] rounded-full overflow-hidden">
-              <div className="h-full w-[62%] bg-gradient-to-r from-[#E5007D] to-[#F472B6] rounded-full" />
-            </div>
-
-            <span className="text-[#0F172A] text-sm font-semibold">
-              248 GB
-            </span>
-          </div>
-
-          <p className="text-[#94A3B8] text-xs mt-1.5">
-            Used this billing cycle
-          </p>
-        </div>
-
-        {/* Updated package catalogue */}
-        <section aria-labelledby="packages-heading" className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[#E5007D] text-[11px] uppercase tracking-wider font-bold">Find your fit</p>
-              <h2 id="packages-heading" className="text-[#0F172A] text-xl font-extrabold">Available Packages</h2>
-            </div>
-            <span className="rounded-full bg-[#FCE7F3] px-3 py-1 text-[11px] font-semibold text-[#BE0067]">4 plans</span>
-          </div>
-          <p className="text-xs text-[#64748B] leading-relaxed">Choose the speed that suits your household or workspace. Device estimates assume everyday mixed use; actual performance depends on activity and network conditions.</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {packages.map((plan) => {
-              const isCurrent = listedCurrentPlan?.name === plan.name;
-              return (
-                <article key={plan.name} className={`relative overflow-hidden rounded-2xl border-2 p-4 ${isCurrent ? "border-[#E5007D] bg-[#FFF1F8]" : "border-[#E2E8F0] bg-white"}`}>
-                  {plan.highlight && <span className="absolute right-0 top-0 rounded-bl-xl bg-[#E5007D] px-3 py-1 text-[10px] font-bold text-white">Most popular</span>}
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-[#0F172A] text-xl font-extrabold">{plan.name}</h3>
-                        {isCurrent && <span className="rounded-full bg-[#E5007D] px-2 py-0.5 text-[10px] font-bold text-white">Your plan</span>}
-                      </div>
-                      <p className="text-[#64748B] text-xs mt-1">{plan.tagline}</p>
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-[#F8FAFC] p-3 mb-3 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-[#E5007D]">
-                      <Zap size={18} />
-                      <span className="font-extrabold text-xl text-[#0F172A]">{plan.speedMbps} <span className="text-sm">Mbps</span></span>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-extrabold text-[#0F172A]">{formatCurrency(plan.monthlyPriceUGX)}</p>
-                      <p className="text-[10px] text-[#64748B]">per month</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 items-center rounded-lg bg-[#F0FDF4] p-2.5 mb-3 text-[#166534]">
-                    <Users size={16} className="shrink-0" />
-                    <span className="text-xs font-semibold">Around {plan.deviceRange} devices (estimate)</span>
-                  </div>
-                  <div className="space-y-2">
-                    {plan.features.map((feature) => <div key={feature} className="flex items-start gap-2 text-[#475569] text-xs"><CheckCircle size={14} className="text-[#16A34A] shrink-0 mt-0.5" />{feature}</div>)}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/report-issue?mode=ticket&type=package_change&package=${encodeURIComponent(plan.name)}`)}
-                    className={`mt-4 w-full rounded-xl py-2.5 text-xs font-semibold transition-colors ${isCurrent ? "border border-[#E5007D] text-[#BE0067] bg-white" : "bg-[#E5007D] text-white hover:bg-[#BE0067]"}`}
-                  >
-                    {isCurrent ? "Ask about this package" : `Enquire about ${plan.name}`}
-                  </button>
-                </article>
-              );
-            })}
-          </div>
-          <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-[#64748B]"><Sparkles size={14} className="shrink-0 text-[#E5007D]" /> Published plans are for enquiries. Your current subscription and renewal amount are based on your account record until staff updates them.</p>
-        </section>
-
-        {/* Billing history */}
-        <div>
-          <p className="text-[#0F172A] text-sm font-semibold mb-3">
-            Billing History
-          </p>
-
-          <div className="bg-white border border-[#E2E8F0] rounded-xl divide-y divide-[#F1F5F9]">
-            {billingHistory.map(({ date, amount, method, status }) => (
-              <div key={date} className="px-4 py-3 flex items-center justify-between">
-                <div>
-                  <p className="text-[#0F172A] text-sm font-medium">{date}</p>
-                  <p className="text-[#94A3B8] text-xs">{method}</p>
-                </div>
-
-                <div className="text-right">
-                  <p className="text-[#0F172A] text-sm font-semibold">
-                    UGX {amount}
-                  </p>
-
-                  <span className="text-[10px] px-1.5 py-0.5 bg-[#F0FDF4] text-[#15803D] rounded-full font-medium capitalize">
-                    {status}
-                  </span>
-                </div>
-              </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            {INTERNET_PACKAGES.map((plan) => (
+              <button type="button" key={plan.name} onClick={() => { setSelected(plan); setAssistantPending(false); }}
+                aria-label={`View ${plan.name} package details`}
+                className={`min-w-0 text-left bg-white rounded-2xl border p-3 shadow-sm transition hover:border-[#E5007D] focus:outline-none focus:ring-2 focus:ring-[#E5007D] ${currentPlan?.name === plan.name ? "border-[#E5007D]" : "border-[#E2E8F0]"}`}>
+                <div className="flex items-center justify-between gap-1"><p className="text-[11px] text-[#E5007D] font-extrabold">{plan.name}</p><ArrowRight size={13} className="text-[#94A3B8]"/></div>
+                <p className="mt-1 text-2xl leading-none text-[#0F172A] font-extrabold">{plan.speedMbps}<span className="text-xs font-semibold"> Mbps</span></p>
+                <p className="mt-2 text-sm text-[#0F172A] font-bold">{formatCurrency(plan.monthlyPriceUGX)}</p>
+                <p className="text-[10px] text-[#64748B]">monthly · ~{plan.deviceRange} devices</p>
+                <p className="mt-2 text-[11px] text-[#E5007D] font-semibold">View details →</p>
+              </button>
             ))}
           </div>
-        </div>
+          <p className="text-[11px] text-[#64748B]">Device counts are estimates for mixed usage, not guaranteed limits. Tap a package to learn more.</p>
+        </section>
+
+        <details className="rounded-xl bg-white border border-[#E2E8F0] group">
+          <summary className="cursor-pointer list-none flex items-center justify-between p-3 text-sm font-semibold text-[#0F172A]">More account details <ChevronDown size={16} className="text-[#64748B] group-open:rotate-180 transition"/></summary>
+          <div className="border-t border-[#E2E8F0] px-3 pb-3 pt-2 grid grid-cols-2 gap-2 text-xs">
+            <div><p className="text-[#64748B]">Customer No.</p><p className="font-semibold break-all">{profile.customerNumber}</p></div>
+            <div><p className="text-[#64748B]">Area</p><p className="font-semibold">{profile.area}</p></div>
+            <div><p className="text-[#64748B]">Router model</p><p className="font-semibold">{profile.routerModel}</p></div>
+            <div><p className="text-[#64748B]">Router serial</p><p className="font-semibold break-all">{profile.routerSerial}</p></div>
+            <div><p className="text-[#64748B]">Customer</p><p className="font-semibold">{profile.fullName}</p></div>
+            <div><p className="text-[#64748B]">Phone</p><p className="font-semibold">{profile.phone}</p></div>
+          </div>
+        </details>
       </div>
+
+      {selected && <div className="fixed inset-0 z-[10050] flex items-end sm:items-center justify-center bg-[#0F172A]/55 p-0 sm:p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) setSelected(null); }}>
+        <div role="dialog" aria-modal="true" aria-labelledby="package-dialog-heading" className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-white p-5 shadow-2xl max-h-[88vh] overflow-y-auto">
+          <div className="flex justify-between items-start gap-2"><div><p className="text-[11px] font-bold text-[#E5007D] uppercase">Package details</p><h3 id="package-dialog-heading" className="text-2xl font-extrabold text-[#0F172A]">{selected.name}</h3></div><button type="button" aria-label="Close package details" onClick={() => setSelected(null)} className="rounded-full p-2 bg-[#F1F5F9]"><X size={18}/></button></div>
+          <p className="text-xs text-[#64748B] mt-1">{selected.tagline}</p>
+          <div className="mt-4 rounded-xl bg-[#FFF1F8] p-3 flex items-center justify-between gap-3"><div className="flex gap-2 items-center text-[#E5007D]"><Zap size={20}/><span className="font-extrabold text-xl text-[#0F172A]">{selected.speedMbps} Mbps</span></div><div className="text-right"><p className="font-bold text-[#0F172A]">{formatCurrency(selected.monthlyPriceUGX)}</p><p className="text-[10px] text-[#64748B]">per month</p></div></div>
+          <p className="mt-4 flex gap-2 items-center text-sm font-semibold text-[#0F172A]"><Users size={17} className="text-[#E5007D]"/> Approx. {selected.deviceRange} devices</p>
+          <div className="space-y-2 mt-3">{selected.features.map((feature) => <div key={feature} className="flex gap-2 items-start text-sm text-[#475569]"><CheckCircle2 size={16} className="text-[#16A34A] mt-0.5 shrink-0"/>{feature}</div>)}</div>
+          <p className="mt-3 text-[11px] text-[#64748B]">Performance and number of devices depend on usage, router and network conditions. Package change requests require staff confirmation.</p>
+          <button type="button" onClick={() => askAssistant(selected)} className="mt-4 w-full flex items-center justify-center gap-2 rounded-xl bg-[#E5007D] py-3 text-white font-semibold text-sm"><Bot size={17}/> Find out more</button>
+          {assistantPending && <div className="mt-3 rounded-xl border border-[#FBCFE8] bg-[#FFF1F8] p-3 text-xs text-[#475569]">MyConnect AI is coming soon. In the meantime, you can ask the support team about {selected.name}.
+            <button type="button" className="mt-2 w-full rounded-lg border border-[#E5007D] bg-white py-2 font-semibold text-[#BE0067]" onClick={() => navigate(`/report-issue?mode=ticket&type=package_change&package=${encodeURIComponent(selected.name)}`)}>Contact support instead</button>
+          </div>}
+        </div>
+      </div>}
     </Layout>
   );
 }
