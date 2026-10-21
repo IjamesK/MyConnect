@@ -58,8 +58,12 @@ export function LoginScreen() {
       } else if (errorCode === "auth/invalid-credential") {
         setMessage("Invalid email or password.");
       } else {
-        setMessage("Login failed. Please try again.");
-      }
+  setMessage(
+    errorCode
+      ? `Login error: ${errorCode}`
+      : "Login failed. Check the browser console."
+  );
+}
     } finally {
       setLoading(false);
     }
