@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Layout } from "../isp/Layout";
-import { ArrowRight, Bot, CheckCircle2, ChevronDown, X, Zap, Users, RefreshCw } from "lucide-react";
+import { ChevronRight, Bot, CheckCircle2, ChevronDown, X, Zap, Users, RefreshCw } from "lucide-react";
 import type { CustomerProfile } from "../../../lib/auth";
 
 type InternetPlan = {
@@ -61,32 +61,34 @@ export function SubscriptionPage() {
 
   return (
     <Layout title="Subscription" showBack backTo="/dashboard">
-      <div className="px-4 py-4 space-y-4 pb-24">
-        <div className="rounded-2xl bg-[#E5007D] p-4 text-white">
+      <div className="px-4 py-5 space-y-5 sm:px-6 lg:px-8 lg:py-8">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch">
+        <div className="min-w-0 rounded-2xl bg-[#E5007D] p-4 text-white sm:p-5">
           <p className="text-[11px] uppercase tracking-wide text-white/80">Your current subscription</p>
-          <div className="flex items-end justify-between gap-3 mt-1">
-            <div><h1 className="text-2xl font-extrabold">{profile.packageName}</h1><p className="text-xs text-white/85 mt-1">{profile.accountStatus} · Expires {profile.expiryDate}</p></div>
-            <div className="text-right shrink-0"><p className="text-[10px] text-white/80">Current monthly bill</p><p className="text-lg font-extrabold">{formatCurrency(profile.packagePrice)}</p></div>
+          <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+            <div className="min-w-0"><h1 className="break-words text-2xl font-extrabold">{profile.packageName}</h1><p className="mt-1 text-xs text-white/85">{profile.accountStatus} · Expires {profile.expiryDate}</p></div>
+            <div className="shrink-0 lg:text-right"><p className="text-[10px] text-white/80">Current monthly bill</p><p className="text-lg font-extrabold">{formatCurrency(profile.packagePrice)}</p></div>
           </div>
         </div>
 
-        <button type="button" onClick={() => navigate("/renewal")} className="w-full py-2.5 rounded-xl bg-[#16A34A] text-white font-semibold text-sm flex items-center justify-center gap-2"><RefreshCw size={15}/> Renew current package</button>
+        <button type="button" onClick={() => navigate("/renewal")} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#16A34A] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#15803D] lg:w-48 lg:flex-col lg:gap-2 lg:rounded-2xl"><RefreshCw size={18}/> Renew package</button>
+        </div>
 
         <section aria-labelledby="packages-heading" className="space-y-2.5">
           <div className="flex items-center justify-between gap-2">
             <div><p className="text-[10px] uppercase font-bold tracking-wider text-[#E5007D]">Explore plans</p><h2 id="packages-heading" className="font-extrabold text-xl text-[#0F172A]">Available packages</h2></div>
             <span className="text-xs rounded-full bg-[#FCE7F3] px-3 py-1 font-semibold text-[#BE0067]">4 packages</span>
           </div>
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-3">
             {INTERNET_PACKAGES.map((plan) => (
               <button type="button" key={plan.name} onClick={() => { setSelected(plan); setAssistantPending(false); }}
                 aria-label={`View ${plan.name} package details`}
-                className={`min-w-0 text-left bg-white rounded-2xl border p-3 shadow-sm transition hover:border-[#E5007D] focus:outline-none focus:ring-2 focus:ring-[#E5007D] ${currentPlan?.name === plan.name ? "border-[#E5007D]" : "border-[#E2E8F0]"}`}>
-                <div className="flex items-center justify-between gap-1"><p className="text-[11px] text-[#E5007D] font-extrabold">{plan.name}</p><ArrowRight size={13} className="text-[#94A3B8]"/></div>
-                <p className="mt-1 text-2xl leading-none text-[#0F172A] font-extrabold">{plan.speedMbps}<span className="text-xs font-semibold"> Mbps</span></p>
-                <p className="mt-2 text-sm text-[#0F172A] font-bold">{formatCurrency(plan.monthlyPriceUGX)}</p>
-                <p className="text-[10px] text-[#64748B]">monthly · ~{plan.deviceRange} devices</p>
-                <p className="mt-2 text-[11px] text-[#E5007D] font-semibold">View details →</p>
+                className={`group flex min-w-0 flex-col rounded-2xl border bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#E5007D] hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E5007D] sm:p-4 ${currentPlan?.name === plan.name ? "border-[#E5007D]" : "border-[#E2E8F0]"}`}>
+                <div className="flex min-w-0 items-center justify-between gap-1"><p className="text-xs font-extrabold tracking-wide text-[#E5007D]">{plan.name}</p>{currentPlan?.name === plan.name && <span className="rounded-full bg-[#FFF0F8] px-2 py-0.5 text-[9px] font-bold text-[#C30068]">Current</span>}</div>
+                <p className="mt-2 text-2xl font-extrabold leading-none text-[#0F172A] sm:text-[28px]">{plan.speedMbps}<span className="ml-1 text-xs font-semibold">Mbps</span></p>
+                <p className="mt-3 break-words text-[13px] font-bold text-[#0F172A] sm:text-sm">{formatCurrency(plan.monthlyPriceUGX)}</p>
+                <p className="mt-0.5 text-[10px] leading-snug text-[#64748B] sm:text-xs">Monthly · ~{plan.deviceRange} devices</p>
+                <div className="mt-auto flex min-w-0 items-center gap-1 pt-4 text-xs font-bold text-[#BE0067] sm:text-sm"><span className="sm:hidden">Details</span><span className="hidden sm:inline">View details</span><ChevronRight aria-hidden="true" size={17} className="shrink-0 transition-transform group-hover:translate-x-0.5"/></div>
               </button>
             ))}
           </div>
@@ -107,7 +109,7 @@ export function SubscriptionPage() {
       </div>
 
       {selected && <div className="fixed inset-0 z-[10050] flex items-end sm:items-center justify-center bg-[#0F172A]/55 p-0 sm:p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) setSelected(null); }}>
-        <div role="dialog" aria-modal="true" aria-labelledby="package-dialog-heading" className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-white p-5 shadow-2xl max-h-[88vh] overflow-y-auto">
+        <div role="dialog" aria-modal="true" aria-labelledby="package-dialog-heading" className="w-full max-h-[88dvh] overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:max-w-lg sm:rounded-3xl sm:p-6">
           <div className="flex justify-between items-start gap-2"><div><p className="text-[11px] font-bold text-[#E5007D] uppercase">Package details</p><h3 id="package-dialog-heading" className="text-2xl font-extrabold text-[#0F172A]">{selected.name}</h3></div><button type="button" aria-label="Close package details" onClick={() => setSelected(null)} className="rounded-full p-2 bg-[#F1F5F9]"><X size={18}/></button></div>
           <p className="text-xs text-[#64748B] mt-1">{selected.tagline}</p>
           <div className="mt-4 rounded-xl bg-[#FFF1F8] p-3 flex items-center justify-between gap-3"><div className="flex gap-2 items-center text-[#E5007D]"><Zap size={20}/><span className="font-extrabold text-xl text-[#0F172A]">{selected.speedMbps} Mbps</span></div><div className="text-right"><p className="font-bold text-[#0F172A]">{formatCurrency(selected.monthlyPriceUGX)}</p><p className="text-[10px] text-[#64748B]">per month</p></div></div>

@@ -230,7 +230,7 @@ export function CustomerDashboard() {
 
   return (
     <Layout>
-      <div className="px-4 py-5 space-y-4">
+      <div className="space-y-5 px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
         {/* Greeting */}
         <div>
           <p className="text-[var(--color-muted)] text-sm">{greeting},</p>
@@ -248,6 +248,7 @@ export function CustomerDashboard() {
           </p>
         </div>
 
+        <div className="grid items-start gap-5 lg:grid-cols-2">
         {/* Internet status hero card */}
         <div className="bg-[#E5007D] rounded-2xl p-5 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/10 -translate-y-8 translate-x-8" />
@@ -345,6 +346,7 @@ export function CustomerDashboard() {
           </div>
         </div>
 
+        </div>
         {/* Renewal warning */}
         {daysLeft <= 7 && (
           <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-xl px-4 py-3 flex items-center gap-3">
@@ -449,6 +451,7 @@ export function CustomerDashboard() {
           </button>
         )}
 
+        <div className="grid items-start gap-5 lg:grid-cols-2">
         {/* Internet tips banner */}
         <div className="bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-2xl p-4 flex gap-3">
           <div className="w-10 h-10 rounded-xl bg-[var(--color-surface)] flex items-center justify-center shrink-0">
@@ -490,6 +493,7 @@ export function CustomerDashboard() {
               </div>
             ))}
           </div>
+        </div>
         </div>
       </div>
     </Layout>
