@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function owner(uid) { return signedIn() && request.auth.uid == uid; }
+    match /users/{uid} {
+      allow get: if owner(uid);
+      allow list, create, update, delete: if false;
+    }
+    match /tickets/{ticketId} {
+      allow get, list: if signedIn() && resource.data.customerUid == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.customerUid == request.auth.uid
+        && request.resource.data.keys().hasAll(['customerUid','category','title','description','status','priority','createdAt','updatedAt'])
+        && request.resource.data.status == 'open'
+        && request.resource.data.category is string
+        && request.resource.data.title is string
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 10000
+        && request.resource.data.priority in ['low','medium','high']
+        && request.resource.data.assignedTo == null;
+      // A customer may append a comment but not edit ownership, assignment, or status.
+      allow update: if signedIn() && resource.data.customerUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updates','updatedAt'])
+        && request.resource.data.updates is list
+        && request.resource.data.updates.size() == resource.data.updates.size() + 1
+        && request.resource.data.updates.hasAll(resource.data.updates)
+        && request.resource.data.updates[request.resource.data.updates.size()-1].text is string
+        && request.resource.data.updates[request.resource.data.updates.size()-1].text.size() <= 2000;
+      allow delete: if false;
+    }
+    match /notifications/{notificationId} {
+      allow get, list: if signedIn() && resource.data.customerUid == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.customerUid == request.auth.uid
+        && request.resource.data.type == 'ticket'
+        && request.resource.data.unread == true;
+      allow update: if signedIn() && resource.data.customerUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['unread'])
+        && request.resource.data.unread == false;
+      allow delete: if false;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}
