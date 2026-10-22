@@ -73,7 +73,7 @@ export function OutageDetails() {
   if (loading) {
     return (
       <Layout showBack backTo="/service-status" title="Outage Details">
-        <div className="px-4 py-8 text-center text-[#64748B] text-sm">
+        <div className="px-4 py-8 text-center text-[var(--color-muted)] text-sm">
           Loading outage details...
         </div>
       </Layout>
@@ -84,9 +84,9 @@ export function OutageDetails() {
     return (
       <Layout showBack backTo="/service-status" title="Outage Details">
         <div className="px-4 py-8 text-center">
-          <AlertTriangle size={32} className="text-[#DC2626] mx-auto mb-3" />
-          <p className="text-[#0F172A] font-semibold">Outage not found</p>
-          <p className="text-[#64748B] text-sm mt-1">
+          <AlertTriangle size={32} className="text-[var(--color-danger-text)] mx-auto mb-3" />
+          <p className="text-[var(--color-text)] font-semibold">Outage not found</p>
+          <p className="text-[var(--color-muted)] text-sm mt-1">
             This incident may have been removed or is no longer available.
           </p>
         </div>
@@ -100,37 +100,37 @@ export function OutageDetails() {
         <button
           type="button"
           onClick={() => navigate("/service-status")}
-          className="flex items-center gap-2 text-[#64748B] text-sm"
+          className="flex items-center gap-2 text-[var(--color-muted)] text-sm"
         >
           <ArrowLeft size={16} />
           Back to Network Status
         </button>
 
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-5">
           <div className="flex items-start gap-3">
-            <div className="w-11 h-11 rounded-xl bg-[#FEF2F2] flex items-center justify-center">
-              <AlertTriangle size={22} className="text-[#DC2626]" />
+            <div className="w-11 h-11 rounded-xl bg-[var(--color-danger-soft)] flex items-center justify-center">
+              <AlertTriangle size={22} className="text-[var(--color-danger-text)]" />
             </div>
 
             <div className="flex-1">
-              <p className="text-[#0F172A] text-lg font-bold">
+              <p className="text-[var(--color-text)] text-lg font-bold">
                 {incident.title}
               </p>
 
-              <p className="text-[#64748B] text-sm mt-1">
+              <p className="text-[var(--color-muted)] text-sm mt-1">
                 {incident.description}
               </p>
 
               <div className="flex flex-wrap gap-2 mt-4">
-                <span className="px-2.5 py-1 rounded-full bg-[#FEF2F2] text-[#DC2626] text-xs font-semibold">
+                <span className="px-2.5 py-1 rounded-full bg-[var(--color-danger-soft)] text-[var(--color-danger-text)] text-xs font-semibold">
                   {statusText(incident.status)}
                 </span>
 
-                <span className="px-2.5 py-1 rounded-full bg-[#EBF2FF] text-[#0057B8] text-xs font-semibold">
+                <span className="px-2.5 py-1 rounded-full bg-[var(--color-surface-soft)] text-[var(--color-primary-text)] text-xs font-semibold">
                   {typeText(incident.type)}
                 </span>
 
-                <span className="px-2.5 py-1 rounded-full bg-[#FFFBEB] text-[#B45309] text-xs font-semibold">
+                <span className="px-2.5 py-1 rounded-full bg-[var(--color-warning-soft)] text-[var(--color-warning-text)] text-xs font-semibold">
                   {incident.severity} severity
                 </span>
               </div>
@@ -138,38 +138,38 @@ export function OutageDetails() {
           </div>
         </div>
 
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 space-y-4">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-5 space-y-4">
           <div className="flex items-start gap-3">
-            <MapPin size={18} className="text-[#0057B8] mt-0.5" />
+            <MapPin size={18} className="text-[var(--color-primary-text)] mt-0.5" />
             <div>
-              <p className="text-[#0F172A] text-sm font-semibold">
+              <p className="text-[var(--color-text)] text-sm font-semibold">
                 Affected Area
               </p>
-              <p className="text-[#64748B] text-sm mt-0.5">
+              <p className="text-[var(--color-muted)] text-sm mt-0.5">
                 {formatAreas(incident)}
               </p>
             </div>
           </div>
 
           <div className="flex items-start gap-3">
-            <Clock size={18} className="text-[#0057B8] mt-0.5" />
+            <Clock size={18} className="text-[var(--color-primary-text)] mt-0.5" />
             <div>
-              <p className="text-[#0F172A] text-sm font-semibold">
+              <p className="text-[var(--color-text)] text-sm font-semibold">
                 Estimated Resolution
               </p>
-              <p className="text-[#64748B] text-sm mt-0.5">
+              <p className="text-[var(--color-muted)] text-sm mt-0.5">
                 {incident.estimatedResolution || "Not yet provided"}
               </p>
             </div>
           </div>
 
           <div className="flex items-start gap-3">
-            <Radio size={18} className="text-[#0057B8] mt-0.5" />
+            <Radio size={18} className="text-[var(--color-primary-text)] mt-0.5" />
             <div>
-              <p className="text-[#0F172A] text-sm font-semibold">
+              <p className="text-[var(--color-text)] text-sm font-semibold">
                 Current Status
               </p>
-              <p className="text-[#64748B] text-sm mt-0.5">
+              <p className="text-[var(--color-muted)] text-sm mt-0.5">
                 {incident.statusNote || statusText(incident.status)}
               </p>
             </div>
@@ -177,12 +177,12 @@ export function OutageDetails() {
 
           {incident.status === "resolved" && (
             <div className="flex items-start gap-3">
-              <ShieldCheck size={18} className="text-[#16A34A] mt-0.5" />
+              <ShieldCheck size={18} className="text-[var(--color-success-text)] mt-0.5" />
               <div>
-                <p className="text-[#0F172A] text-sm font-semibold">
+                <p className="text-[var(--color-text)] text-sm font-semibold">
                   Service Restored
                 </p>
-                <p className="text-[#64748B] text-sm mt-0.5">
+                <p className="text-[var(--color-muted)] text-sm mt-0.5">
                   This incident has been marked as resolved.
                 </p>
               </div>
@@ -190,11 +190,11 @@ export function OutageDetails() {
           )}
         </div>
 
-        <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-4">
-          <p className="text-[#94A3B8] text-xs">Incident Reference</p>
+        <div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-2xl p-4">
+          <p className="text-[var(--color-subtle-text)] text-xs">Incident Reference</p>
           <p
             style={{ fontFamily: "'JetBrains Mono', monospace" }}
-            className="text-[#475569] text-xs mt-1"
+            className="text-[var(--color-muted)] text-xs mt-1"
           >
             {formatIncidentReference(incident)}
           </p>
@@ -208,7 +208,7 @@ export function OutageDetails() {
                 `/report-issue?mode=incident&type=area_outage&source=outage_details&incident=${incident.id}`
               )
             }
-            className="w-full py-3 bg-[#E5007D] text-white rounded-xl text-sm font-semibold hover:bg-[#BE0067] active:scale-95 transition-all"
+            className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold hover:bg-[var(--color-primary)] active:scale-95 transition-all"
           >
             Report this is still ongoing
           </button>

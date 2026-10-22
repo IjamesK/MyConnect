@@ -55,22 +55,22 @@ function getStatusText(incident: PublicIncident) {
 
 function getStatusClasses(incident: PublicIncident) {
   if (incident.status === "resolved") {
-    return "bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]";
+    return "bg-[var(--color-success-soft)] text-[var(--color-success-strong)] border-[var(--color-success-border)]";
   }
 
   if (incident.status === "scheduled") {
-    return "bg-[#EBF2FF] text-[#0057B8] border-[#BFDBFE]";
+    return "bg-[var(--color-surface-soft)] text-[var(--color-primary-text)] border-[var(--color-border)]";
   }
 
   if (incident.status === "monitoring") {
-    return "bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]";
+    return "bg-[var(--color-warning-soft)] text-[var(--color-warning-text)] border-[var(--color-warning-border)]";
   }
 
   if (incident.severity === "high") {
-    return "bg-[#FEF2F2] text-[#DC2626] border-[#FECACA]";
+    return "bg-[var(--color-danger-soft)] text-[var(--color-danger-text)] border-[var(--color-danger-border)]";
   }
 
-  return "bg-[#FFF7ED] text-[#EA580C] border-[#FED7AA]";
+  return "bg-[var(--color-warning-soft)] text-[var(--color-warning-text)] border-[var(--color-warning-border)]";
 }
 
 function getIcon(incident: PublicIncident) {
@@ -136,34 +136,34 @@ function IncidentCard({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left bg-white border rounded-2xl p-4 transition-all ${
+      className={`w-full text-left bg-[var(--color-surface)] border rounded-2xl p-4 transition-all ${
         highlighted
-          ? "border-[#0057B8] shadow-sm"
-          : "border-[#E2E8F0] hover:border-[#CBD5E1]"
+          ? "border-[var(--color-primary)] shadow-sm"
+          : "border-[var(--color-border)] hover:border-[var(--color-border)]"
       }`}
     >
       <div className="flex items-start gap-3">
         <div
           className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
             incident.status === "resolved"
-              ? "bg-[#F0FDF4]"
+              ? "bg-[var(--color-success-soft)]"
               : incident.status === "scheduled"
-                ? "bg-[#EBF2FF]"
+                ? "bg-[var(--color-surface-soft)]"
                 : incident.severity === "high"
-                  ? "bg-[#FEF2F2]"
-                  : "bg-[#FFFBEB]"
+                  ? "bg-[var(--color-danger-soft)]"
+                  : "bg-[var(--color-warning-soft)]"
           }`}
         >
           <Icon
             size={20}
             className={
               incident.status === "resolved"
-                ? "text-[#15803D]"
+                ? "text-[var(--color-success-strong)]"
                 : incident.status === "scheduled"
-                  ? "text-[#0057B8]"
+                  ? "text-[var(--color-primary-text)]"
                   : incident.severity === "high"
-                    ? "text-[#DC2626]"
-                    : "text-[#B45309]"
+                    ? "text-[var(--color-danger-text)]"
+                    : "text-[var(--color-warning-text)]"
             }
           />
         </div>
@@ -171,11 +171,11 @@ function IncidentCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-[#0F172A] text-sm font-semibold">
+              <p className="text-[var(--color-text)] text-sm font-semibold">
                 {incident.title}
               </p>
 
-              <p className="text-[#64748B] text-xs mt-0.5">
+              <p className="text-[var(--color-muted)] text-xs mt-0.5">
                 {getIncidentLabel(incident)}
               </p>
             </div>
@@ -189,30 +189,30 @@ function IncidentCard({
             </span>
           </div>
 
-          <p className="text-[#64748B] text-xs mt-3 leading-relaxed">
+          <p className="text-[var(--color-muted)] text-xs mt-3 leading-relaxed">
             {incident.description}
           </p>
 
-          <div className="mt-3 flex items-center gap-2 text-[#94A3B8] text-xs">
+          <div className="mt-3 flex items-center gap-2 text-[var(--color-subtle-text)] text-xs">
             <MapPin size={12} />
             <span>{formatIncidentAreas(incident)}</span>
           </div>
 
           <div className="mt-2 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-[#94A3B8] text-xs">
+            <div className="flex items-center gap-2 text-[var(--color-subtle-text)] text-xs">
               <Clock size={12} />
               <span>{formatTimeAgo(incident)}</span>
             </div>
 
             {incident.estimatedResolution && (
-              <span className="text-[#64748B] text-xs">
+              <span className="text-[var(--color-muted)] text-xs">
                 ETA: {incident.estimatedResolution}
               </span>
             )}
           </div>
         </div>
 
-        <ChevronRight size={16} className="text-[#CBD5E1] shrink-0 mt-1" />
+        <ChevronRight size={16} className="text-[var(--color-border)] shrink-0 mt-1" />
       </div>
     </button>
   );
@@ -331,7 +331,7 @@ export function ServiceStatus() {
   if (!profile) {
     return (
       <Layout showBack backTo="/dashboard" title="Network Status">
-        <div className="px-4 py-10 text-center text-[#64748B] text-sm">
+        <div className="px-4 py-10 text-center text-[var(--color-muted)] text-sm">
           Loading account details...
         </div>
       </Layout>
@@ -347,18 +347,18 @@ export function ServiceStatus() {
               fontFamily: "'Inter Tight', system-ui, sans-serif",
               fontWeight: 800,
             }}
-            className="text-[#0F172A] text-2xl"
+            className="text-[var(--color-text)] text-2xl"
           >
             Network Status
           </h1>
 
-          <p className="text-[#64748B] text-sm mt-1">
+          <p className="text-[var(--color-muted)] text-sm mt-1">
             Live network updates for your area and other affected service zones.
           </p>
         </div>
 
         {/* Customer area first */}
-        <div className="bg-gradient-to-br from-[#0057B8] to-[#003D82] rounded-2xl p-4 text-white shadow-sm">
+        <div className="bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-2xl p-4 text-white shadow-sm">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-white/70 text-xs">Your Area</p>
@@ -369,20 +369,20 @@ export function ServiceStatus() {
 
               <div className="flex items-center gap-2 mt-3">
                 {areaStatus === "Operational" ? (
-                  <CheckCircle size={16} className="text-[#86EFAC]" />
+                  <CheckCircle size={16} className="text-[var(--color-success-text)]" />
                 ) : areaStatus === "Full outage" ? (
-                  <WifiOff size={16} className="text-[#FCA5A5]" />
+                  <WifiOff size={16} className="text-[var(--color-danger-border)]" />
                 ) : areaStatus === "Scheduled maintenance" ? (
-                  <Wrench size={16} className="text-[#BFDBFE]" />
+                  <Wrench size={16} className="text-[var(--color-border)]" />
                 ) : (
-                  <AlertTriangle size={16} className="text-[#FDE68A]" />
+                  <AlertTriangle size={16} className="text-[var(--color-warning-border)]" />
                 )}
 
                 <span className="text-sm font-semibold">{areaStatus}</span>
               </div>
             </div>
 
-            <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-2xl bg-[var(--color-surface)]/15 flex items-center justify-center">
               <Activity size={24} />
             </div>
           </div>
@@ -398,42 +398,42 @@ export function ServiceStatus() {
 
         {/* Summary cards */}
         <div className="grid grid-cols-3 gap-2">
-          <div className="bg-white border border-[#E2E8F0] rounded-xl p-3">
-            <p className="text-[#94A3B8] text-xs">Active</p>
-            <p className="text-[#0F172A] text-xl font-bold mt-1">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-3">
+            <p className="text-[var(--color-subtle-text)] text-xs">Active</p>
+            <p className="text-[var(--color-text)] text-xl font-bold mt-1">
               {activeOutages.length}
             </p>
           </div>
 
-          <div className="bg-white border border-[#E2E8F0] rounded-xl p-3">
-            <p className="text-[#94A3B8] text-xs">Planned</p>
-            <p className="text-[#0F172A] text-xl font-bold mt-1">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-3">
+            <p className="text-[var(--color-subtle-text)] text-xs">Planned</p>
+            <p className="text-[var(--color-text)] text-xl font-bold mt-1">
               {plannedWork.length}
             </p>
           </div>
 
-          <div className="bg-white border border-[#E2E8F0] rounded-xl p-3">
-            <p className="text-[#94A3B8] text-xs">Your Area</p>
-            <p className="text-[#0F172A] text-xl font-bold mt-1">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-3">
+            <p className="text-[var(--color-subtle-text)] text-xs">Your Area</p>
+            <p className="text-[var(--color-text)] text-xl font-bold mt-1">
               {customerActiveIncidents.length}
             </p>
           </div>
         </div>
 
         {loading && (
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 text-center">
-            <p className="text-[#64748B] text-sm">Loading network updates...</p>
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-6 text-center">
+            <p className="text-[var(--color-muted)] text-sm">Loading network updates...</p>
           </div>
         )}
 
         {!loading && customerActiveIncidents.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[#0F172A] text-sm font-semibold">
+              <h3 className="text-[var(--color-text)] text-sm font-semibold">
                 Affecting Your Area
               </h3>
 
-              <span className="text-[#0057B8] text-xs font-medium">
+              <span className="text-[var(--color-primary-text)] text-xs font-medium">
                 Priority
               </span>
             </div>
@@ -453,10 +453,10 @@ export function ServiceStatus() {
 
         {!loading && otherActiveOutages.length > 0 && (
           <div>
-            <h3 className="text-[#0F172A] text-sm font-semibold mb-1">
+            <h3 className="text-[var(--color-text)] text-sm font-semibold mb-1">
               Other Active Outages & Incidents
             </h3>
-            <p className="text-[#94A3B8] text-xs mb-3">
+            <p className="text-[var(--color-subtle-text)] text-xs mb-3">
               These are active network updates outside your main area section.
             </p>
 
@@ -474,7 +474,7 @@ export function ServiceStatus() {
 
         {!loading && otherPlannedWork.length > 0 && (
           <div>
-            <h3 className="text-[#0F172A] text-sm font-semibold mb-3">
+            <h3 className="text-[var(--color-text)] text-sm font-semibold mb-3">
               Planned Maintenance & Upgrades
             </h3>
 
@@ -494,16 +494,16 @@ export function ServiceStatus() {
           otherActiveOutages.length === 0 &&
           otherPlannedWork.length === 0 &&
           customerActiveIncidents.length === 0 && (
-            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] flex items-center justify-center mx-auto mb-3">
-                <CheckCircle size={26} className="text-[#16A34A]" />
+            <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-6 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-[var(--color-success-soft)] border border-[var(--color-success-border)] flex items-center justify-center mx-auto mb-3">
+                <CheckCircle size={26} className="text-[var(--color-success-text)]" />
               </div>
 
-              <h3 className="text-[#0F172A] text-base font-bold">
+              <h3 className="text-[var(--color-text)] text-base font-bold">
                 All Systems Operational
               </h3>
 
-              <p className="text-[#64748B] text-sm mt-1">
+              <p className="text-[var(--color-muted)] text-sm mt-1">
                 There are no active outages or planned maintenance updates at
                 the moment.
               </p>
@@ -512,7 +512,7 @@ export function ServiceStatus() {
 
         {!loading && resolvedIncidents.length > 0 && (
           <div>
-            <h3 className="text-[#0F172A] text-sm font-semibold mb-3">
+            <h3 className="text-[var(--color-text)] text-sm font-semibold mb-3">
               Recently Resolved
             </h3>
 

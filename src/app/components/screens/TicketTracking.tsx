@@ -188,7 +188,7 @@ export function TicketTracking() {
   if (loading) {
     return (
       <Layout showBack backTo="/dashboard" title="Ticket">
-        <div className="px-4 py-10 text-center text-[#64748B] text-sm">
+        <div className="px-4 py-10 text-center text-[var(--color-muted)] text-sm">
           Loading ticket...
         </div>
       </Layout>
@@ -199,13 +199,13 @@ export function TicketTracking() {
     return (
       <Layout showBack backTo="/dashboard" title="Ticket Not Found">
         <div className="px-4 py-16 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-[#FEF2F2] border border-[#FECACA] flex items-center justify-center mx-auto mb-3">
-            <MessageSquare size={24} className="text-[#DC2626]" />
+          <div className="w-14 h-14 rounded-2xl bg-[var(--color-danger-soft)] border border-[var(--color-danger-border)] flex items-center justify-center mx-auto mb-3">
+            <MessageSquare size={24} className="text-[var(--color-danger-text)]" />
           </div>
 
-          <h2 className="text-[#0F172A] text-lg font-bold">Ticket not found</h2>
+          <h2 className="text-[var(--color-text)] text-lg font-bold">Ticket not found</h2>
 
-          <p className="text-[#64748B] text-sm mt-1">
+          <p className="text-[var(--color-muted)] text-sm mt-1">
             This ticket may have been removed, or the notification may be
             pointing to an old demo ticket.
           </p>
@@ -213,7 +213,7 @@ export function TicketTracking() {
           <button
             type="button"
             onClick={() => navigate("/dashboard")}
-            className="mt-5 px-4 py-2.5 bg-[#0057B8] text-white rounded-xl text-sm font-semibold"
+            className="mt-5 px-4 py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold"
           >
             Back to Dashboard
           </button>
@@ -239,11 +239,11 @@ export function TicketTracking() {
     >
       <div className="px-4 py-5 space-y-4">
         {/* Ticket header */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-5">
           <div className="flex items-start justify-between mb-1">
             <p
               style={{ fontFamily: "'JetBrains Mono', monospace" }}
-              className="text-[#94A3B8] text-xs"
+              className="text-[var(--color-subtle-text)] text-xs"
             >
               #{ticket.id}
             </p>
@@ -264,54 +264,54 @@ export function TicketTracking() {
               fontFamily: "'Inter Tight', system-ui, sans-serif",
               fontWeight: 800,
             }}
-            className="text-[#0F172A] text-xl"
+            className="text-[var(--color-text)] text-xl"
           >
             {ticket.title || formatCategory(ticket.category)}
           </h1>
 
-          <p className="text-[#64748B] text-sm mt-2 leading-relaxed whitespace-pre-line">
+          <p className="text-[var(--color-muted)] text-sm mt-2 leading-relaxed whitespace-pre-line">
             {ticket.description}
           </p>
 
           <div className="flex flex-wrap items-center gap-2 mt-3 text-xs">
-            <div className="flex items-center gap-1 text-[#64748B]">
+            <div className="flex items-center gap-1 text-[var(--color-muted)]">
               <Clock size={11} />
               <span>Created {formatDate(ticket.createdAt)}</span>
             </div>
 
-            <div className="flex items-center gap-1 text-[#64748B]">
+            <div className="flex items-center gap-1 text-[var(--color-muted)]">
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
                   ticket.priority === "high"
-                    ? "bg-[#DC2626]"
+                    ? "bg-[var(--color-danger-action)]"
                     : ticket.priority === "medium"
-                      ? "bg-[#F59E0B]"
-                      : "bg-[#16A34A]"
+                      ? "bg-[var(--color-warning-action)]"
+                      : "bg-[var(--color-success-action)]"
                 }`}
               />
               <span>Priority: {ticket.priority}</span>
             </div>
           </div>
 
-          <div className="mt-4 pt-4 border-t border-[#F1F5F9] grid grid-cols-2 gap-3 text-xs">
-            <div className="flex items-center gap-2 text-[#64748B]">
+          <div className="mt-4 pt-4 border-t border-[var(--color-hover)] grid grid-cols-2 gap-3 text-xs">
+            <div className="flex items-center gap-2 text-[var(--color-muted)]">
               <MapPin size={13} />
               <span>
                 {ticket.area}, {ticket.district}
               </span>
             </div>
 
-            <div className="flex items-center gap-2 text-[#64748B]">
+            <div className="flex items-center gap-2 text-[var(--color-muted)]">
               <Wifi size={13} />
               <span>{ticket.routerSerial || "Router not set"}</span>
             </div>
 
-            <div className="flex items-center gap-2 text-[#64748B]">
+            <div className="flex items-center gap-2 text-[var(--color-muted)]">
               <User size={13} />
               <span>{ticket.customerName}</span>
             </div>
 
-            <div className="flex items-center gap-2 text-[#64748B]">
+            <div className="flex items-center gap-2 text-[var(--color-muted)]">
               <ShieldCheck size={13} />
               <span>{formatCategory(ticket.category)}</span>
             </div>
@@ -320,41 +320,41 @@ export function TicketTracking() {
 
         {/* Attached speed test */}
         {ticket.speedTest && (
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">
-              <Gauge size={18} className="text-[#0057B8]" />
-              <p className="text-[#0F172A] text-sm font-semibold">
+              <Gauge size={18} className="text-[var(--color-primary-text)]" />
+              <p className="text-[var(--color-text)] text-sm font-semibold">
                 Attached Speed Test
               </p>
             </div>
 
             <div className="grid grid-cols-3 gap-2">
-              <div className="bg-[#F8FAFC] border border-[#F1F5F9] rounded-xl p-3">
-                <Download size={14} className="text-[#0057B8] mb-1" />
-                <p className="text-[#94A3B8] text-[10px]">Download</p>
-                <p className="text-[#0F172A] text-sm font-bold">
+              <div className="bg-[var(--color-bg)] border border-[var(--color-hover)] rounded-xl p-3">
+                <Download size={14} className="text-[var(--color-primary-text)] mb-1" />
+                <p className="text-[var(--color-subtle-text)] text-[10px]">Download</p>
+                <p className="text-[var(--color-text)] text-sm font-bold">
                   {ticket.speedTest.downloadMbps} Mbps
                 </p>
               </div>
 
-              <div className="bg-[#F8FAFC] border border-[#F1F5F9] rounded-xl p-3">
-                <Upload size={14} className="text-[#0057B8] mb-1" />
-                <p className="text-[#94A3B8] text-[10px]">Upload</p>
-                <p className="text-[#0F172A] text-sm font-bold">
+              <div className="bg-[var(--color-bg)] border border-[var(--color-hover)] rounded-xl p-3">
+                <Upload size={14} className="text-[var(--color-primary-text)] mb-1" />
+                <p className="text-[var(--color-subtle-text)] text-[10px]">Upload</p>
+                <p className="text-[var(--color-text)] text-sm font-bold">
                   {ticket.speedTest.uploadMbps} Mbps
                 </p>
               </div>
 
-              <div className="bg-[#F8FAFC] border border-[#F1F5F9] rounded-xl p-3">
-                <Timer size={14} className="text-[#0057B8] mb-1" />
-                <p className="text-[#94A3B8] text-[10px]">Latency</p>
-                <p className="text-[#0F172A] text-sm font-bold">
+              <div className="bg-[var(--color-bg)] border border-[var(--color-hover)] rounded-xl p-3">
+                <Timer size={14} className="text-[var(--color-primary-text)] mb-1" />
+                <p className="text-[var(--color-subtle-text)] text-[10px]">Latency</p>
+                <p className="text-[var(--color-text)] text-sm font-bold">
                   {ticket.speedTest.latencyMs} ms
                 </p>
               </div>
             </div>
 
-            <p className="text-[#64748B] text-xs mt-3">
+            <p className="text-[var(--color-muted)] text-xs mt-3">
               Devices connected during test: {ticket.speedTest.connectedDevices}
             </p>
           </div>
@@ -363,7 +363,7 @@ export function TicketTracking() {
         {ticket.routerLightCheck && (
           <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">
-              <Wifi size={18} className="text-[var(--color-primary)]" />
+              <Wifi size={18} className="text-[var(--color-primary-text)]" />
               <p className="text-[var(--color-text)] text-sm font-semibold">
                 Router Light Check
               </p>
@@ -382,20 +382,20 @@ export function TicketTracking() {
         )}
 
         {ticket.eligibilityCheck && (
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">
-              <MapPinned size={18} className="text-[#0057B8]" />
-              <p className="text-[#0F172A] text-sm font-semibold">
+              <MapPinned size={18} className="text-[var(--color-primary-text)]" />
+              <p className="text-[var(--color-text)] text-sm font-semibold">
                 Move Location Check
               </p>
             </div>
 
-            <div className="space-y-2 text-xs text-[#64748B]">
-              <p className="text-[#0F172A] text-sm font-bold">
+            <div className="space-y-2 text-xs text-[var(--color-muted)]">
+              <p className="text-[var(--color-text)] text-sm font-bold">
                 {ticket.eligibilityCheck.statusLabel}
               </p>
               <p className="leading-relaxed">{ticket.eligibilityCheck.summary}</p>
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#F1F5F9]">
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--color-hover)]">
                 <p>New place: {ticket.eligibilityCheck.newAddress || "Not provided"}</p>
                 <p>Landmark: {ticket.eligibilityCheck.landmark || "Not provided"}</p>
                 <p>Coordinates: {formatCoordinate(ticket.eligibilityCheck.currentLatitude)}, {formatCoordinate(ticket.eligibilityCheck.currentLongitude)}</p>
@@ -407,12 +407,12 @@ export function TicketTracking() {
 
         {/* Password reset notice */}
         {isPasswordReset && (
-          <div className="bg-[#EBF2FF] border border-[#BFDBFE] rounded-2xl p-4">
-            <p className="text-[#0F172A] text-sm font-semibold">
+          <div className="bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-2xl p-4">
+            <p className="text-[var(--color-text)] text-sm font-semibold">
               Password reset request received
             </p>
 
-            <p className="text-[#64748B] text-xs mt-1 leading-relaxed">
+            <p className="text-[var(--color-muted)] text-xs mt-1 leading-relaxed">
               Support will verify the account and guide you through the password
               reset process. For security reasons, do not share your new
               password inside the ticket conversation.
@@ -422,8 +422,8 @@ export function TicketTracking() {
 
         {/* Technician card */}
         {isTechnicianTicket && (
-          <div className="bg-[#FCE7F3] border border-[#FBCFE8] rounded-2xl p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-[#E5007D] flex items-center justify-center text-white font-bold text-sm shrink-0">
+          <div className="bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-2xl p-4 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-white font-bold text-sm shrink-0">
               {(ticket.assignedTechnicianName || "Tech")
                 .split(" ")
                 .map((part) => part[0])
@@ -433,17 +433,17 @@ export function TicketTracking() {
             </div>
 
             <div className="flex-1">
-              <p className="text-[#0F172A] text-sm font-semibold">
+              <p className="text-[var(--color-text)] text-sm font-semibold">
                 {ticket.assignedTechnicianName || (isSiteSurveyTicket ? "Site survey pending" : "Technician pending")}
               </p>
 
-              <p className="text-[#64748B] text-xs">
+              <p className="text-[var(--color-muted)] text-xs">
                 {isSiteSurveyTicket ? "Coverage / Move Review" : "Field Technician"} · {ticket.area || "Service Area"}
               </p>
 
               <p
                 className={`text-xs mt-0.5 font-medium ${
-                  ticket.eta ? "text-[#E5007D]" : "text-[#64748B]"
+                  ticket.eta ? "text-[var(--color-primary-text)]" : "text-[var(--color-muted)]"
                 }`}
               >
                 {ticket.eta
@@ -455,7 +455,7 @@ export function TicketTracking() {
             {ticket.assignedTechnicianPhone && (
               <a
                 href={`tel:${ticket.assignedTechnicianPhone}`}
-                className="w-9 h-9 rounded-full bg-[#E5007D] flex items-center justify-center"
+                className="w-9 h-9 rounded-full bg-[var(--color-primary)] flex items-center justify-center"
               >
                 <Phone size={15} className="text-white" />
               </a>
@@ -465,12 +465,12 @@ export function TicketTracking() {
 
         {/* Monitoring notice */}
         {ticket.workType === "monitoring" && (
-          <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-2xl p-4">
-            <p className="text-[#0F172A] text-sm font-semibold">
+          <div className="bg-[var(--color-warning-soft)] border border-[var(--color-warning-border)] rounded-2xl p-4">
+            <p className="text-[var(--color-text)] text-sm font-semibold">
               Ticket under monitoring
             </p>
 
-            <p className="text-[#64748B] text-xs mt-1 leading-relaxed">
+            <p className="text-[var(--color-muted)] text-xs mt-1 leading-relaxed">
               Support is monitoring your service before closing this ticket. If
               the issue continues, reply below with what you are experiencing.
             </p>
@@ -478,11 +478,11 @@ export function TicketTracking() {
         )}
 
         {/* Progress timeline */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5">
-          <p className="text-[#0F172A] text-sm font-semibold mb-4">Progress</p>
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-5">
+          <p className="text-[var(--color-text)] text-sm font-semibold mb-4">Progress</p>
 
           <div className="relative">
-            <div className="absolute left-3.5 top-3 bottom-3 w-px bg-[#E2E8F0]" />
+            <div className="absolute left-3.5 top-3 bottom-3 w-px bg-[var(--color-border)]" />
 
             <div className="space-y-5">
               {timelineSteps.map(({ label, time, done, active }) => (
@@ -490,21 +490,21 @@ export function TicketTracking() {
                   <div
                     className={`w-7 h-7 rounded-full flex items-center justify-center z-10 border-2 flex-shrink-0 ${
                       active
-                        ? "bg-[#FCE7F3] border-[#E5007D]"
+                        ? "bg-[var(--color-surface-soft)] border-[var(--color-primary)]"
                         : done
-                          ? "bg-[#F0FDF4] border-[#16A34A]"
-                          : "bg-[#F8FAFC] border-[#E2E8F0]"
+                          ? "bg-[var(--color-success-soft)] border-[var(--color-success)]"
+                          : "bg-[var(--color-bg)] border-[var(--color-border)]"
                     }`}
                   >
                     {active ? (
                       <Loader2
                         size={12}
-                        className="text-[#E5007D] animate-spin"
+                        className="text-[var(--color-primary-text)] animate-spin"
                       />
                     ) : done ? (
-                      <CheckCircle2 size={12} className="text-[#16A34A]" />
+                      <CheckCircle2 size={12} className="text-[var(--color-success-text)]" />
                     ) : (
-                      <div className="w-2 h-2 rounded-full bg-[#CBD5E1]" />
+                      <div className="w-2 h-2 rounded-full bg-[var(--color-border)]" />
                     )}
                   </div>
 
@@ -512,16 +512,16 @@ export function TicketTracking() {
                     <p
                       className={`text-sm font-medium ${
                         active
-                          ? "text-[#E5007D]"
+                          ? "text-[var(--color-primary-text)]"
                           : done
-                            ? "text-[#0F172A]"
-                            : "text-[#94A3B8]"
+                            ? "text-[var(--color-text)]"
+                            : "text-[var(--color-subtle-text)]"
                       }`}
                     >
                       {label}
                     </p>
 
-                    <p className="text-[#94A3B8] text-xs mt-0.5">{time}</p>
+                    <p className="text-[var(--color-subtle-text)] text-xs mt-0.5">{time}</p>
                   </div>
                 </div>
               ))}
@@ -530,51 +530,51 @@ export function TicketTracking() {
         </div>
 
         {/* Updates feed */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5">
-          <p className="text-[#0F172A] text-sm font-semibold mb-4">Updates</p>
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-5">
+          <p className="text-[var(--color-text)] text-sm font-semibold mb-4">Updates</p>
 
           <div className="space-y-3 mb-4">
             {updates.length === 0 ? (
-              <p className="text-[#94A3B8] text-sm">
+              <p className="text-[var(--color-subtle-text)] text-sm">
                 No updates have been added yet.
               </p>
             ) : (
               updates.map((update, index) => (
                 <div
                   key={`${update.text}-${index}`}
-                  className="bg-[#F8FAFC] border border-[#F1F5F9] rounded-xl p-3.5"
+                  className="bg-[var(--color-bg)] border border-[var(--color-hover)] rounded-xl p-3.5"
                 >
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[#E5007D] text-xs font-semibold">
+                    <span className="text-[var(--color-primary-text)] text-xs font-semibold">
                       {update.by}
                     </span>
 
-                    <span className="text-[#94A3B8] text-xs">
+                    <span className="text-[var(--color-subtle-text)] text-xs">
                       {formatDate(update.createdAt)}
                     </span>
                   </div>
 
-                  <p className="text-[#475569] text-sm whitespace-pre-line">{update.text}</p>
+                  <p className="text-[var(--color-muted)] text-sm whitespace-pre-line">{update.text}</p>
                 </div>
               ))
             )}
           </div>
 
-          {message && <p className="text-[#16A34A] text-xs mb-2">{message}</p>}
+          {message && <p className="text-[var(--color-success-text)] text-xs mb-2">{message}</p>}
 
-          <div className="flex gap-2 pt-3 border-t border-[#F1F5F9]">
+          <div className="flex gap-2 pt-3 border-t border-[var(--color-hover)]">
             <input
               type="text"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Reply to update..."
-              className="flex-1 px-3 py-2.5 bg-white border border-[#E2E8F0] rounded-xl text-sm placeholder:text-[#CBD5E1] outline-none focus:border-[#E5007D] focus:ring-2 focus:ring-[#E5007D]/20 transition"
+              className="flex-1 px-3 py-2.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl text-sm placeholder:text-[var(--color-border)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition"
             />
 
             <button
               type="button"
               onClick={handleSendComment}
-              className="w-11 h-11 bg-[#E5007D] rounded-xl flex items-center justify-center flex-shrink-0 hover:bg-[#BE0067] active:scale-95 transition-all"
+              className="w-11 h-11 bg-[var(--color-primary)] rounded-xl flex items-center justify-center flex-shrink-0 hover:bg-[var(--color-primary)] active:scale-95 transition-all"
             >
               <Send size={15} className="text-white" />
             </button>
@@ -591,7 +591,7 @@ export function TicketTracking() {
               );
               alert("Ticket details copied to clipboard!");
             }}
-            className="col-span-2 py-3 bg-[#E5007D] text-white rounded-xl text-sm font-semibold hover:bg-[#BE0067] flex items-center justify-center gap-2 active:scale-95 transition-all"
+            className="col-span-2 py-3 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold hover:bg-[var(--color-primary)] flex items-center justify-center gap-2 active:scale-95 transition-all"
           >
             <MessageSquare size={16} />
             Share Ticket
@@ -600,7 +600,7 @@ export function TicketTracking() {
           <button
             type="button"
             onClick={() => navigate("/notifications")}
-            className="py-2.5 bg-white border border-[#E2E8F0] rounded-xl text-sm font-medium text-[#0F172A] hover:bg-[#F8FAFC] flex items-center justify-center gap-1.5"
+            className="py-2.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg)] flex items-center justify-center gap-1.5"
           >
             <MessageSquare size={14} />
             Notifications
@@ -609,7 +609,7 @@ export function TicketTracking() {
           <button
             type="button"
             onClick={() => navigate("/troubleshoot")}
-            className="py-2.5 bg-white border border-[#E2E8F0] rounded-xl text-sm font-medium text-[#0F172A] hover:bg-[#F8FAFC] flex items-center justify-center gap-1.5"
+            className="py-2.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg)] flex items-center justify-center gap-1.5"
           >
             <CheckCircle2 size={14} />
             Troubleshoot

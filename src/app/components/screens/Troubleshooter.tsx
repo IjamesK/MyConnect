@@ -90,7 +90,7 @@ export function Troubleshooter() {
 
         <div className="bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-2xl p-4 flex gap-3">
           <div className="w-10 h-10 rounded-xl bg-[var(--color-surface)] flex items-center justify-center shrink-0">
-            <ShieldCheck size={19} className="text-[var(--color-primary)]" />
+            <ShieldCheck size={19} className="text-[var(--color-primary-text)]" />
           </div>
           <div>
             <p className="text-[var(--color-text)] text-sm font-bold">
@@ -110,7 +110,7 @@ export function Troubleshooter() {
             >
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center shrink-0">
-                  <Icon size={19} className="text-[var(--color-primary)]" />
+                  <Icon size={19} className="text-[var(--color-primary-text)]" />
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -138,7 +138,7 @@ export function Troubleshooter() {
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center shrink-0">
-              <Wifi size={19} className="text-[var(--color-primary)]" />
+              <Wifi size={19} className="text-[var(--color-primary-text)]" />
             </div>
             <div>
               <p className="text-[var(--color-text)] text-sm font-bold">
@@ -153,7 +153,7 @@ export function Troubleshooter() {
           <button
             type="button"
             onClick={() => navigate("/report-issue")}
-            className="mt-3 w-full py-2.5 border border-[var(--color-primary)] text-[var(--color-primary)] rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5"
+            className="mt-3 w-full py-2.5 border border-[var(--color-primary)] text-[var(--color-primary-text)] rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5"
           >
             <AlertCircle size={14} />
             Report a Problem

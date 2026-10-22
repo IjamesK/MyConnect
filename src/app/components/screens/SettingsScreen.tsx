@@ -16,22 +16,24 @@ import {
 } from "../../../lib/i18n";
 
 const themeLabels: Record<ThemeName, string> = {
-  canalbox: "CanalBox Blue",
-  dark: "Dark Mode",
+  canalbox: "CanalBox Rose",
+  slate: "Mist Grey",
+  dark: "Midnight",
   emerald: "Emerald",
   sunset: "Sunset",
 };
 
 const themeDescriptions: Record<ThemeName, string> = {
-  canalbox: "The default MyConnect blue theme.",
-  dark: "A darker interface for low-light use.",
+  canalbox: "Signature CanalBox accents on calm neutral surfaces.",
+  slate: "Soft grey backgrounds, crisp cards and minimal color.",
+  dark: "Balanced dark surfaces for low-light use.",
   emerald: "A clean green theme for a softer look.",
   sunset: "A warm orange theme with bright highlights.",
 };
 
 export function SettingsScreen() {
   const navigate = useNavigate();
-  const [selectedTheme, setSelectedTheme] = useState<ThemeName>("canalbox");
+  const [selectedTheme, setSelectedTheme] = useState<ThemeName>(() => getSavedTheme());
   const [selectedLanguage, setSelectedLanguage] = useState<AppLanguage>("en");
 
   useEffect(() => {
@@ -51,7 +53,7 @@ export function SettingsScreen() {
 
   return (
     <Layout showBack backTo="/dashboard" title="Settings">
-      <div className="px-4 py-5 space-y-5">
+      <div className="mx-auto max-w-3xl px-4 py-5 space-y-5 sm:px-6 lg:py-8">
         <div>
           <h1
             style={{
@@ -71,7 +73,7 @@ export function SettingsScreen() {
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center">
-              <Palette size={20} className="text-[var(--color-primary)]" />
+              <Palette size={20} className="text-[var(--color-primary-text)]" />
             </div>
 
             <div>
@@ -84,7 +86,7 @@ export function SettingsScreen() {
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {(Object.keys(themes) as ThemeName[]).map((themeName) => {
               const theme = themes[themeName];
               const active = selectedTheme === themeName;
@@ -94,12 +96,24 @@ export function SettingsScreen() {
                   key={themeName}
                   type="button"
                   onClick={() => handleThemeChange(themeName)}
-                  className={`w-full p-4 rounded-2xl border text-left transition-all ${
+                  aria-pressed={active}
+                  className={`w-full p-4 rounded-2xl border text-left transition-all hover:shadow-sm focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
                     active
                       ? "border-[var(--color-primary)] bg-[var(--color-surface-soft)]"
                       : "border-[var(--color-border)] bg-[var(--color-surface)]"
                   }`}
                 >
+                  <div className="mb-3 flex h-14 items-stretch overflow-hidden rounded-xl border" style={{ borderColor: theme.border, backgroundColor: theme.background }} aria-hidden="true">
+                    <div className="w-9 border-r p-2" style={{ borderColor: theme.border, backgroundColor: theme.surface }}>
+                      <div className="h-2 w-4 rounded-full" style={{ backgroundColor: theme.primary }} />
+                      <div className="mt-2 h-1 w-4 rounded-full" style={{ backgroundColor: theme.border }} />
+                      <div className="mt-1 h-1 w-3 rounded-full" style={{ backgroundColor: theme.border }} />
+                    </div>
+                    <div className="flex flex-1 items-center gap-2 p-2">
+                      <div className="h-8 flex-1 rounded-md border" style={{ borderColor: theme.border, backgroundColor: theme.surface }} />
+                      <div className="h-8 w-9 rounded-md" style={{ backgroundColor: theme.primary }} />
+                    </div>
+                  </div>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1">
                       <span
@@ -129,7 +143,7 @@ export function SettingsScreen() {
                     {active && (
                       <CheckCircle
                         size={18}
-                        className="text-[var(--color-primary)]"
+                        className="text-[var(--color-primary-text)]"
                       />
                     )}
                   </div>
@@ -142,7 +156,7 @@ export function SettingsScreen() {
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center">
-              <ShieldCheck size={20} className="text-[var(--color-primary)]" />
+              <ShieldCheck size={20} className="text-[var(--color-primary-text)]" />
             </div>
 
             <div>
@@ -162,7 +176,7 @@ export function SettingsScreen() {
           >
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center shrink-0">
-                <KeyRound size={18} className="text-[var(--color-primary)]" />
+                <KeyRound size={18} className="text-[var(--color-primary-text)]" />
               </div>
 
               <div className="flex-1">
@@ -180,7 +194,7 @@ export function SettingsScreen() {
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center">
-              <Languages size={20} className="text-[var(--color-primary)]" />
+              <Languages size={20} className="text-[var(--color-primary-text)]" />
             </div>
 
             <div>
@@ -204,7 +218,7 @@ export function SettingsScreen() {
                   onClick={() => handleLanguageChange(language)}
                   className={`p-3 rounded-xl border text-sm font-semibold ${
                     active
-                      ? "border-[var(--color-primary)] bg-[var(--color-surface-soft)] text-[var(--color-primary)]"
+                      ? "border-[var(--color-primary)] bg-[var(--color-surface-soft)] text-[var(--color-primary-text)]"
                       : "border-[var(--color-border)] text-[var(--color-text)]"
                   }`}
                 >

@@ -7,14 +7,14 @@ interface StatusBadgeProps {
 }
 
 const config: Record<Status, { dot: string; text: string; label: string }> = {
-  operational: { dot: "bg-[#16A34A]", text: "text-[#15803D] bg-[#F0FDF4]", label: "Operational" },
-  partial: { dot: "bg-[#F59E0B]", text: "text-[#B45309] bg-[#FFFBEB]", label: "Partial Outage" },
-  down: { dot: "bg-[#DC2626]", text: "text-[#B91C1C] bg-[#FEF2F2]", label: "Service Down" },
-  investigating: { dot: "bg-[#F59E0B]", text: "text-[#B45309] bg-[#FFFBEB]", label: "Investigating" },
-  resolved: { dot: "bg-[#16A34A]", text: "text-[#15803D] bg-[#F0FDF4]", label: "Resolved" },
-  assigned: { dot: "bg-[#0057B8]", text: "text-[#1D4ED8] bg-[#EBF2FF]", label: "Engineer Assigned" },
-  critical: { dot: "bg-[#DC2626]", text: "text-[#B91C1C] bg-[#FEF2F2]", label: "Critical" },
-  maintenance: { dot: "bg-[#7C3AED]", text: "text-[#6D28D9] bg-[#F5F3FF]", label: "Maintenance" },
+  operational: { dot: "bg-[var(--color-success-action)]", text: "text-[var(--color-success-strong)] bg-[var(--color-success-soft)]", label: "Operational" },
+  partial: { dot: "bg-[var(--color-warning-action)]", text: "text-[var(--color-warning-text)] bg-[var(--color-warning-soft)]", label: "Partial Outage" },
+  down: { dot: "bg-[var(--color-danger-action)]", text: "text-[var(--color-danger-strong)] bg-[var(--color-danger-soft)]", label: "Service Down" },
+  investigating: { dot: "bg-[var(--color-warning-action)]", text: "text-[var(--color-warning-text)] bg-[var(--color-warning-soft)]", label: "Investigating" },
+  resolved: { dot: "bg-[var(--color-success-action)]", text: "text-[var(--color-success-strong)] bg-[var(--color-success-soft)]", label: "Resolved" },
+  assigned: { dot: "bg-[var(--color-primary)]", text: "text-[var(--color-primary-dark)] bg-[var(--color-surface-soft)]", label: "Engineer Assigned" },
+  critical: { dot: "bg-[var(--color-danger-action)]", text: "text-[var(--color-danger-strong)] bg-[var(--color-danger-soft)]", label: "Critical" },
+  maintenance: { dot: "bg-[var(--color-primary)]", text: "text-[var(--color-primary-dark)] bg-[var(--color-surface-soft)]", label: "Maintenance" },
 };
 
 export function StatusBadge({ status, pulse = false, className = "" }: StatusBadgeProps) {
@@ -39,9 +39,9 @@ interface StatusDotProps {
 
 export function StatusDot({ status, pulse = false }: StatusDotProps) {
   const colors = {
-    operational: "bg-[#16A34A]",
-    partial: "bg-[#F59E0B]",
-    down: "bg-[#DC2626]",
+    operational: "bg-[var(--color-success-action)]",
+    partial: "bg-[var(--color-warning-action)]",
+    down: "bg-[var(--color-danger-action)]",
   };
   return (
     <span className="relative flex h-2.5 w-2.5 flex-shrink-0">

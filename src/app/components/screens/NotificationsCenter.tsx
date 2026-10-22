@@ -29,11 +29,11 @@ function getNotificationIcon(type: AppNotification["type"]) {
 }
 
 function getNotificationColor(type: AppNotification["type"]) {
-  if (type === "ticket") return "bg-[#EBF2FF] text-[#0057B8]";
-  if (type === "incident") return "bg-[#FEF2F2] text-[#DC2626]";
-  if (type === "maintenance") return "bg-[#FFFBEB] text-[#B45309]";
-  if (type === "billing") return "bg-[#FCE7F3] text-[#E5007D]";
-  return "bg-[#F8FAFC] text-[#64748B]";
+  if (type === "ticket") return "bg-[var(--color-surface-soft)] text-[var(--color-primary-text)]";
+  if (type === "incident") return "bg-[var(--color-danger-soft)] text-[var(--color-danger-text)]";
+  if (type === "maintenance") return "bg-[var(--color-warning-soft)] text-[var(--color-warning-text)]";
+  if (type === "billing") return "bg-[var(--color-surface-soft)] text-[var(--color-primary-text)]";
+  return "bg-[var(--color-bg)] text-[var(--color-muted)]";
 }
 
 function formatNotificationTime(notification: AppNotification) {
@@ -182,12 +182,12 @@ export function NotificationsCenter() {
                 fontFamily: "'Inter Tight', system-ui, sans-serif",
                 fontWeight: 800,
               }}
-              className="text-[#0F172A] text-2xl"
+              className="text-[var(--color-text)] text-2xl"
             >
               Notifications
             </h1>
 
-            <p className="text-[#64748B] text-sm mt-1">
+            <p className="text-[var(--color-muted)] text-sm mt-1">
               Ticket updates, network incidents, maintenance, and account notices.
             </p>
           </div>
@@ -196,7 +196,7 @@ export function NotificationsCenter() {
             <button
               type="button"
               onClick={handleMarkAllRead}
-              className="px-3 py-2 rounded-xl bg-[#EBF2FF] text-[#0057B8] text-xs font-semibold"
+              className="px-3 py-2 rounded-xl bg-[var(--color-surface-soft)] text-[var(--color-primary-text)] text-xs font-semibold"
             >
               Mark all read
             </button>
@@ -204,16 +204,16 @@ export function NotificationsCenter() {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4">
-            <p className="text-[#94A3B8] text-xs">Unread</p>
-            <p className="text-[#0F172A] text-2xl font-bold mt-1">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
+            <p className="text-[var(--color-subtle-text)] text-xs">Unread</p>
+            <p className="text-[var(--color-text)] text-2xl font-bold mt-1">
               {unreadCount}
             </p>
           </div>
 
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4">
-            <p className="text-[#94A3B8] text-xs">Total</p>
-            <p className="text-[#0F172A] text-2xl font-bold mt-1">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
+            <p className="text-[var(--color-subtle-text)] text-xs">Total</p>
+            <p className="text-[var(--color-text)] text-2xl font-bold mt-1">
               {notifications.length}
             </p>
           </div>
@@ -228,8 +228,8 @@ export function NotificationsCenter() {
                 onClick={() => setFilter(tab.key)}
                 className={`px-3 py-2 rounded-full text-xs font-semibold whitespace-nowrap border transition-all ${
                   filter === tab.key
-                    ? "bg-[#E5007D] text-white border-[#E5007D]"
-                    : "bg-white text-[#64748B] border-[#E2E8F0]"
+                    ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                    : "bg-[var(--color-surface)] text-[var(--color-muted)] border-[var(--color-border)]"
                 }`}
               >
                 {tab.label}
@@ -239,25 +239,25 @@ export function NotificationsCenter() {
         )}
 
         {loading ? (
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 text-center text-[#64748B] text-sm">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-6 text-center text-[var(--color-muted)] text-sm">
             Loading notifications...
           </div>
         ) : notifications.length === 0 ? (
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-8 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] flex items-center justify-center mx-auto mb-3">
-              <CheckCircle size={26} className="text-[#16A34A]" />
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-8 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-[var(--color-success-soft)] border border-[var(--color-success-border)] flex items-center justify-center mx-auto mb-3">
+              <CheckCircle size={26} className="text-[var(--color-success-text)]" />
             </div>
 
-            <h3 className="text-[#0F172A] text-base font-bold">
+            <h3 className="text-[var(--color-text)] text-base font-bold">
               No notifications yet
             </h3>
 
-            <p className="text-[#64748B] text-sm mt-1">
+            <p className="text-[var(--color-muted)] text-sm mt-1">
               Ticket and network updates will appear here.
             </p>
           </div>
         ) : filteredNotifications.length === 0 ? (
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 text-center text-[#64748B] text-sm">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-6 text-center text-[var(--color-muted)] text-sm">
             No notifications in this filter.
           </div>
         ) : (
@@ -270,10 +270,10 @@ export function NotificationsCenter() {
                   key={notification.id}
                   type="button"
                   onClick={() => handleNotificationClick(notification)}
-                  className={`w-full text-left bg-white border rounded-2xl p-4 flex items-start gap-3 transition-all ${
+                  className={`w-full text-left bg-[var(--color-surface)] border rounded-2xl p-4 flex items-start gap-3 transition-all ${
                     notification.unread
-                      ? "border-[#0057B8] shadow-sm"
-                      : "border-[#E2E8F0] hover:border-[#CBD5E1]"
+                      ? "border-[var(--color-primary)] shadow-sm"
+                      : "border-[var(--color-border)] hover:border-[var(--color-border)]"
                   }`}
                 >
                   <div
@@ -286,20 +286,20 @@ export function NotificationsCenter() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-[#0F172A] text-sm font-semibold">
+                      <p className="text-[var(--color-text)] text-sm font-semibold">
                         {notification.title}
                       </p>
 
                       {notification.unread && (
-                        <span className="w-2 h-2 rounded-full bg-[#E5007D] shrink-0 mt-1.5" />
+                        <span className="w-2 h-2 rounded-full bg-[var(--color-primary)] shrink-0 mt-1.5" />
                       )}
                     </div>
 
-                    <p className="text-[#64748B] text-xs mt-1 leading-relaxed">
+                    <p className="text-[var(--color-muted)] text-xs mt-1 leading-relaxed">
                       {displayNotificationBody(notification, profile)}
                     </p>
 
-                    <div className="flex items-center gap-1.5 text-[#94A3B8] text-xs mt-2">
+                    <div className="flex items-center gap-1.5 text-[var(--color-subtle-text)] text-xs mt-2">
                       <Clock size={11} />
                       <span>{formatNotificationTime(notification)}</span>
                     </div>

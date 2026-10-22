@@ -98,7 +98,7 @@ export function ChangePassword() {
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
           <div className="flex items-start gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center shrink-0">
-              <LockKeyhole size={20} className="text-[var(--color-primary)]" />
+              <LockKeyhole size={20} className="text-[var(--color-primary-text)]" />
             </div>
 
             <div className="flex-1">
@@ -155,7 +155,7 @@ export function ChangePassword() {
           <button
             type="button"
             onClick={() => setShowPasswords((value) => !value)}
-            className="mt-3 text-[var(--color-primary)] text-xs font-semibold flex items-center gap-1"
+            className="mt-3 text-[var(--color-primary-text)] text-xs font-semibold flex items-center gap-1"
           >
             {showPasswords ? <EyeOff size={14} /> : <Eye size={14} />}
             {showPasswords ? "Hide passwords" : "Show passwords"}
@@ -163,7 +163,7 @@ export function ChangePassword() {
         </div>
 
         <div className="bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-2xl p-4 flex gap-3">
-          <ShieldCheck size={18} className="text-[var(--color-primary)] shrink-0 mt-0.5" />
+          <ShieldCheck size={18} className="text-[var(--color-primary-text)] shrink-0 mt-0.5" />
           <p className="text-[var(--color-muted)] text-xs leading-relaxed">
             MyConnect does not store your password in the customer profile. Password changes are handled securely through the login system.
           </p>
@@ -173,8 +173,8 @@ export function ChangePassword() {
           <div
             className={`rounded-xl border px-3 py-2 text-xs flex items-start gap-2 ${
               error
-                ? "bg-red-50 text-red-600 border-red-200"
-                : "bg-green-50 text-green-700 border-green-200"
+                ? "bg-[var(--color-danger-soft)] text-[var(--color-danger-text)] border-[var(--color-danger-border)]"
+                : "bg-[var(--color-success-soft)] text-[var(--color-success-strong)] border-[var(--color-success-border)]"
             }`}
           >
             {error ? <AlertTriangle size={14} className="shrink-0 mt-0.5" /> : <CheckCircle size={14} className="shrink-0 mt-0.5" />}

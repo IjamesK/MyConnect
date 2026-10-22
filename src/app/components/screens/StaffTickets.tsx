@@ -28,32 +28,32 @@ import { routerPatternLabel } from "../../../lib/routerTypes";
 
 function statusBadgeClass(status: TicketStatus) {
   if (status === "open") {
-    return "bg-[#FEF2F2] text-[#DC2626] border-[#FECACA]";
+    return "bg-[var(--color-danger-soft)] text-[var(--color-danger-text)] border-[var(--color-danger-border)]";
   }
 
   if (status === "assigned") {
-    return "bg-[#EBF2FF] text-[#0057B8] border-[#BFDBFE]";
+    return "bg-[var(--color-surface-soft)] text-[var(--color-primary-text)] border-[var(--color-border)]";
   }
 
   if (status === "in_progress") {
-    return "bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]";
+    return "bg-[var(--color-warning-soft)] text-[var(--color-warning-text)] border-[var(--color-warning-border)]";
   }
 
   if (status === "monitoring") {
-    return "bg-[#FCE7F3] text-[#E5007D] border-[#FBCFE8]";
+    return "bg-[var(--color-surface-soft)] text-[var(--color-primary-text)] border-[var(--color-border)]";
   }
 
   if (status === "resolved") {
-    return "bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]";
+    return "bg-[var(--color-success-soft)] text-[var(--color-success-strong)] border-[var(--color-success-border)]";
   }
 
-  return "bg-[#F8FAFC] text-[#64748B] border-[#E2E8F0]";
+  return "bg-[var(--color-bg)] text-[var(--color-muted)] border-[var(--color-border)]";
 }
 
 function priorityBadgeClass(priority?: string) {
-  if (priority === "high") return "bg-[#FEF2F2] text-[#DC2626]";
-  if (priority === "medium") return "bg-[#FFF7ED] text-[#EA580C]";
-  return "bg-[#F0FDF4] text-[#15803D]";
+  if (priority === "high") return "bg-[var(--color-danger-soft)] text-[var(--color-danger-text)]";
+  if (priority === "medium") return "bg-[var(--color-warning-soft)] text-[var(--color-warning-text)]";
+  return "bg-[var(--color-success-soft)] text-[var(--color-success-strong)]";
 }
 
 function formatTimeAgo(ticket: CustomerTicket) {
@@ -299,48 +299,48 @@ export function StaffTickets() {
       <div className="space-y-6">
         {/* KPI cards */}
         <div className="grid grid-cols-4 gap-4">
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4">
-            <p className="text-[#94A3B8] text-xs">Total Tickets</p>
-            <p className="text-[#0F172A] text-2xl font-bold mt-1">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
+            <p className="text-[var(--color-subtle-text)] text-xs">Total Tickets</p>
+            <p className="text-[var(--color-text)] text-2xl font-bold mt-1">
               {tickets.length}
             </p>
           </div>
 
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4">
-            <p className="text-[#94A3B8] text-xs">Open</p>
-            <p className="text-[#DC2626] text-2xl font-bold mt-1">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
+            <p className="text-[var(--color-subtle-text)] text-xs">Open</p>
+            <p className="text-[var(--color-danger-text)] text-2xl font-bold mt-1">
               {openTickets.length}
             </p>
           </div>
 
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4">
-            <p className="text-[#94A3B8] text-xs">High Priority</p>
-            <p className="text-[#B45309] text-2xl font-bold mt-1">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
+            <p className="text-[var(--color-subtle-text)] text-xs">High Priority</p>
+            <p className="text-[var(--color-warning-text)] text-2xl font-bold mt-1">
               {highPriorityTickets.length}
             </p>
           </div>
 
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4">
-            <p className="text-[#94A3B8] text-xs">Resolved</p>
-            <p className="text-[#16A34A] text-2xl font-bold mt-1">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
+            <p className="text-[var(--color-subtle-text)] text-xs">Resolved</p>
+            <p className="text-[var(--color-success-text)] text-2xl font-bold mt-1">
               {resolvedTickets.length}
             </p>
           </div>
         </div>
 
         {message && (
-          <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm text-[#475569]">
+          <div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl px-4 py-3 text-sm text-[var(--color-muted)]">
             {message}
           </div>
         )}
 
         {/* Filters */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
           <div className="flex items-center gap-3">
             <div className="flex-1 relative">
               <Search
                 size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-subtle-text)]"
               />
 
               <input
@@ -348,7 +348,7 @@ export function StaffTickets() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by customer, phone, area, issue..."
-                className="w-full pl-9 pr-3 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] placeholder:text-[#CBD5E1] outline-none focus:border-[#0057B8] focus:ring-2 focus:ring-[#0057B8]/20 transition"
+                className="w-full pl-9 pr-3 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl text-sm text-[var(--color-text)] placeholder:text-[var(--color-border)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition"
               />
             </div>
 
@@ -357,7 +357,7 @@ export function StaffTickets() {
               onChange={(e) =>
                 setStatusFilter(e.target.value as "all" | TicketStatus)
               }
-              className="px-3 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] outline-none focus:border-[#0057B8] focus:ring-2 focus:ring-[#0057B8]/20 transition"
+              className="px-3 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition"
             >
               <option value="all">All Statuses</option>
               <option value="open">Open</option>
@@ -371,30 +371,30 @@ export function StaffTickets() {
         </div>
 
         {/* Ticket list */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#F1F5F9] flex items-center justify-between">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-[var(--color-hover)] flex items-center justify-between">
             <div>
-              <p className="text-[#0F172A] text-sm font-semibold">
+              <p className="text-[var(--color-text)] text-sm font-semibold">
                 Support Tickets
               </p>
-              <p className="text-[#94A3B8] text-xs mt-0.5">
+              <p className="text-[var(--color-subtle-text)] text-xs mt-0.5">
                 Personal customer issues. These are not public network
                 incidents.
               </p>
             </div>
 
-            <span className="text-[#64748B] text-xs">
+            <span className="text-[var(--color-muted)] text-xs">
               {filteredTickets.length} shown
             </span>
           </div>
 
           {filteredTickets.length === 0 ? (
             <div className="p-8 text-center">
-              <Ticket size={30} className="text-[#94A3B8] mx-auto mb-2" />
-              <p className="text-[#64748B] text-sm">No tickets found.</p>
+              <Ticket size={30} className="text-[var(--color-subtle-text)] mx-auto mb-2" />
+              <p className="text-[var(--color-muted)] text-sm">No tickets found.</p>
             </div>
           ) : (
-            <div className="divide-y divide-[#F1F5F9]">
+            <div className="divide-y divide-[var(--color-hover)]">
               {filteredTickets.map((ticket) => (
                 <div key={ticket.id} className="px-5 py-4">
                   <div className="flex items-start justify-between gap-4">
@@ -402,22 +402,22 @@ export function StaffTickets() {
                       <div
                         className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
                           ticket.priority === "high"
-                            ? "bg-[#FEF2F2]"
+                            ? "bg-[var(--color-danger-soft)]"
                             : ticket.priority === "medium"
-                              ? "bg-[#FFF7ED]"
-                              : "bg-[#EBF2FF]"
+                              ? "bg-[var(--color-warning-soft)]"
+                              : "bg-[var(--color-surface-soft)]"
                         }`}
                       >
                         {ticket.priority === "high" ? (
-                          <WifiOff size={21} className="text-[#DC2626]" />
+                          <WifiOff size={21} className="text-[var(--color-danger-text)]" />
                         ) : (
-                          <AlertCircle size={21} className="text-[#0057B8]" />
+                          <AlertCircle size={21} className="text-[var(--color-primary-text)]" />
                         )}
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-[#0F172A] text-sm font-bold">
+                          <p className="text-[var(--color-text)] text-sm font-bold">
                             {ticket.title ||
                               ticket.category ||
                               "Customer Issue"}
@@ -440,36 +440,36 @@ export function StaffTickets() {
                           </span>
                         </div>
 
-                        <p className="text-[#64748B] text-xs mt-2 leading-relaxed">
+                        <p className="text-[var(--color-muted)] text-xs mt-2 leading-relaxed">
                           {ticket.description}
                         </p>
 
                         {ticket.speedTest && (
-                          <div className="mt-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3">
+                          <div className="mt-3 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl p-3">
                             <div className="flex items-center gap-2 mb-2">
-                              <Gauge size={14} className="text-[#0057B8]" />
-                              <p className="text-[#0F172A] text-xs font-semibold">
+                              <Gauge size={14} className="text-[var(--color-primary-text)]" />
+                              <p className="text-[var(--color-text)] text-xs font-semibold">
                                 Speed Test Evidence
                               </p>
-                              <span className="text-[#94A3B8] text-[10px]">
+                              <span className="text-[var(--color-subtle-text)] text-[10px]">
                                 {ticket.speedTest.connectedDevices} device(s)
                               </span>
                             </div>
 
                             <div className="grid grid-cols-3 gap-2 text-xs">
-                              <div className="flex items-center gap-1 text-[#64748B]">
+                              <div className="flex items-center gap-1 text-[var(--color-muted)]">
                                 <Download size={12} />
                                 <span>
                                   {ticket.speedTest.downloadMbps} Mbps down
                                 </span>
                               </div>
-                              <div className="flex items-center gap-1 text-[#64748B]">
+                              <div className="flex items-center gap-1 text-[var(--color-muted)]">
                                 <Upload size={12} />
                                 <span>
                                   {ticket.speedTest.uploadMbps} Mbps up
                                 </span>
                               </div>
-                              <div className="flex items-center gap-1 text-[#64748B]">
+                              <div className="flex items-center gap-1 text-[var(--color-muted)]">
                                 <Timer size={12} />
                                 <span>{ticket.speedTest.latencyMs} ms</span>
                               </div>
@@ -480,7 +480,7 @@ export function StaffTickets() {
                         {ticket.routerLightCheck && (
                           <div className="mt-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-3">
                             <div className="flex items-center gap-2 mb-2">
-                              <WifiOff size={14} className="text-[var(--color-primary)]" />
+                              <WifiOff size={14} className="text-[var(--color-primary-text)]" />
                               <p className="text-[var(--color-text)] text-xs font-semibold">
                                 Router Light Evidence
                               </p>
@@ -498,11 +498,11 @@ export function StaffTickets() {
                         )}
 
                         {ticket.eligibilityCheck && (
-                          <div className="mt-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3">
+                          <div className="mt-3 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl p-3">
                             <div className="flex items-center justify-between gap-3 mb-2">
                               <div className="flex items-center gap-2">
-                                <MapPinned size={14} className="text-[#0057B8]" />
-                                <p className="text-[#0F172A] text-xs font-semibold">
+                                <MapPinned size={14} className="text-[var(--color-primary-text)]" />
+                                <p className="text-[var(--color-text)] text-xs font-semibold">
                                   Move Location Evidence
                                 </p>
                               </div>
@@ -510,14 +510,14 @@ export function StaffTickets() {
                               <button
                                 type="button"
                                 onClick={() => handleCopyCoordinates(ticket)}
-                                className="px-2 py-1 bg-[#EBF2FF] text-[#0057B8] rounded-lg text-[10px] font-semibold flex items-center gap-1"
+                                className="px-2 py-1 bg-[var(--color-surface-soft)] text-[var(--color-primary-text)] rounded-lg text-[10px] font-semibold flex items-center gap-1"
                               >
                                 <Copy size={11} />
                                 Copy
                               </button>
                             </div>
 
-                            <div className="text-[#64748B] text-xs space-y-1">
+                            <div className="text-[var(--color-muted)] text-xs space-y-1">
                               <p>New location: {ticket.eligibilityCheck.newAddress || "Not provided"}</p>
                               <p>Landmark: {ticket.eligibilityCheck.landmark || "Not provided"}</p>
                               <p>Coordinates: {formatCoordinate(ticket.eligibilityCheck.currentLatitude)}, {formatCoordinate(ticket.eligibilityCheck.currentLongitude)}</p>
@@ -527,27 +527,27 @@ export function StaffTickets() {
                         )}
 
                         <div className="grid grid-cols-2 xl:grid-cols-4 gap-2 mt-3">
-                          <div className="flex items-center gap-1.5 text-[#64748B] text-xs">
+                          <div className="flex items-center gap-1.5 text-[var(--color-muted)] text-xs">
                             <User size={12} />
                             <span>{ticket.customerName}</span>
                           </div>
 
-                          <div className="flex items-center gap-1.5 text-[#64748B] text-xs">
+                          <div className="flex items-center gap-1.5 text-[var(--color-muted)] text-xs">
                             <Phone size={12} />
                             <span>{ticket.phone}</span>
                           </div>
 
-                          <div className="flex items-center gap-1.5 text-[#64748B] text-xs">
+                          <div className="flex items-center gap-1.5 text-[var(--color-muted)] text-xs">
                             <MapPin size={12} />
                             <span>{formatLocation(ticket)}</span>
                           </div>
 
-                          <div className="flex items-center gap-1.5 text-[#64748B] text-xs">
+                          <div className="flex items-center gap-1.5 text-[var(--color-muted)] text-xs">
                             <Clock size={12} />
                             <span>{formatTimeAgo(ticket)}</span>
                           </div>
                         </div>
-                        <div className="mt-3 flex flex-wrap items-center gap-3 text-[#94A3B8] text-xs">
+                        <div className="mt-3 flex flex-wrap items-center gap-3 text-[var(--color-subtle-text)] text-xs">
                           <span>Customer No: {ticket.customerNumber}</span>
                           <span>Router: {ticket.routerSerial}</span>
                           <span>Package: {ticket.packageName}</span>
@@ -568,7 +568,7 @@ export function StaffTickets() {
                           <button
                             type="button"
                             onClick={() => handleAssignTechnician(ticket)}
-                            className="px-3 py-2 bg-[#EBF2FF] text-[#0057B8] rounded-xl text-xs font-semibold"
+                            className="px-3 py-2 bg-[var(--color-surface-soft)] text-[var(--color-primary-text)] rounded-xl text-xs font-semibold"
                           >
                             Assign Technician
                           </button>
@@ -579,7 +579,7 @@ export function StaffTickets() {
                           <button
                             type="button"
                             onClick={() => handleRemoteSupport(ticket)}
-                            className="px-3 py-2 bg-[#F8FAFC] text-[#475569] border border-[#E2E8F0] rounded-xl text-xs font-semibold"
+                            className="px-3 py-2 bg-[var(--color-bg)] text-[var(--color-muted)] border border-[var(--color-border)] rounded-xl text-xs font-semibold"
                           >
                             Remote Support
                           </button>
@@ -590,7 +590,7 @@ export function StaffTickets() {
                           <button
                             type="button"
                             onClick={() => handleMonitoring(ticket)}
-                            className="px-3 py-2 bg-[#FCE7F3] text-[#E5007D] rounded-xl text-xs font-semibold"
+                            className="px-3 py-2 bg-[var(--color-surface-soft)] text-[var(--color-primary-text)] rounded-xl text-xs font-semibold"
                           >
                             Monitor
                           </button>
@@ -603,7 +603,7 @@ export function StaffTickets() {
                             onClick={() =>
                               handleStatusChange(ticket, "in_progress")
                             }
-                            className="px-3 py-2 bg-[#FFFBEB] text-[#B45309] rounded-xl text-xs font-semibold"
+                            className="px-3 py-2 bg-[var(--color-warning-soft)] text-[var(--color-warning-text)] rounded-xl text-xs font-semibold"
                           >
                             In Progress
                           </button>
@@ -613,7 +613,7 @@ export function StaffTickets() {
                         <button
                           type="button"
                           onClick={() => handleResolveTicket(ticket)}
-                          className="px-3 py-2 bg-[#F0FDF4] text-[#15803D] rounded-xl text-xs font-semibold flex items-center justify-center gap-1"
+                          className="px-3 py-2 bg-[var(--color-success-soft)] text-[var(--color-success-strong)] rounded-xl text-xs font-semibold flex items-center justify-center gap-1"
                         >
                           <CheckCircle size={13} />
                           Resolve

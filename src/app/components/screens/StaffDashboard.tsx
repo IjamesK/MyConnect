@@ -195,28 +195,28 @@ export function StaffDashboard() {
           ? `${highPriorityTickets.length} high priority`
           : "No high priority tickets",
       icon: Ticket,
-      color: "bg-[#EBF2FF] text-[#0057B8]",
+      color: "bg-[var(--color-surface-soft)] text-[var(--color-primary-text)]",
     },
     {
       label: "Active Updates",
       value: activeIncidents.length,
       sub: "Outages, monitoring, or scheduled work",
       icon: AlertTriangle,
-      color: "bg-[#FEF2F2] text-[#DC2626]",
+      color: "bg-[var(--color-danger-soft)] text-[var(--color-danger-text)]",
     },
     {
       label: "Pending Reports",
       value: pendingReports.length,
       sub: "Customer incident reports awaiting review",
       icon: FileWarning,
-      color: "bg-[#FFFBEB] text-[#B45309]",
+      color: "bg-[var(--color-warning-soft)] text-[var(--color-warning-text)]",
     },
     {
       label: "Planned Work",
       value: plannedWork.length,
       sub: "Maintenance or upgrades",
       icon: Wrench,
-      color: "bg-[#F0FDF4] text-[#15803D]",
+      color: "bg-[var(--color-success-soft)] text-[var(--color-success-strong)]",
     },
   ];
 
@@ -231,11 +231,11 @@ export function StaffDashboard() {
           {kpis.map(({ label, value, sub, icon: Icon, color }) => (
             <div
               key={label}
-              className="bg-white border border-[#E2E8F0] rounded-2xl p-5"
+              className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-5"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[#64748B] text-xs font-medium uppercase tracking-wide">
+                  <p className="text-[var(--color-muted)] text-xs font-medium uppercase tracking-wide">
                     {label}
                   </p>
 
@@ -244,7 +244,7 @@ export function StaffDashboard() {
                       fontFamily: "'Inter Tight', system-ui, sans-serif",
                       fontWeight: 800,
                     }}
-                    className="text-[#0F172A] text-3xl mt-2"
+                    className="text-[var(--color-text)] text-3xl mt-2"
                   >
                     {value}
                   </p>
@@ -257,7 +257,7 @@ export function StaffDashboard() {
                 </div>
               </div>
 
-              <p className="text-[#94A3B8] text-xs mt-2">{sub}</p>
+              <p className="text-[var(--color-subtle-text)] text-xs mt-2">{sub}</p>
             </div>
           ))}
         </div>
@@ -267,22 +267,22 @@ export function StaffDashboard() {
           <button
             type="button"
             onClick={() => navigate("/staff/outages")}
-            className="bg-white border border-[#E2E8F0] hover:border-[#0057B8] rounded-2xl p-5 text-left transition-all"
+            className="bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)] rounded-2xl p-5 text-left transition-all"
           >
-            <div className="w-11 h-11 rounded-xl bg-[#EBF2FF] text-[#0057B8] flex items-center justify-center mb-4">
+            <div className="w-11 h-11 rounded-xl bg-[var(--color-surface-soft)] text-[var(--color-primary-text)] flex items-center justify-center mb-4">
               <AlertTriangle size={22} />
             </div>
 
-            <p className="text-[#0F172A] text-sm font-bold">
+            <p className="text-[var(--color-text)] text-sm font-bold">
               Outage Management
             </p>
 
-            <p className="text-[#64748B] text-xs mt-1 leading-relaxed">
+            <p className="text-[var(--color-muted)] text-xs mt-1 leading-relaxed">
               Create outages, planned maintenance, approve reports, and update
               customer-facing network status.
             </p>
 
-            <div className="flex items-center gap-1 text-[#0057B8] text-xs font-semibold mt-4">
+            <div className="flex items-center gap-1 text-[var(--color-primary-text)] text-xs font-semibold mt-4">
               Open module <ArrowRight size={13} />
             </div>
           </button>
@@ -290,22 +290,22 @@ export function StaffDashboard() {
           <button
             type="button"
             onClick={() => navigate("/staff/analytics")}
-            className="bg-white border border-[#E2E8F0] hover:border-[#0057B8] rounded-2xl p-5 text-left transition-all"
+            className="bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)] rounded-2xl p-5 text-left transition-all"
           >
-            <div className="w-11 h-11 rounded-xl bg-[#F0FDF4] text-[#15803D] flex items-center justify-center mb-4">
+            <div className="w-11 h-11 rounded-xl bg-[var(--color-success-soft)] text-[var(--color-success-strong)] flex items-center justify-center mb-4">
               <CheckCircle size={22} />
             </div>
 
-            <p className="text-[#0F172A] text-sm font-bold">
+            <p className="text-[var(--color-text)] text-sm font-bold">
               Analytics Dashboard
             </p>
 
-            <p className="text-[#64748B] text-xs mt-1 leading-relaxed">
+            <p className="text-[var(--color-muted)] text-xs mt-1 leading-relaxed">
               Review network trends, ticket volume, outage frequency, and
               operational performance.
             </p>
 
-            <div className="flex items-center gap-1 text-[#0057B8] text-xs font-semibold mt-4">
+            <div className="flex items-center gap-1 text-[var(--color-primary-text)] text-xs font-semibold mt-4">
               View analytics <ArrowRight size={13} />
             </div>
           </button>
@@ -313,36 +313,36 @@ export function StaffDashboard() {
           <button
             type="button"
             onClick={() => navigate("/staff/outages")}
-            className="bg-white border border-[#E2E8F0] hover:border-[#0057B8] rounded-2xl p-5 text-left transition-all"
+            className="bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)] rounded-2xl p-5 text-left transition-all"
           >
-            <div className="w-11 h-11 rounded-xl bg-[#FFFBEB] text-[#B45309] flex items-center justify-center mb-4">
+            <div className="w-11 h-11 rounded-xl bg-[var(--color-warning-soft)] text-[var(--color-warning-text)] flex items-center justify-center mb-4">
               <FileWarning size={22} />
             </div>
 
-            <p className="text-[#0F172A] text-sm font-bold">
+            <p className="text-[var(--color-text)] text-sm font-bold">
               Pending Incident Reports
             </p>
 
-            <p className="text-[#64748B] text-xs mt-1 leading-relaxed">
+            <p className="text-[var(--color-muted)] text-xs mt-1 leading-relaxed">
               Review customer-reported knocked poles, cable cuts, damaged
               cabinets, and area issues.
             </p>
 
-            <div className="flex items-center gap-1 text-[#0057B8] text-xs font-semibold mt-4">
+            <div className="flex items-center gap-1 text-[var(--color-primary-text)] text-xs font-semibold mt-4">
               Review reports <ArrowRight size={13} />
             </div>
           </button>
         </div>
 
         {/* Active incidents */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-[#F1F5F9]">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-hover)]">
             <div>
-              <p className="text-[#0F172A] text-sm font-semibold">
+              <p className="text-[var(--color-text)] text-sm font-semibold">
                 Active Network Updates
               </p>
 
-              <p className="text-[#94A3B8] text-xs mt-0.5">
+              <p className="text-[var(--color-subtle-text)] text-xs mt-0.5">
                 These are visible to affected customers.
               </p>
             </div>
@@ -350,25 +350,25 @@ export function StaffDashboard() {
             <button
               type="button"
               onClick={() => navigate("/staff/outages")}
-              className="flex items-center gap-1 text-[#0057B8] text-xs font-medium"
+              className="flex items-center gap-1 text-[var(--color-primary-text)] text-xs font-medium"
             >
               Manage <ArrowRight size={12} />
             </button>
           </div>
 
           {loading ? (
-            <div className="px-5 py-6 text-center text-[#64748B] text-sm">
+            <div className="px-5 py-6 text-center text-[var(--color-muted)] text-sm">
               Loading network updates...
             </div>
           ) : recentIncidents.length === 0 ? (
             <div className="px-5 py-6 text-center">
-              <CheckCircle size={26} className="text-[#16A34A] mx-auto mb-2" />
-              <p className="text-[#64748B] text-sm">
+              <CheckCircle size={26} className="text-[var(--color-success-text)] mx-auto mb-2" />
+              <p className="text-[var(--color-muted)] text-sm">
                 No active outage or scheduled maintenance at the moment.
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-[#F1F5F9]">
+            <div className="divide-y divide-[var(--color-hover)]">
               {recentIncidents.map((incident) => (
                 <div
                   key={incident.id}
@@ -378,7 +378,7 @@ export function StaffDashboard() {
                     <div className="flex items-center gap-2">
                       <p
                         style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                        className="text-[#94A3B8] text-xs"
+                        className="text-[var(--color-subtle-text)] text-xs"
                       >
                         {incident.id.slice(0, 8)}
                       </p>
@@ -386,34 +386,34 @@ export function StaffDashboard() {
                       <span
                         className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
                           incident.status === "scheduled"
-                            ? "bg-[#EBF2FF] text-[#0057B8]"
+                            ? "bg-[var(--color-surface-soft)] text-[var(--color-primary-text)]"
                             : incident.status === "monitoring"
-                              ? "bg-[#FFFBEB] text-[#B45309]"
+                              ? "bg-[var(--color-warning-soft)] text-[var(--color-warning-text)]"
                               : incident.severity === "high"
-                                ? "bg-[#FEF2F2] text-[#DC2626]"
-                                : "bg-[#FFF7ED] text-[#EA580C]"
+                                ? "bg-[var(--color-danger-soft)] text-[var(--color-danger-text)]"
+                                : "bg-[var(--color-warning-soft)] text-[var(--color-warning-text)]"
                         }`}
                       >
                         {incidentStatusText(incident)}
                       </span>
                     </div>
 
-                    <p className="text-[#0F172A] text-sm font-medium mt-0.5">
+                    <p className="text-[var(--color-text)] text-sm font-medium mt-0.5">
                       {incident.title}
                     </p>
 
-                    <p className="text-[#64748B] text-xs mt-0.5">
+                    <p className="text-[var(--color-muted)] text-xs mt-0.5">
                       {incidentTypeLabel(incident.type)} ·{" "}
                       {formatIncidentAreas(incident)}
                     </p>
                   </div>
 
                   <div className="text-right flex-shrink-0">
-                    <p className="text-[#64748B] text-xs">
+                    <p className="text-[var(--color-muted)] text-xs">
                       ETA: {incident.estimatedResolution || "Not set"}
                     </p>
 
-                    <p className="text-[#94A3B8] text-xs">
+                    <p className="text-[var(--color-subtle-text)] text-xs">
                       {incident.status.replace("_", " ")}
                     </p>
                   </div>
@@ -421,9 +421,9 @@ export function StaffDashboard() {
                   <button
                     type="button"
                     onClick={() => navigate("/staff/outages")}
-                    className="w-8 h-8 rounded-lg border border-[#E2E8F0] flex items-center justify-center hover:bg-[#F8FAFC]"
+                    className="w-8 h-8 rounded-lg border border-[var(--color-border)] flex items-center justify-center hover:bg-[var(--color-bg)]"
                   >
-                    <ArrowRight size={13} className="text-[#94A3B8]" />
+                    <ArrowRight size={13} className="text-[var(--color-subtle-text)]" />
                   </button>
                 </div>
               ))}
@@ -433,14 +433,14 @@ export function StaffDashboard() {
 
         {/* Pending reports + recent tickets */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#F1F5F9]">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-hover)]">
               <div>
-                <p className="text-[#0F172A] text-sm font-semibold">
+                <p className="text-[var(--color-text)] text-sm font-semibold">
                   Pending Customer Reports
                 </p>
 
-                <p className="text-[#94A3B8] text-xs mt-0.5">
+                <p className="text-[var(--color-subtle-text)] text-xs mt-0.5">
                   Public incident reports awaiting review.
                 </p>
               </div>
@@ -448,7 +448,7 @@ export function StaffDashboard() {
               <button
                 type="button"
                 onClick={() => navigate("/staff/outages")}
-                className="flex items-center gap-1 text-[#0057B8] text-xs font-medium"
+                className="flex items-center gap-1 text-[var(--color-primary-text)] text-xs font-medium"
               >
                 Review <ArrowRight size={12} />
               </button>
@@ -456,32 +456,32 @@ export function StaffDashboard() {
 
             {pendingReports.length === 0 ? (
               <div className="px-5 py-6 text-center">
-                <CheckCircle size={24} className="text-[#16A34A] mx-auto mb-2" />
-                <p className="text-[#64748B] text-sm">
+                <CheckCircle size={24} className="text-[var(--color-success-text)] mx-auto mb-2" />
+                <p className="text-[var(--color-muted)] text-sm">
                   No customer incident reports pending.
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-[#F1F5F9]">
+              <div className="divide-y divide-[var(--color-hover)]">
                 {pendingReports.slice(0, 4).map((report) => (
                   <div key={report.id} className="px-5 py-3.5">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-[#0F172A] text-sm font-medium">
+                        <p className="text-[var(--color-text)] text-sm font-medium">
                           {report.title}
                         </p>
 
-                        <p className="text-[#64748B] text-xs mt-0.5">
+                        <p className="text-[var(--color-muted)] text-xs mt-0.5">
                           {report.area}, {report.district}
                         </p>
                       </div>
 
-                      <span className="px-2 py-1 rounded-full bg-[#FFFBEB] text-[#B45309] text-[10px] font-semibold">
+                      <span className="px-2 py-1 rounded-full bg-[var(--color-warning-soft)] text-[var(--color-warning-text)] text-[10px] font-semibold">
                         Pending
                       </span>
                     </div>
 
-                    <p className="text-[#94A3B8] text-xs mt-2 line-clamp-2">
+                    <p className="text-[var(--color-subtle-text)] text-xs mt-2 line-clamp-2">
                       {report.description}
                     </p>
                   </div>
@@ -490,56 +490,56 @@ export function StaffDashboard() {
             )}
           </div>
 
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#F1F5F9]">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-hover)]">
               <div>
-                <p className="text-[#0F172A] text-sm font-semibold">
+                <p className="text-[var(--color-text)] text-sm font-semibold">
                   Recent Tickets
                 </p>
 
-                <p className="text-[#94A3B8] text-xs mt-0.5">
+                <p className="text-[var(--color-subtle-text)] text-xs mt-0.5">
                   Latest private customer support issues.
                 </p>
               </div>
 
-              <span className="text-[#64748B] text-xs">
+              <span className="text-[var(--color-muted)] text-xs">
                 {openTickets.length} open
               </span>
             </div>
 
             {recentTickets.length === 0 ? (
               <div className="px-5 py-6 text-center">
-                <Ticket size={24} className="text-[#94A3B8] mx-auto mb-2" />
-                <p className="text-[#64748B] text-sm">
+                <Ticket size={24} className="text-[var(--color-subtle-text)] mx-auto mb-2" />
+                <p className="text-[var(--color-muted)] text-sm">
                   No customer tickets submitted yet.
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-[#F1F5F9]">
+              <div className="divide-y divide-[var(--color-hover)]">
                 {recentTickets.map((ticket) => (
                   <div
                     key={ticket.id}
                     className="px-5 py-3 flex items-center gap-3"
                   >
-                    <div className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center text-xs font-bold text-[#475569]">
+                    <div className="w-8 h-8 rounded-full bg-[var(--color-hover)] flex items-center justify-center text-xs font-bold text-[var(--color-muted)]">
                       {formatCustomer(ticket)[0]?.toUpperCase() || "C"}
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-[#0F172A] text-sm font-medium truncate">
+                        <p className="text-[var(--color-text)] text-sm font-medium truncate">
                           {formatCustomer(ticket)}
                         </p>
 
                         <p
                           style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                          className="text-[#94A3B8] text-xs"
+                          className="text-[var(--color-subtle-text)] text-xs"
                         >
                           {ticket.id.slice(0, 8)}
                         </p>
                       </div>
 
-                      <p className="text-[#64748B] text-xs truncate">
+                      <p className="text-[var(--color-muted)] text-xs truncate">
                         {formatTicketTitle(ticket)} · {formatArea(ticket)}
                       </p>
                     </div>
@@ -547,7 +547,7 @@ export function StaffDashboard() {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <StatusBadge status={ticketStatusBadge(ticket.status)} />
 
-                      <span className="text-[#94A3B8] text-xs flex items-center gap-1">
+                      <span className="text-[var(--color-subtle-text)] text-xs flex items-center gap-1">
                         <Clock size={11} />
                         {formatTimeAgo(ticket.createdAt)}
                       </span>
@@ -561,12 +561,12 @@ export function StaffDashboard() {
 
         {/* Resolved summary */}
         {resolvedIncidents.length > 0 && (
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5">
-            <p className="text-[#0F172A] text-sm font-semibold">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-5">
+            <p className="text-[var(--color-text)] text-sm font-semibold">
               Recently Resolved
             </p>
 
-            <p className="text-[#64748B] text-xs mt-1">
+            <p className="text-[var(--color-muted)] text-xs mt-1">
               {resolvedIncidents.length} incident
               {resolvedIncidents.length === 1 ? "" : "s"} currently marked as
               resolved.

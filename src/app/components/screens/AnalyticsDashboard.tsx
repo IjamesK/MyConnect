@@ -122,16 +122,16 @@ const topOperationalIssues = [
 function toneClasses(tone: string) {
   if (tone === "success") {
     return {
-      bg: "bg-[var(--color-success)]/10",
-      text: "text-[var(--color-success)]",
+      bg: "bg-[var(--color-success-action)]/10",
+      text: "text-[var(--color-success-text)]",
       border: "border-[var(--color-success)]/20",
     };
   }
 
   if (tone === "warning") {
     return {
-      bg: "bg-[var(--color-warning)]/10",
-      text: "text-[var(--color-warning)]",
+      bg: "bg-[var(--color-warning-action)]/10",
+      text: "text-[var(--color-warning-text)]",
       border: "border-[var(--color-warning)]/20",
     };
   }
@@ -139,7 +139,7 @@ function toneClasses(tone: string) {
   if (tone === "primary") {
     return {
       bg: "bg-[var(--color-primary)]/10",
-      text: "text-[var(--color-primary)]",
+      text: "text-[var(--color-primary-text)]",
       border: "border-[var(--color-primary)]/20",
     };
   }
@@ -435,7 +435,7 @@ export function AnalyticsDashboard() {
             <div className="mt-5 bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-xl p-3 flex items-start gap-2">
               <ServerCog
                 size={15}
-                className="text-[var(--color-primary)] mt-0.5 shrink-0"
+                className="text-[var(--color-primary-text)] mt-0.5 shrink-0"
               />
 
               <p className="text-[var(--color-muted)] text-xs leading-relaxed">
@@ -474,7 +474,7 @@ export function AnalyticsDashboard() {
                       </div>
                     </div>
 
-                    <span className="text-[var(--color-primary)] text-xs font-bold">
+                    <span className="text-[var(--color-primary-text)] text-xs font-bold">
                       {count}
                     </span>
                   </div>
@@ -487,7 +487,7 @@ export function AnalyticsDashboard() {
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-5">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center">
-              <Router size={19} className="text-[var(--color-primary)]" />
+              <Router size={19} className="text-[var(--color-primary-text)]" />
             </div>
 
             <div className="flex-1">
@@ -503,7 +503,7 @@ export function AnalyticsDashboard() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
                 <div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl p-3">
-                  <WifiOff size={16} className="text-[var(--color-danger)] mb-2" />
+                  <WifiOff size={16} className="text-[var(--color-danger-text)] mb-2" />
                   <p className="text-[var(--color-text)] text-xs font-semibold">
                     No Internet
                   </p>
@@ -513,7 +513,7 @@ export function AnalyticsDashboard() {
                 </div>
 
                 <div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl p-3">
-                  <Gauge size={16} className="text-[var(--color-warning)] mb-2" />
+                  <Gauge size={16} className="text-[var(--color-warning-text)] mb-2" />
                   <p className="text-[var(--color-text)] text-xs font-semibold">
                     Slow Speed
                   </p>
@@ -523,7 +523,7 @@ export function AnalyticsDashboard() {
                 </div>
 
                 <div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl p-3">
-                  <MapPin size={16} className="text-[var(--color-success)] mb-2" />
+                  <MapPin size={16} className="text-[var(--color-success-text)] mb-2" />
                   <p className="text-[var(--color-text)] text-xs font-semibold">
                     Area Trends
                   </p>

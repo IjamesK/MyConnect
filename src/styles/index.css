@@ -2,20 +2,58 @@
 @import './tailwind.css';
 @import './theme.css';
 :root {
-  --color-primary: #0057b8;
-  --color-primary-dark: #003d82;
-  --color-bg: #f8fafc;
-  --color-surface: #ffffff;
-  --color-surface-soft: #ebf2ff;
-  --color-text: #0f172a;
-  --color-muted: #64748b;
-  --color-border: #e2e8f0;
-  --color-success: #16a34a;
-  --color-danger: #dc2626;
-  --color-warning: #b45309;
+  --color-primary: #C00069;
+  --color-primary-dark: #990052;
+  --color-primary-text: #C00069;
+  --color-success-text: #15803D;
+  --color-danger-text: #B42318;
+  --color-warning-text: #A15C07;
+  --color-success-action: #15803D;
+  --color-danger-action: #B42318;
+  --color-warning-action: #A15C07;
+  --color-bg: #F7F8FB;
+  --color-surface: #FFFFFF;
+  --color-surface-soft: #FCEBF4;
+  --color-text: #172033;
+  --color-muted: #66758B;
+  --color-subtle-text: #8895A7;
+  --color-border: #E8E6ED;
+  --color-raised: #FFFFFF;
+  --color-hover: #FAF0F6;
+  --color-input: #FFFFFF;
+  --color-primary-contrast: #FFFFFF;
+  --color-success: #15803D;
+  --color-danger: #B42318;
+  --color-warning: #A15C07;
+  --color-success-soft: #ECFDF3;
+  --color-success-border: #B7ECC9;
+  --color-success-strong: #166534;
+  --color-danger-soft: #FEF3F2;
+  --color-danger-border: #F6C4BE;
+  --color-danger-strong: #912018;
+  --color-warning-soft: #FFF7E6;
+  --color-warning-border: #F4D49E;
+  --color-warning-strong: #8B4A05;
+  --color-sidebar-bg: #FFFFFF;
+  --color-sidebar-text: #172033;
+  --color-sidebar-muted: #66758B;
+  --color-sidebar-hover: #F1F4F8;
+  --color-overlay: #0F172A;
 }
-
-body {
-  background: var(--color-bg);
+html { background: var(--color-bg); }
+body { background: var(--color-bg); color: var(--color-text); }
+/* A unified treatment of cards, form controls, and focus indicators. */
+button, input, select, textarea { font: inherit; }
+input:not([type="checkbox"]):not([type="radio"]), select, textarea {
   color: var(--color-text);
+  background-color: var(--color-input);
+}
+input::placeholder, textarea::placeholder { color: var(--color-subtle-text); }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+::selection { background: var(--color-surface-soft); color: var(--color-text); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }

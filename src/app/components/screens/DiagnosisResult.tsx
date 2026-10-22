@@ -256,36 +256,36 @@ function getResultConfig(issue: string, device: string, pattern: string): Result
 function toneClasses(tone: ResultConfig["tone"]) {
   if (tone === "danger") {
     return {
-      box: "bg-[#FEF2F2] border-[#FECACA]",
-      icon: "text-[#DC2626]",
-      bar: "from-[#DC2626] to-[#F87171]",
-      text: "text-[#991B1B]",
+      box: "bg-[var(--color-danger-soft)] border-[var(--color-danger-border)]",
+      icon: "text-[var(--color-danger-text)]",
+      bar: "from-[var(--color-danger)] to-[var(--color-danger)]",
+      text: "text-[var(--color-danger-strong)]",
     };
   }
 
   if (tone === "warning") {
     return {
-      box: "bg-[#FFFBEB] border-[#FDE68A]",
-      icon: "text-[#B45309]",
-      bar: "from-[#F59E0B] to-[#FBBF24]",
-      text: "text-[#92400E]",
+      box: "bg-[var(--color-warning-soft)] border-[var(--color-warning-border)]",
+      icon: "text-[var(--color-warning-text)]",
+      bar: "from-[var(--color-warning)] to-[var(--color-warning)]",
+      text: "text-[var(--color-warning-strong)]",
     };
   }
 
   if (tone === "success") {
     return {
-      box: "bg-[#F0FDF4] border-[#BBF7D0]",
-      icon: "text-[#16A34A]",
-      bar: "from-[#16A34A] to-[#4ADE80]",
-      text: "text-[#166534]",
+      box: "bg-[var(--color-success-soft)] border-[var(--color-success-border)]",
+      icon: "text-[var(--color-success-text)]",
+      bar: "from-[var(--color-success)] to-[var(--color-success)]",
+      text: "text-[var(--color-success-strong)]",
     };
   }
 
   return {
-    box: "bg-[#EBF2FF] border-[#BFDBFE]",
-    icon: "text-[#0057B8]",
-    bar: "from-[#0057B8] to-[#3B82F6]",
-    text: "text-[#1D4ED8]",
+    box: "bg-[var(--color-surface-soft)] border-[var(--color-border)]",
+    icon: "text-[var(--color-primary-text)]",
+    bar: "from-[var(--color-primary)] to-[var(--color-primary)]",
+    text: "text-[var(--color-primary-dark)]",
   };
 }
 
@@ -338,18 +338,18 @@ export function DiagnosisResult() {
               fontFamily: "'Inter Tight', system-ui, sans-serif",
               fontWeight: 800,
             }}
-            className="text-[#0F172A] text-2xl"
+            className="text-[var(--color-text)] text-2xl"
           >
             {result.title}
           </h1>
 
-          <p className="text-[#64748B] text-sm mt-1">{result.subtitle}</p>
+          <p className="text-[var(--color-muted)] text-sm mt-1">{result.subtitle}</p>
         </div>
 
         {/* Confidence card */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 space-y-4">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-[#0F172A] text-sm font-semibold">
+            <span className="text-[var(--color-text)] text-sm font-semibold">
               Confidence Score
             </span>
 
@@ -358,13 +358,13 @@ export function DiagnosisResult() {
                 fontFamily: "'Inter Tight', system-ui, sans-serif",
                 fontWeight: 800,
               }}
-              className="text-[#16A34A] text-xl"
+              className="text-[var(--color-success-text)] text-xl"
             >
               {result.confidence}%
             </span>
           </div>
 
-          <div className="w-full h-2.5 bg-[#F1F5F9] rounded-full overflow-hidden">
+          <div className="w-full h-2.5 bg-[var(--color-hover)] rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full bg-gradient-to-r ${classes.bar}`}
               style={{ width: `${result.confidence}%` }}
@@ -372,26 +372,26 @@ export function DiagnosisResult() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 pt-1">
-            <div className="bg-[#F8FAFC] rounded-xl p-3">
-              <p className="text-[#94A3B8] text-[10px] uppercase tracking-wide">
+            <div className="bg-[var(--color-bg)] rounded-xl p-3">
+              <p className="text-[var(--color-subtle-text)] text-[10px] uppercase tracking-wide">
                 Possible Cause
               </p>
 
-              <p className="text-[#0F172A] text-sm font-semibold mt-1">
+              <p className="text-[var(--color-text)] text-sm font-semibold mt-1">
                 {result.cause}
               </p>
             </div>
 
-            <div className="bg-[#F8FAFC] rounded-xl p-3">
-              <p className="text-[#94A3B8] text-[10px] uppercase tracking-wide">
+            <div className="bg-[var(--color-bg)] rounded-xl p-3">
+              <p className="text-[var(--color-subtle-text)] text-[10px] uppercase tracking-wide">
                 Selected Device
               </p>
 
-              <p className="text-[#0F172A] text-sm font-semibold mt-1">
+              <p className="text-[var(--color-text)] text-sm font-semibold mt-1">
                 {deviceLabel(device)}
               </p>
 
-              <p className="text-[#64748B] text-xs mt-0.5">
+              <p className="text-[var(--color-muted)] text-xs mt-0.5">
                 {result.deviceStatus}
               </p>
             </div>
@@ -399,16 +399,16 @@ export function DiagnosisResult() {
         </div>
 
         {/* Diagnosis steps */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4">
-          <p className="text-[#0F172A] text-xs font-semibold mb-3 uppercase tracking-wide">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
+          <p className="text-[var(--color-text)] text-xs font-semibold mb-3 uppercase tracking-wide">
             Diagnostic Steps
           </p>
 
           <div className="space-y-2.5">
             {result.steps.map((step) => (
               <div key={step} className="flex items-center gap-3">
-                <CheckCircle size={14} className="text-[#16A34A]" />
-                <p className="text-[#475569] text-xs">{step}</p>
+                <CheckCircle size={14} className="text-[var(--color-success-text)]" />
+                <p className="text-[var(--color-muted)] text-xs">{step}</p>
               </div>
             ))}
           </div>
@@ -429,12 +429,12 @@ export function DiagnosisResult() {
 
         {/* Password-specific guide */}
         {issue === "password-reset" && (
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4">
-            <p className="text-[#0F172A] text-sm font-semibold mb-3">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
+            <p className="text-[var(--color-text)] text-sm font-semibold mb-3">
               General password-change guidance
             </p>
 
-            <div className="space-y-2 text-[#64748B] text-xs leading-relaxed">
+            <div className="space-y-2 text-[var(--color-muted)] text-xs leading-relaxed">
               <p>1. Make sure you are connected to your home Wi-Fi.</p>
               <p>
                 2. Open the router/ONT management page if your account has local
@@ -453,7 +453,7 @@ export function DiagnosisResult() {
               </p>
             </div>
 
-            <p className="text-[#DC2626] text-xs mt-3">
+            <p className="text-[var(--color-danger-text)] text-xs mt-3">
               Do not share your new Wi-Fi password inside a ticket message.
             </p>
           </div>
@@ -463,7 +463,7 @@ export function DiagnosisResult() {
         <button
           type="button"
           onClick={() => navigate("/service-status")}
-          className="w-full py-3 bg-[#0057B8] hover:bg-[#003D82] text-white rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+          className="w-full py-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2"
         >
           <ExternalLink size={15} />
           View Network Status
@@ -476,7 +476,7 @@ export function DiagnosisResult() {
                   `/report-issue?mode=ticket&type=${ticketTypeFromIssue(issue, pattern)}&source=troubleshooter`
                 )
               }
-              className="w-full py-3 bg-white border border-[#E2E8F0] text-[#0F172A] rounded-xl font-semibold text-sm hover:bg-[#F8FAFC] transition-colors flex items-center justify-center gap-2"
+              className="w-full py-3 bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)] rounded-xl font-semibold text-sm hover:bg-[var(--color-bg)] transition-colors flex items-center justify-center gap-2"
             >
               <Ticket size={15} />
               Open Support Ticket
@@ -485,7 +485,7 @@ export function DiagnosisResult() {
         <button
           type="button"
           onClick={() => navigate("/troubleshoot")}
-          className="w-full py-3 bg-white border border-[#E2E8F0] text-[#64748B] rounded-xl font-semibold text-sm hover:bg-[#F8FAFC] transition-colors flex items-center justify-center gap-2"
+          className="w-full py-3 bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-muted)] rounded-xl font-semibold text-sm hover:bg-[var(--color-bg)] transition-colors flex items-center justify-center gap-2"
         >
           <Wrench size={15} />
           Try Another Diagnosis

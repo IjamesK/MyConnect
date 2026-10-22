@@ -83,10 +83,10 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-[#E5007D] flex flex-col items-center justify-center px-6 py-12">
+    <div className="min-h-[100dvh] bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col items-center justify-center px-4 sm:px-6 py-12">
       {/* Logo section */}
-      <div className="flex flex-col items-center mb-10">
-        <div className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center mb-4 shadow-lg">
+      <div className="flex flex-col items-center mb-7">
+        <div className="w-14 h-14 rounded-2xl bg-[var(--color-primary)] flex items-center justify-center mb-4 shadow-sm">
           <Wifi size={32} className="text-white" />
         </div>
 
@@ -95,18 +95,18 @@ export function LoginScreen() {
             fontFamily: "'Inter Tight', system-ui, sans-serif",
             fontWeight: 800,
           }}
-          className="text-white text-3xl tracking-tight"
+          className="text-[var(--color-text)] text-3xl tracking-tight"
         >
           MyConnect
         </h1>
 
-        <p className="text-white/80 text-sm mt-1">OWN YOUR NETWORK</p>
+        <p className="text-[var(--color-muted)] text-xs font-semibold tracking-[0.14em] mt-1">OWN YOUR NETWORK</p>
       </div>
 
       {/* Card */}
       <form
         onSubmit={handleLogin}
-        className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-6 space-y-4"
+        className="w-full max-w-md bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl shadow-sm p-6 sm:p-8 space-y-5"
       >
         <div>
           <h2
@@ -114,26 +114,26 @@ export function LoginScreen() {
               fontFamily: "'Inter Tight', system-ui, sans-serif",
               fontWeight: 700,
             }}
-            className="text-[#0F172A] text-xl"
+            className="text-[var(--color-text)] text-xl"
           >
             Welcome back
           </h2>
 
-          <p className="text-[#64748B] text-sm mt-0.5">
+          <p className="text-[var(--color-muted)] text-sm mt-0.5">
             Sign in to your account
           </p>
         </div>
 
         {/* Email input */}
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-[#475569] uppercase tracking-wide">
+          <label className="text-xs font-medium text-[var(--color-muted)] uppercase tracking-wide">
             Email Address
           </label>
 
           <div className="relative">
             <Mail
               size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-subtle-text)]"
             />
 
             <input
@@ -141,21 +141,21 @@ export function LoginScreen() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="e.g. customer@email.com"
-              className="w-full pl-9 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] placeholder:text-[#CBD5E1] outline-none focus:border-[#E5007D] focus:ring-2 focus:ring-[#E5007D]/20 transition"
+              className="w-full pl-9 pr-4 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl text-sm text-[var(--color-text)] placeholder:text-[var(--color-subtle-text)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition"
             />
           </div>
         </div>
 
         {/* Password input */}
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-[#475569] uppercase tracking-wide">
+          <label className="text-xs font-medium text-[var(--color-muted)] uppercase tracking-wide">
             Password
           </label>
 
           <div className="relative">
             <Lock
               size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-subtle-text)]"
             />
 
             <input
@@ -163,13 +163,13 @@ export function LoginScreen() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
-              className="w-full pl-9 pr-10 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] placeholder:text-[#CBD5E1] outline-none focus:border-[#E5007D] focus:ring-2 focus:ring-[#E5007D]/20 transition"
+              className="w-full pl-9 pr-10 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl text-sm text-[var(--color-text)] placeholder:text-[var(--color-subtle-text)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition"
             />
 
             <button
               type="button"
               onClick={() => setShowPass(!showPass)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#475569]"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-subtle-text)] hover:text-[var(--color-muted)]"
             >
               {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
@@ -177,7 +177,7 @@ export function LoginScreen() {
         </div>
 
         {message && (
-          <div className="text-xs bg-red-50 text-red-600 border border-red-200 rounded-lg px-3 py-2">
+          <div className="text-xs bg-[var(--color-danger-soft)] text-[var(--color-danger-strong)] border border-[var(--color-danger-border)] rounded-lg px-3 py-2">
             {message}
           </div>
         )}
@@ -186,7 +186,7 @@ export function LoginScreen() {
           <button
             type="button"
             onClick={handleForgotPassword}
-            className="text-xs text-[#E5007D] font-medium hover:underline"
+            className="text-xs text-[var(--color-primary-text)] font-medium hover:underline"
           >
             Forgot password?
           </button>
@@ -195,16 +195,16 @@ export function LoginScreen() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3 bg-[#E5007D] hover:bg-[#BE0067] disabled:bg-[#E5007D]/60 disabled:cursor-not-allowed text-white rounded-xl font-semibold text-sm transition-colors shadow-sm active:scale-95"
+          className="w-full py-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary)] disabled:bg-[var(--color-primary)]/60 disabled:cursor-not-allowed text-white rounded-xl font-semibold text-sm transition-colors shadow-sm active:scale-95"
         >
           {loading ? "Signing in..." : "Sign In"}
         </button>
 
-        <div className="text-center text-xs text-[#94A3B8]">
+        <div className="text-center text-xs text-[var(--color-subtle-text)]">
           Need help?{" "}
           <button
             type="button"
-            className="text-[#E5007D] font-medium hover:underline"
+            className="text-[var(--color-primary-text)] font-medium hover:underline"
           >
             Call 032 6106800
           </button>
@@ -215,7 +215,7 @@ export function LoginScreen() {
       <button
         type="button"
         onClick={() => navigate("/staff")}
-        className="mt-6 text-white/60 text-xs hover:text-white transition-colors"
+        className="mt-6 text-[var(--color-muted)] text-xs hover:text-[var(--color-primary-text)] transition-colors"
       >
         Staff Login →
       </button>

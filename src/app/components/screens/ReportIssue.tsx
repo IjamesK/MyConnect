@@ -180,15 +180,15 @@ function eligibilityToneClass(status: MoveEligibilityCheck["status"]) {
   const tone = eligibilityStatusTone(status);
 
   if (tone === "success") {
-    return "bg-green-50 text-green-700 border-green-200";
+    return "bg-[var(--color-success-soft)] text-[var(--color-success-strong)] border-[var(--color-success-border)]";
   }
 
   if (tone === "warning") {
-    return "bg-amber-50 text-amber-700 border-amber-200";
+    return "bg-[var(--color-warning-soft)] text-[var(--color-warning-strong)] border-[var(--color-warning-border)]";
   }
 
   if (tone === "danger") {
-    return "bg-red-50 text-red-700 border-red-200";
+    return "bg-[var(--color-danger-soft)] text-[var(--color-danger-text)] border-[var(--color-danger-border)]";
   }
 
   return "bg-[var(--color-surface-soft)] text-[var(--color-muted)] border-[var(--color-border)]";
@@ -732,7 +732,7 @@ export function ReportIssue() {
   const renderAccountLocation = () => (
     <SectionCard>
       <div className="flex items-center gap-3">
-        <MapPin size={16} className="text-[var(--color-primary)] shrink-0" />
+        <MapPin size={16} className="text-[var(--color-primary-text)] shrink-0" />
 
         <div className="flex-1">
           <p className="text-[var(--color-text)] text-sm font-medium">
@@ -831,10 +831,10 @@ export function ReportIssue() {
     return (
       <Layout showBack backTo="/report-issue" title="Report">
         <div className="px-4 py-5 space-y-4">
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+          <div className="bg-[var(--color-warning-soft)] border border-[var(--color-warning-border)] rounded-2xl p-4">
             <div className="flex gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center shrink-0">
-                <AlertTriangle size={20} className="text-amber-600" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--color-surface)]/70 flex items-center justify-center shrink-0">
+                <AlertTriangle size={20} className="text-[var(--color-warning-text)]" />
               </div>
 
               <div className="flex-1">
@@ -848,7 +848,7 @@ export function ReportIssue() {
                   {duplicateBlock.title}
                 </h1>
 
-                <p className="text-amber-700 text-sm mt-2 leading-relaxed">
+                <p className="text-[var(--color-warning-strong)] text-sm mt-2 leading-relaxed">
                   {duplicateBlock.message}
                 </p>
               </div>
@@ -884,7 +884,7 @@ export function ReportIssue() {
           <SectionCard>
             <div className="flex items-start gap-3 mb-3">
               <div className="w-9 h-9 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center shrink-0">
-                <MessageSquare size={18} className="text-[var(--color-primary)]" />
+                <MessageSquare size={18} className="text-[var(--color-primary-text)]" />
               </div>
               <div>
                 <p className="text-[var(--color-text)] text-sm font-bold">
@@ -926,8 +926,8 @@ export function ReportIssue() {
             <div
               className={`text-xs rounded-lg px-3 py-2 border ${
                 error
-                  ? "bg-red-50 text-red-600 border-red-200"
-                  : "bg-green-50 text-green-700 border-green-200"
+                  ? "bg-[var(--color-danger-soft)] text-[var(--color-danger-text)] border-[var(--color-danger-border)]"
+                  : "bg-[var(--color-success-soft)] text-[var(--color-success-strong)] border-[var(--color-success-border)]"
               }`}
             >
               {error || statusMessage || "Update added to the existing ticket."}
@@ -954,7 +954,7 @@ export function ReportIssue() {
       <Layout showBack backTo="/dashboard" title="Report">
         <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
           <div className="w-16 h-16 rounded-2xl bg-[var(--color-surface-soft)] border-2 border-[var(--color-border)] flex items-center justify-center mb-4">
-            <CheckCircle size={28} className="text-[var(--color-success)]" />
+            <CheckCircle size={28} className="text-[var(--color-success-text)]" />
           </div>
 
           <h2
@@ -1041,7 +1041,7 @@ export function ReportIssue() {
                 size={20}
                 className={
                   mode === "ticket"
-                    ? "text-[var(--color-primary)]"
+                    ? "text-[var(--color-primary-text)]"
                     : "text-[var(--color-muted)]"
                 }
               />
@@ -1069,7 +1069,7 @@ export function ReportIssue() {
                 size={20}
                 className={
                   mode === "incident"
-                    ? "text-[var(--color-primary)]"
+                    ? "text-[var(--color-primary-text)]"
                     : "text-[var(--color-muted)]"
                 }
               />
@@ -1102,7 +1102,7 @@ export function ReportIssue() {
                   }}
                   className="px-3 py-3 rounded-xl border text-xs font-medium text-left transition-all flex items-center gap-2 border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted)] hover:border-[var(--color-primary)]"
                 >
-                  <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-[var(--color-surface-soft)] text-[var(--color-primary)]">
+                  <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-[var(--color-surface-soft)] text-[var(--color-primary-text)]">
                     <Icon size={16} strokeWidth={2.3} />
                   </span>
                   <span className="leading-snug text-[var(--color-text)]">{label}</span>
@@ -1150,7 +1150,7 @@ export function ReportIssue() {
           <SectionCard>
             <div className="flex gap-3">
               <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center shrink-0">
-                <Router size={20} className="text-[var(--color-primary)]" />
+                <Router size={20} className="text-[var(--color-primary-text)]" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[var(--color-text)] text-sm font-bold">
@@ -1159,7 +1159,7 @@ export function ReportIssue() {
                 <p className="text-[var(--color-muted)] text-xs mt-1">
                   {routerLightCheck.routerName} · {routerPatternLabel(routerLightCheck.pattern)}
                 </p>
-                <p className="text-[var(--color-primary)] text-xs mt-1 font-medium">
+                <p className="text-[var(--color-primary-text)] text-xs mt-1 font-medium">
                   Lights selected: {routerLightCheck.selectedLights.length > 0 ? routerLightCheck.selectedLights.join(", ") : "None selected"}
                 </p>
               </div>
@@ -1171,7 +1171,7 @@ export function ReportIssue() {
           <SectionCard>
             <div className="flex items-start gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center shrink-0">
-                <Gauge size={20} className="text-[var(--color-primary)]" />
+                <Gauge size={20} className="text-[var(--color-primary-text)]" />
               </div>
 
               <div className="flex-1">
@@ -1184,7 +1184,7 @@ export function ReportIssue() {
               </div>
             </div>
 
-            <a href="https://www.speedtest.net/" target="_blank" rel="noopener noreferrer" className="text-xs underline text-[var(--color-primary)]">Open Speedtest.net</a>
+            <a href="https://www.speedtest.net/" target="_blank" rel="noopener noreferrer" className="text-xs underline text-[var(--color-primary-text)]">Open Speedtest.net</a>
             <label className="block">
               <span className="text-[var(--color-text)] text-xs font-semibold">
                 Devices currently connected to your router
@@ -1201,7 +1201,7 @@ export function ReportIssue() {
                     }}
                     className={`py-2 rounded-xl border text-xs font-semibold ${
                       connectedDevices === count
-                        ? "border-[var(--color-primary)] bg-[var(--color-surface-soft)] text-[var(--color-primary)]"
+                        ? "border-[var(--color-primary)] bg-[var(--color-surface-soft)] text-[var(--color-primary-text)]"
                         : "border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-muted)]"
                     }`}
                   >
@@ -1230,7 +1230,7 @@ export function ReportIssue() {
 
             {speedTesting && (
               <div className="mt-4 bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-xl p-3">
-                <div className="flex items-center gap-2 text-[var(--color-primary)] text-xs font-semibold mb-2">
+                <div className="flex items-center gap-2 text-[var(--color-primary-text)] text-xs font-semibold mb-2">
                   <RefreshCw size={14} className="animate-spin" />
                   Checking connection...
                 </div>
@@ -1246,7 +1246,7 @@ export function ReportIssue() {
           <SectionCard>
             <div className="flex items-start gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-soft)] flex items-center justify-center shrink-0">
-                <MapPinned size={20} className="text-[var(--color-primary)]" />
+                <MapPinned size={20} className="text-[var(--color-primary-text)]" />
               </div>
 
               <div className="flex-1">
@@ -1350,7 +1350,7 @@ export function ReportIssue() {
                 Location details
               </p>
               <div className="bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-xl p-3 flex items-center gap-3 mb-2">
-                <MapPin size={16} className="text-[var(--color-primary)] shrink-0" />
+                <MapPin size={16} className="text-[var(--color-primary-text)] shrink-0" />
                 <div className="flex-1">
                   <p className="text-[var(--color-text)] text-sm font-medium">
                     {profile.area}, {profile.district}
@@ -1406,8 +1406,8 @@ export function ReportIssue() {
           <div
             className={`text-xs rounded-lg px-3 py-2 border ${
               error
-                ? "bg-red-50 text-red-600 border-red-200"
-                : "bg-[var(--color-surface-soft)] text-[var(--color-primary)] border-[var(--color-border)]"
+                ? "bg-[var(--color-danger-soft)] text-[var(--color-danger-text)] border-[var(--color-danger-border)]"
+                : "bg-[var(--color-surface-soft)] text-[var(--color-primary-text)] border-[var(--color-border)]"
             }`}
           >
             {error || statusMessage}

@@ -50,10 +50,10 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-10 h-10 border-4 border-[#E5007D]/20 border-t-[#E5007D] rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-[#64748B] text-sm">Loading your account...</p>
+          <div className="w-10 h-10 border-4 border-[var(--color-primary)]/20 border-t-[var(--color-primary)] rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-[var(--color-muted)] text-sm">Loading your account...</p>
         </div>
       </div>
     );

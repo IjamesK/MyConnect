@@ -172,28 +172,28 @@ export function CustomerDashboard() {
       icon: RefreshCw,
       label: "Renew",
       sublabel: daysLeft > 0 ? `${daysLeft} Days left` : "Expired",
-      color: "bg-[var(--color-surface-soft)] text-[var(--color-primary)]",
+      color: "bg-[var(--color-surface-soft)] text-[var(--color-primary-text)]",
       path: "/renewal",
     },
     {
       icon: AlertCircle,
       label: "Report",
       sublabel: "Report a problem",
-      color: "bg-[var(--color-surface-soft)] text-[var(--color-primary)]",
+      color: "bg-[var(--color-surface-soft)] text-[var(--color-primary-text)]",
       path: "/report-issue",
     },
         {
       icon: MapPinned,
       label: "Move / Eligibility",
       sublabel: "Check new location",
-      color: "bg-[var(--color-surface-soft)] text-[var(--color-primary)]",
+      color: "bg-[var(--color-surface-soft)] text-[var(--color-primary-text)]",
       path: "/report-issue?mode=ticket&type=move_eligibility",
     },
     {
       icon: Wrench,
       label: "Self Help",
       sublabel: "Simple guides",
-      color: "bg-[var(--color-surface-soft)] text-[var(--color-primary)]",
+      color: "bg-[var(--color-surface-soft)] text-[var(--color-primary-text)]",
       path: "/self-help",
     },
   ];
@@ -250,9 +250,9 @@ export function CustomerDashboard() {
 
         <div className="grid items-start gap-5 lg:grid-cols-2">
         {/* Internet status hero card */}
-        <div className="bg-[#E5007D] rounded-2xl p-5 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/10 -translate-y-8 translate-x-8" />
-          <div className="absolute bottom-0 right-8 w-20 h-20 rounded-full bg-white/10 translate-y-8" />
+        <div className="bg-[var(--color-primary)] rounded-2xl p-5 text-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-[var(--color-surface)]/10 -translate-y-8 translate-x-8" />
+          <div className="absolute bottom-0 right-8 w-20 h-20 rounded-full bg-[var(--color-surface)]/10 translate-y-8" />
 
           <div className="relative">
             <div className="flex items-center justify-between mb-4">
@@ -262,8 +262,8 @@ export function CustomerDashboard() {
                 </p>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4ADE80] opacity-75" />
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-[#4ADE80]" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-success-action)] opacity-75" />
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-[var(--color-success-action)]" />
                   </span>
                   <span
                     style={{
@@ -285,7 +285,7 @@ export function CustomerDashboard() {
                     navigator.clipboard.writeText(profile.routerSerial ?? "");
                     alert("Copied Router SN");
                   }}
-                  className="bg-white/20 hover:bg-white/30 transition-colors text-white text-xs px-2 py-1 rounded flex items-center gap-1 active:scale-95"
+                  className="bg-[var(--color-surface)]/20 hover:bg-[var(--color-surface)]/30 transition-colors text-white text-xs px-2 py-1 rounded flex items-center gap-1 active:scale-95"
                 >
                   <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     {profile.routerSerial}
@@ -294,7 +294,7 @@ export function CustomerDashboard() {
               </div>
             </div>
 
-            <div className="border-t border-white/20 pt-3 flex items-center justify-between">
+            <div className="border-t border-[var(--color-border)] pt-3 flex items-center justify-between">
               <div>
                 <p className="text-white/80 text-[10px] uppercase tracking-wide">
                   Package
@@ -307,7 +307,7 @@ export function CustomerDashboard() {
                 <p className="text-white/80 text-[10px] uppercase tracking-wide">
                   Expires In
                 </p>
-                <p className="text-[#FCD34D] text-sm font-semibold">
+                <p className="text-[var(--color-warning-border)] text-sm font-semibold">
                   {daysLeft > 0 ? `${daysLeft} Days` : "Expired"}
                 </p>
               </div>
@@ -349,20 +349,20 @@ export function CustomerDashboard() {
         </div>
         {/* Renewal warning */}
         {daysLeft <= 7 && (
-          <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-xl px-4 py-3 flex items-center gap-3">
+          <div className="bg-[var(--color-warning-soft)] border border-[var(--color-warning-border)] rounded-xl px-4 py-3 flex items-center gap-3">
             <span className="text-lg">⚠️</span>
             <div className="flex-1">
-              <p className="text-[#92400E] text-xs font-semibold">
+              <p className="text-[var(--color-warning-strong)] text-xs font-semibold">
                 Subscription expires soon
               </p>
-              <p className="text-[#B45309] text-xs mt-0.5">
+              <p className="text-[var(--color-warning-text)] text-xs mt-0.5">
                 Renew before {profile.expiryDate} to avoid disconnection
               </p>
             </div>
             <button
               type="button"
               onClick={() => navigate("/renewal")}
-              className="bg-[#E5007D] hover:bg-[#BE0067] text-white px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors active:scale-95"
+              className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)] text-white px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors active:scale-95"
             >
               Renew →
             </button>
@@ -379,7 +379,7 @@ export function CustomerDashboard() {
               <button
                 type="button"
                 onClick={() => navigate("/service-status")}
-                className="px-3 py-1.5 rounded-full bg-[var(--color-surface-soft)] text-[var(--color-primary)] text-xs font-bold"
+                className="px-3 py-1.5 rounded-full bg-[var(--color-surface-soft)] text-[var(--color-primary-text)] text-xs font-bold"
               >
                 View all
               </button>
@@ -412,7 +412,7 @@ export function CustomerDashboard() {
                   </p>
                 </div>
 
-                <ChevronRight size={16} className="text-[#CBD5E1]" />
+                <ChevronRight size={16} className="text-[var(--color-border)]" />
               </button>
             ))}
           </div>
@@ -427,12 +427,12 @@ export function CustomerDashboard() {
           >
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="flex items-center gap-2">
-                <TicketCheck size={18} className="text-[var(--color-primary)]" />
+                <TicketCheck size={18} className="text-[var(--color-primary-text)]" />
                 <p className="text-[var(--color-text)] text-sm font-semibold">
                   Ticket Progress
                 </p>
               </div>
-              <span className="text-[var(--color-primary)] text-xs font-semibold">
+              <span className="text-[var(--color-primary-text)] text-xs font-semibold">
                 {progress.label}
               </span>
             </div>
@@ -455,11 +455,11 @@ export function CustomerDashboard() {
         {/* Internet tips banner */}
         <div className="bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-2xl p-4 flex gap-3">
           <div className="w-10 h-10 rounded-xl bg-[var(--color-surface)] flex items-center justify-center shrink-0">
-            <Lightbulb size={19} className="text-[var(--color-primary)]" />
+            <Lightbulb size={19} className="text-[var(--color-primary-text)]" />
           </div>
           <div>
             <p className="text-[var(--color-text)] text-sm font-bold">Internet Tip</p>
-            <p className="text-[var(--color-primary)] text-xs font-semibold mt-0.5">
+            <p className="text-[var(--color-primary-text)] text-xs font-semibold mt-0.5">
               {currentTip.title}
             </p>
             <p className="text-[var(--color-muted)] text-xs mt-1 leading-relaxed">

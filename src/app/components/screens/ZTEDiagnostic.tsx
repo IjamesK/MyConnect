@@ -94,13 +94,13 @@ export function ZTEDiagnostic() {
             onClick={() => setShowInfo(!showInfo)}
             className="w-9 h-9 rounded-full bg-[var(--color-surface-soft)] flex items-center justify-center shrink-0"
           >
-            <Info size={16} className="text-[var(--color-primary)]" />
+            <Info size={16} className="text-[var(--color-primary-text)]" />
           </button>
         </div>
 
         {showInfo && (
           <div className="bg-[var(--color-surface-soft)] border border-[var(--color-border)] rounded-xl p-4">
-            <p className="text-[var(--color-primary)] text-xs font-semibold mb-2">
+            <p className="text-[var(--color-primary-text)] text-xs font-semibold mb-2">
               Router light guide
             </p>
 
@@ -131,8 +131,8 @@ export function ZTEDiagnostic() {
               <div
                 className={`${bodyWidth} h-[150px] rounded-2xl border-2 shadow-xl relative overflow-hidden ${
                   isBlackOnt
-                    ? "bg-gradient-to-b from-[#111827] to-[#020617] border-[#334155]"
-                    : "bg-gradient-to-b from-[#E2E8F0] to-[#CBD5E1] border-[#94A3B8]"
+                    ? "bg-gradient-to-b from-[var(--color-text)] to-[var(--color-text)] border-[var(--color-text)]"
+                    : "bg-gradient-to-b from-[var(--color-border)] to-[var(--color-border)] border-[var(--color-subtle-text)]"
                 }`}
               >
                 <div className="absolute top-3 left-1/2 -translate-x-1/2 text-center">
@@ -142,7 +142,7 @@ export function ZTEDiagnostic() {
                       fontWeight: 800,
                     }}
                     className={`text-[10px] tracking-[0.25em] ${
-                      isBlackOnt ? "text-white/70" : "text-[#475569]"
+                      isBlackOnt ? "text-white/70" : "text-[var(--color-muted)]"
                     }`}
                   >
                     {isBlackOnt ? "ALCL" : "ZTE"}
@@ -151,7 +151,7 @@ export function ZTEDiagnostic() {
 
                 <div
                   className={`absolute top-8 left-1/2 -translate-x-1/2 w-24 h-1.5 rounded-full ${
-                    isBlackOnt ? "bg-white/15" : "bg-[#94A3B8]/40"
+                    isBlackOnt ? "bg-[var(--color-surface)]/15" : "bg-[var(--color-subtle-text)]/40"
                   }`}
                 />
 
@@ -168,18 +168,18 @@ export function ZTEDiagnostic() {
                         className={`flex flex-col items-center gap-2 px-1.5 py-1 rounded-lg transition-all ${
                           activeLight === light.id
                             ? isBlackOnt
-                              ? "bg-white/10"
-                              : "bg-white/50"
+                              ? "bg-[var(--color-surface)]/10"
+                              : "bg-[var(--color-surface)]/50"
                             : isBlackOnt
-                              ? "hover:bg-white/10"
-                              : "hover:bg-white/30"
+                              ? "hover:bg-[var(--color-surface)]/10"
+                              : "hover:bg-[var(--color-surface)]/30"
                         }`}
                         aria-label={`Toggle ${light.label}`}
                       >
                         <div
-                          className={`${selected ? "w-4 h-4 border-white/20" : "w-3.5 h-3.5 border-dashed border-[#94A3B8]/70"} rounded-full border transition-all`}
+                          className={`${selected ? "w-4 h-4 border-[var(--color-border)]" : "w-3.5 h-3.5 border-dashed border-[var(--color-subtle-text)]/70"} rounded-full border transition-all`}
                           style={{
-                            backgroundColor: selected ? color : isBlackOnt ? "#475569" : "#CBD5E1",
+                            backgroundColor: selected ? color : isBlackOnt ? "var(--color-muted)" : "var(--color-border)",
                             boxShadow: selected ? `0 0 9px ${color}` : "none",
                           }}
                         />
@@ -190,10 +190,10 @@ export function ZTEDiagnostic() {
                             selected
                               ? isBlackOnt
                                 ? "text-white"
-                                : "text-[#0F172A]"
+                                : "text-[var(--color-text)]"
                               : isBlackOnt
                                 ? "text-white/55"
-                                : "text-[#64748B]"
+                                : "text-[var(--color-muted)]"
                           }`}
                         >
                           {light.label}
@@ -208,7 +208,7 @@ export function ZTEDiagnostic() {
                     <div
                       key={i}
                       className={`w-4 h-2.5 rounded-sm ${
-                        isBlackOnt ? "bg-white/20" : "bg-[#0F172A]"
+                        isBlackOnt ? "bg-[var(--color-surface)]/20" : "bg-[var(--color-text)]"
                       }`}
                     />
                   ))}
@@ -257,7 +257,7 @@ export function ZTEDiagnostic() {
         <button
           type="button"
           onClick={handleContinue}
-          className="w-full py-3 bg-[#E5007D] hover:bg-[#BE0067] text-white rounded-xl font-semibold text-sm transition-colors"
+          className="w-full py-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary)] text-white rounded-xl font-semibold text-sm transition-colors"
         >
           Continue →
         </button>
