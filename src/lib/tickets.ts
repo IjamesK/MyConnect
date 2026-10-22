@@ -225,8 +225,6 @@ export async function findActiveRelatedTicket(
   const ticketsQuery = query(
     collection(db, "tickets"),
     where("customerUid", "==", customerUid),
-    orderBy("createdAt", "desc"),
-    limit(30),
   );
 
   const snapshot = await getDocs(ticketsQuery);
@@ -236,6 +234,7 @@ export async function findActiveRelatedTicket(
       id: docSnap.id,
       ...docSnap.data(),
     }) as CustomerTicket)
+    .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0))
     .find((ticket) =>
       isActiveTicket(ticket.status) && isRelatedTicket(ticket.category, newCategory),
     );
@@ -302,7 +301,7 @@ export async function createTicket(
     updatedAt: serverTimestamp(),
   });
 
-  await createCustomerNotification({
+  try { await createCustomerNotification({
     customerUid: profile.uid,
     type: "ticket",
     title: data.category === "move_eligibility" ? "Move Request Created" : "Ticket Created",
@@ -314,6 +313,9 @@ export async function createTicket(
     relatedId: ticketRef.id,
   });
 
+  } catch (notificationError) {
+    console.warn("Ticket saved but notification was not created:", notificationError);
+  }
   return ticketRef.id;
 }
 
@@ -342,8 +344,7 @@ export function listenToCustomerTickets(
 ): Unsubscribe {
   const ticketsQuery = query(
     collection(db, "tickets"),
-    where("customerUid", "==", customerUid),
-    orderBy("createdAt", "desc")
+    where("customerUid", "==", customerUid)
   );
 
   return onSnapshot(ticketsQuery, (snapshot) => {
@@ -352,7 +353,7 @@ export function listenToCustomerTickets(
         id: docSnap.id,
         ...docSnap.data(),
       })) as CustomerTicket[]
-    );
+    ).sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
   });
 }
 

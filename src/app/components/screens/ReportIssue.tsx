@@ -33,7 +33,9 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import type { CustomerProfile } from "../../../lib/auth";
+import { getUserProfile, type CustomerProfile } from "../../../lib/auth";
+import { auth } from "../../../lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import {
   addTicketCustomerComment,
   createTicket,
@@ -314,26 +316,34 @@ export function ReportIssue() {
   };
 
   useEffect(() => {
-    const savedProfile = localStorage.getItem("customerProfile");
-
-    if (!savedProfile) {
-      navigate("/", { replace: true });
-      return;
-    }
-
-    try {
-      setProfile(JSON.parse(savedProfile));
-    } catch (err) {
-      console.error("Failed to load customer profile:", err);
-      localStorage.removeItem("customerProfile");
-      navigate("/", { replace: true });
-    }
+    let active = true;
+    const stop = onAuthStateChanged(auth, async (user) => {
+      if (!user) { if (active) navigate("/", { replace: true }); return; }
+      try {
+        const fresh = await getUserProfile(user.uid);
+        if (!active) return;
+        if (!fresh) { setError("No customer profile found. Check the users document ID against your Authentication UID."); return; }
+        setProfile(fresh);
+      } catch (err) {
+        console.error("Unable to load Firestore customer profile", err);
+        if (active) setError("Unable to load your customer profile. Check database permissions and retry.");
+      }
+    });
+    return () => { active = false; stop(); };
   }, [navigate]);
 
   useEffect(() => {
     const modeParam = searchParams.get("mode");
     const typeParam = searchParams.get("type");
     const source = searchParams.get("source");
+
+    if (source === "assistant") {
+      const fromAssistant = sessionStorage.getItem("myconnect:assistant-ticket-description");
+      if (fromAssistant) {
+        setDescription(current => current || fromAssistant);
+        sessionStorage.removeItem("myconnect:assistant-ticket-description");
+      }
+    }
 
     if (modeParam === "ticket") {
       setMode("ticket");
@@ -633,21 +643,9 @@ export function ReportIssue() {
 
         let capturedSpeedTest: SpeedTestResult | null = null;
 
-        if (personalIssueType === "slow_speed") {
-          const devices = Math.max(1, Number(connectedDevices));
-          setSpeedTesting(true);
-          setStatusMessage("Checking your connection and attaching the result...");
-
-          try {
-            capturedSpeedTest = await runBrowserSpeedTest(devices);
-            setSpeedTest(capturedSpeedTest);
-          } catch (err) {
-            console.error("Speed test failed:", err);
-            capturedSpeedTest = null;
-          } finally {
-            setSpeedTesting(false);
-          }
-        }
+        // Do not fabricate measurements: browser_prototype produced estimates,
+        // not genuine speed-test results. User-supplied Speedtest.net figures
+        // are included in the description and clearly labelled unverified.
 
         const moveDescription =
           personalIssueType === "move_eligibility"
@@ -665,7 +663,7 @@ export function ReportIssue() {
           personalIssueType === "slow_speed"
             ? capturedSpeedTest
               ? `\n\nAutomatic connection check attached:\nDownload: ${capturedSpeedTest.downloadMbps} Mbps\nUpload: ${capturedSpeedTest.uploadMbps} Mbps\nLatency: ${capturedSpeedTest.latencyMs} ms\nDevices connected: ${capturedSpeedTest.connectedDevices}\nResult: ${qualityLabel(capturedSpeedTest.quality)}.`
-              : `\n\nAutomatic connection check was attempted but could not be completed. Customer was asked to stay connected to CanalBox Wi-Fi. Reported connected devices: ${connectedDevices}.`
+              : `\n\nNo independent speed measurement captured by MyConnect. Customer-reported speedtest figures, if supplied, are in the description.`
             : "";
 
         const routerLightNote = routerLightCheck
@@ -1178,14 +1176,15 @@ export function ReportIssue() {
 
               <div className="flex-1">
                 <p className="text-[var(--color-text)] text-sm font-bold">
-                  Connection check will run automatically
+                  Real speed-test results (optional)
                 </p>
                 <p className="text-[var(--color-muted)] text-xs mt-0.5 leading-relaxed">
-                  Make sure you are connected to your CanalBox Wi-Fi. When you submit, we’ll check the connection and attach the result.
+                  Run a test at speedtest.net, then provide the download, upload and ping figures in your description. The assistant can prefill these values. No automatic measurement is claimed.
                 </p>
               </div>
             </div>
 
+            <a href="https://www.speedtest.net/" target="_blank" rel="noopener noreferrer" className="text-xs underline text-[var(--color-primary)]">Open Speedtest.net</a>
             <label className="block">
               <span className="text-[var(--color-text)] text-xs font-semibold">
                 Devices currently connected to your router
