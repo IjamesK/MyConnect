@@ -1,208 +1,365 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { Bot, X, Send, Headphones, RotateCcw, Router } from "lucide-react";
+import { Bot, X, Send, RotateCcw, Router } from "lucide-react";
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { auth, db } from "../../../lib/firebase";
 import { getUserProfile, type CustomerProfile } from "../../../lib/auth";
 import type { CustomerTicket } from "../../../lib/tickets";
-import { diagnoseRouterLights, normalizeRouterType, routerLightsFor, routerName, routerPatternLabel, ticketTypeFromRouterPattern, type RouterType } from "../../../lib/routerTypes";
+import { diagnoseRouterLights, normalizeRouterType, routerLightsFor, routerName, ticketTypeFromRouterPattern, type RouterType } from "../../../lib/routerTypes";
 
 type Message = { role: "assistant" | "user"; text: string };
-type AIEvent = CustomEvent<{ prompt?: string; packageName?: string }>;
-const INTRO = "Welcome to MyConnect CanalBox support. I can check your recorded account and issues, guide you using the lights on your router, explain packages, and help you report an unresolved fault. What seems wrong?";
+type Step = "start" | "scope" | "connection" | "device" | "lights" | "restart" | "speed" | "website" | "website_detail" | "password_kind" | "connected" | "packages" | "ticket" | "resolved";
+type SupportSession = {
+  messages: Message[];
+  issue: string;
+  symptom: string;
+  step: Step;
+  scope: string;
+  connection: string;
+  checks: string[];
+  speed: string;
+  lights: string;
+  selectedLights: string[];
+  router: RouterType | null;
+  escalate: boolean;
+};
+type SupportContext = { profile: CustomerProfile | null; tickets: CustomerTicket[]; historyReady: boolean };
+const INTRO = "Hello. I can help with your connection, Wi-Fi settings, packages, or a support report. I can read your MyConnect records, but I cannot test your line remotely. What would you like help with?";
 const PLANS = [
-  { name: "GO", speed: 50, price: 69000, devices: "3–5", use: "everyday browsing, messaging and HD streaming" },
-  { name: "FIT", speed: 100, price: 90000, devices: "5–8", use: "families, video calls and multiple HD streams" },
-  { name: "START", speed: 200, price: 110000, devices: "8–12", use: "4K streaming, gaming and busy households" },
-  { name: "PREMIUM", speed: 300, price: 200000, devices: "12–20", use: "many connected devices and heavy household or workspace use" },
+  { name: "GO", speed: 50, price: 69000 },
+  { name: "FIT", speed: 100, price: 90000 },
+  { name: "START", speed: 200, price: 110000 },
+  { name: "PREMIUM", speed: 300, price: 200000 },
 ];
-// Guided CanalBox support for demonstration: no model API, no unverified network diagnostics.
-const whatsapp = "256758073035"; // Company-confirmed support WhatsApp; show only after guided checks and ticket escalation.
-function answer(input: string, profile: CustomerProfile | null, tickets: CustomerTicket[], turns: number): string {
-  const text = input.toLowerCase();
-  const recent = tickets[0];
-  // Verified CanalBox self-service procedure. Ask about connectivity before giving portal steps.
-  if (/(forgot|forgotten|lost|don't know|do not know|reset).{0,45}(wi.?fi|wifi|wireless|network).{0,30}(password|passphrase|key)|(?:wi.?fi|wifi).{0,25}(password|passphrase).{0,25}(forgot|reset|lost)/.test(text)) {
-    return "If you've forgotten the Wi-Fi password and cannot join your CanalBox network, please request a Wi-Fi password reset through Report Issue. Support may restore the default Wi-Fi credentials provided with the router. Do not press the physical RESET button. CanalBox requires at least 24 hours between password changes or resets. Never share your password in chat. Would you like to create a reset case?";
+const ISSUE_NAMES: Record<string, string> = {
+  slow_speed: "Slow internet", no_internet: "Connection unavailable", los_light: "Red LOS / possible fibre signal problem",
+  router_issue: "Router or Wi-Fi problem", password_reset: "Wi-Fi password reset request",
+  payment_not_reflected: "Payment not reflected", other: "Other support request",
+};
+const RESTART = "Turn the router off using its power switch or power adapter. Wait 5 minutes, turn it on, and let the lights settle. Do not press RESET or touch the fibre connector.\n\nHas your connection returned to normal?";
+
+function newSupportSession(): SupportSession {
+  return { messages: [{ role: "assistant", text: INTRO }], issue: "other", symptom: "", step: "start", scope: "", connection: "", checks: [], speed: "", lights: "", selectedLights: [], router: null, escalate: false };
+}
+
+// Reject likely credential disclosures before they enter either the chat or report.
+// This is a conservative safeguard, not a guarantee that arbitrary text is secret-free.
+function containsCredential(value: string): boolean {
+  return /(?:password|passphrase|pin|otp|verification code|recovery code|secret|api.?key|token)\s*(?:is\b|was\b|=|:)|\b(?:my|the) (?:password|passphrase|pin|otp)\s+\S*\d\S*|\bBearer\s+\S+|-----BEGIN .*PRIVATE KEY-----|\b\d{6}\b|\b\d{12,19}\b/i.test(value);
+}
+
+function reportSafe(value: string): string {
+  if (containsCredential(value)) return "[Sensitive details omitted]";
+  return value.replace(/https?:\/\/\S+/gi, "[link omitted]")
+    .replace(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/gi, "[email omitted]")
+    .replace(/\b[A-Za-z0-9_=-]{32,}\b/g, "[long value omitted]").slice(0, 500);
+}
+
+function reply(state: SupportSession, text: string, patch: Partial<SupportSession> = {}): SupportSession {
+  return { ...state, ...patch, messages: [...state.messages, { role: "assistant", text }] };
+}
+
+function escalateCase(state: SupportSession, reason: string): SupportSession {
+  return reply(state, reason + "\n\nChoose “Review support report” below. You can check the details before submitting; no ticket has been sent yet.", { step: "ticket", escalate: true });
+}
+
+function planResponse(plan: typeof PLANS[number]): string {
+  return `${plan.name}: ${plan.speed} Mbps at UGX ${plan.price.toLocaleString("en-UG")} per month. Support must confirm availability and any package change.`;
+}
+
+function supportTurn(previous: SupportSession, input: string, context: SupportContext): SupportSession {
+  const raw = input.trim().slice(0, 500);
+  if (!raw) return previous;
+  if (containsCredential(raw)) return reply(previous, "That message appears to contain a password, code, or other sensitive value, so I have not added it to the conversation or report. Describe the problem without sharing credentials.");
+  const text = raw.toLowerCase().replace(/[’‘]/g, "'");
+  let state: SupportSession = { ...previous, messages: [...previous.messages, { role: "user", text: raw }] };
+  const yes = /^(yes|yes please|yeah|yep|it works|working now|resolved|fixed|it's working|it is working)[.! ]*$/.test(text);
+  const no = /^(no|nope|not yet|not working|still not working|still slow|still offline|same problem|no change|didn't work|did not work|not better|unresolved)[.! ]*$/.test(text);
+  const unresolved = no || /\bstill\b|didn't (?:work|help)|did not (?:work|help)|not better|no change/.test(text);
+  const isWifi = /wi[ -]?fi|wireless|wlan/.test(text);
+  const isPassword = /password|passphrase|ssid|network name/.test(text);
+  const passwordRequest = isPassword && /forgot|forgotten|lost|reset|change|update|rename|don't know|cannot remember|can't remember/.test(text);
+  const los = /\bred (?:los|light)|\blos (?:is )?red|\blos light|fibre cut|fiber cut/.test(text) && !/los.{0,12}(?:not red|off)/.test(text);
+  const slow = /\bslow\b|buffer|\blag\b|\bspeed\b/.test(text);
+  const offline = /offline|no internet|disconnected|disconnects|can't (?:connect|go online)|cannot (?:connect|go online)|(?:internet|wi[ -]?fi|my router).*not working|connection.*down/.test(text);
+  const website = /websites?|\bsites?\b|\bdns\b|err_name_not_resolved|access denied|\b403\b/.test(text);
+  const missingWifi = /(?:wi[ -]?fi|wlan|network name).*(?:missing|gone|not showing|off)|can't see.*wi[ -]?fi/.test(text);
+
+  // A new, explicit issue replaces old evidence. Follow-ups keep the active case.
+  let detected = los ? "los_light" : passwordRequest ? (isWifi ? "password_reset" : "other")
+    : /missing payment|payment not reflected|paid but/.test(text) ? "payment_not_reflected"
+    : website ? "other" : slow ? "slow_speed" : offline ? "no_internet" : missingWifi ? "router_issue" : "";
+  const newIssue = !!detected && (!previous.symptom || previous.step === "resolved" || (!unresolved && detected !== previous.issue));
+  if (newIssue) state = { ...newSupportSession(), messages: state.messages, issue: detected, symptom: reportSafe(raw) };
+
+  // Explicit requests can interrupt a diagnostic question without reinterpreting short answers.
+  if (los) return escalateCase({ ...state, issue: "los_light", symptom: state.symptom || "Red LOS light reported", checks: [...state.checks, "Customer reports a red LOS light."] }, "A red LOS light can indicate loss of fibre signal; I cannot confirm a fibre cut remotely. Do not disconnect or bend the fibre cable. Use “Check router lights” to record the indicators, then report this to support.");
+  if (passwordRequest) {
+    if (!isWifi && !/login|myconnect|account/.test(text)) return reply(state, "Do you mean your Wi-Fi password or your MyConnect sign-in password? Do not type the password here.", { step: "password_kind" });
+    if (!isWifi) return reply(state, "For your MyConnect sign-in password, use “Forgot password?” on the sign-in page and follow the email instructions. Never share the reset link or verification code here.", { step: "start" });
+    if (/forgot|forgotten|lost|reset|don't know|can't remember|cannot remember/.test(text)) return escalateCase({ ...state, issue: "password_reset", symptom: "Customer needs a Wi-Fi password reset" }, "Support can help you recover access to your Wi-Fi. Do not press the router's RESET button or share your password here.");
+    return reply(state, "Are you currently connected to your CanalBox Wi-Fi?", { issue: "router_issue", step: "connected", symptom: "Customer wants to change Wi-Fi settings" });
   }
-  if (/forgot (my |the )?password|can't remember (my |the )?(wifi )?password/.test(text)) return "Do you mean your CanalBox Wi-Fi password or your MyConnect login password? If it is Wi-Fi and you cannot connect, use Report Issue to request a support-assisted reset. Never press the router's factory RESET button. Wait 24 hours between changes or resets.";
-  if (/(change|update|rename|modify|new).{0,40}(wi.?fi|wifi|wireless|ssid|network).{0,35}(password|passphrase|name)|(?:wi.?fi|wifi).{0,30}(password|name|ssid).{0,40}(change|update|rename)|how.{0,20}(change|update).{0,20}password/.test(text)) {
-    return `Are you currently CONNECTED to your CanalBox Wi-Fi? If yes: copy your router serial number from your MyConnect account${profile?.routerSerial ? ` (serial: ${profile.routerSerial})` : " (ask support if your serial is missing)"}, then visit https://my.canalbox.africa/login. Enter the router S/N, open the three-bar menu at top left, choose My Box → WiFi, enter a new SSID (Wi-Fi name) and new Wi-Fi passphrase (password), both at least 8 characters, and save. Your devices may disconnect; reconnect with the new credentials. Keep a secure private record, not a screenshot shared with support. Wait at least 24 hours before another change or reset. If you cannot connect or forgot your password, tell me and I'll guide you to a reset request. Do NOT factory-reset the router.`;
+  if (/\b(?:history|previous tickets|my tickets|my reports|past issues)\b/.test(text)) {
+    if (!context.historyReady) return reply(state, "Your ticket history is not available yet. You can check it on the Support tickets page; I can still help troubleshoot.");
+    if (!context.tickets.length) return reply(state, "There are no support tickets in the MyConnect records I loaded for your account. Reports made elsewhere may not appear here.");
+    const recent = context.tickets[0];
+    return reply(state, `Your latest recorded ticket is “${reportSafe(recent.title || "Support request")}” (${String(recent.status || "unknown").replace(/_/g, " ")}). Use “View my tickets” below to check its progress.`);
   }
-  if (/^(yes|i am connected|connected to (the )?(wifi|network))$/i.test(text)) return "If you mean you're connected and want to change Wi-Fi settings, open https://my.canalbox.africa/login using your CanalBox connection, enter the router S/N from MyConnect, then ☰ → My Box → WiFi. Use at least 8 characters for the new SSID and passphrase and save. If you meant another issue, tell me which one.";
-  if (/previous|history|past issue|ticket|my reports|reported before/.test(text)) {
-    if (!tickets.length) return "I can't see a previous support ticket in your accessible MyConnect records. If you've reported an issue elsewhere, it may not yet be recorded in this database. What happened?";
-    return `Your latest recorded issue is “${recent.title}” (${recent.status.replace(/_/g, " ")}). ${tickets.length > 1 ? `I can see ${tickets.length} recorded support issues.` : ""} Is this problem happening again, or is it a new issue?`;
-  }
-  if (/my account|my package|my plan|my subscription|expiry|expire|my router/.test(text)) {
-    if (!profile) return "Your account details aren't available at the moment. I can still guide troubleshooting, but I won't guess your subscription or router.";
-    return `Your MyConnect profile lists ${profile.packageName || "an unspecified package"}, ${profile.accountStatus || "unknown"} account status, expiry ${profile.expiryDate || "not listed"}, and router ${profile.routerModel || "not recorded"}. If these details look incorrect, please report them to support. What would you like help with?`;
+  if (/\bmy (?:account|package|plan|subscription)\b|\bexpiry\b|\bexpire\b/.test(text) && !slow && !offline && !website) {
+    const p = context.profile;
+    return reply(state, p ? `Your recorded package: ${p.packageName || "not listed"}.\nAccount status: ${p.accountStatus || "not listed"}.\nExpiry: ${p.expiryDate || "not listed"}.\nThese are your saved MyConnect details, not a live line test.` : "Your customer profile is not available. I can still guide you, but support needs to confirm your account details.");
   }
   const plan = PLANS.find(p => new RegExp(`\\b${p.name.toLowerCase()}\\b`).test(text));
-  if (plan) return `${plan.name}: ${plan.speed} Mbps, UGX ${plan.price.toLocaleString("en-UG")}/month. Suggested use: ${plan.use}. Roughly ${plan.devices} devices with mixed usage (not an official guaranteed limit). Staff must confirm eligibility and changes.`;
-  if (/package|plan|price|cost|subscribe|upgrade|bundle/.test(text)) return PLANS.map(p => `${p.name} — ${p.speed} Mbps — UGX ${p.price.toLocaleString("en-UG")}/month`).join("\n") + "\nWhich plan would you like to know more about?";
-  if (/some websites|certain websites|specific websites|some sites|websites? (won.t|will not|not|isn.t|is not|cannot|can.t) (open|load|work|accessible)|can.t (open|access|reach) (some|certain|a) (websites?|sites?)|not accessing (some|certain) websites?|site not opening|website blocked/.test(text)) return "Let's isolate the website problem without changing your router settings. 1) Is it just one website or several? 2) Does it work on another device or using mobile data (not CanalBox Wi-Fi)? 3) What error do you see (timeout, DNS error, access denied, or blank page)? 4) Do other websites open normally on CanalBox? Try a private/incognito tab and another browser. Please don't change DNS settings or factory-reset the router yet. Tell me what you find and I can guide the next check or help report the issue.";
-  if (/dns|site can.t be reached|name not resolved|err_name_not_resolved|connection timed out|connection reset|access denied|403|website still/.test(text)) return "Thanks. Does this website open on mobile data but fail on your CanalBox connection, or does it fail on both? Tell me the website domain (never share a login link or password) and exact error. If other sites work, this alone doesn't prove a CanalBox outage. Try another browser and device, then report the website-access issue with those details if it persists.";
-  if (/red los|los red|los light|red light|fibre cut|fiber cut/.test(text)) return "A RED LOS light on a white ZTE may mean loss of fibre signal, possibly from a fibre fault or cut; I cannot confirm a cut remotely. Do not disconnect, bend, or look into the fibre cable, and do not press RESET. Please open the light selector so I can record what is lit, then report the issue if LOS remains red.";
-  if (/restart|reboot|not yet/.test(text)) return "CanalBox restart procedure: turn the router OFF with its power switch or unplug its POWER ADAPTER. Wait 5 full minutes, reconnect power, and allow the indicator lights to settle. Do NOT press the small RESET button or touch the fibre connector. Did the service return?";
-  if (/slow|buffer|lag|speed/.test(text)) return `Let's investigate slow speeds on your ${profile?.routerModel || "router"}. Is it slow on ALL devices or only one? Is it over Wi-Fi, wired connection, or both? Use https://www.speedtest.net/ while connected to CanalBox Wi-Fi near your router, with other downloads paused. Share the download Mbps, upload Mbps, ping ms, and whether you tested over Wi-Fi or Ethernet. Use the router-light selector if any lights seem abnormal. ${recent?.category === "slow_speed" ? "There is an earlier slow-speed issue in your accessible ticket history." : ""} If it persists, we can open a slow-speed support case.`;
-  if (/offline|no internet|disconnected|not working|can't connect|cannot connect/.test(text)) return `Let's check your ${profile?.routerModel || "router"} first. Is the power light on? For a white ZTE router, is PON on and LOS red? For a black ALCL device, are LINK and AUTH lit? Please tell me the lights you see. Don't touch the fiber connector or press RESET.`;
-  if (/wi-?fi (name|network|ssid) (is )?(missing|gone|not showing)|can.t see (the )?wi-?fi|wifi light off|wlan light off/.test(text)) return "If your Wi-Fi name has disappeared and the Wi-Fi/WLAN light is off: on a WHITE ZTE router, briefly press the Wi-Fi button on the WIDE SIDE; on a BLACK router, briefly press the WLAN button on the BACK. Wait for the Wi-Fi light and network name to appear. Do not press RESET or hold buttons down. Is the network name visible now?";
-  if (/one device|only one|wifi only|wi-fi only/.test(text)) return "That may be a device or Wi-Fi issue rather than the full CanalBox line. Try moving closer to the router and reconnecting Wi-Fi on that device. Does another device work normally in the same place?";
-  if (/all devices|every device|still slow|still offline|didn't work|did not work|same problem|not better|unresolved|still not/.test(text)) return turns >= 3 ? "The earlier checks haven't resolved this. Please open a MyConnect support ticket so the team can follow your steps and recorded issues. If the issue needs photos and standard support cannot resolve it, use the final-escalation WhatsApp option if the company has configured it." : "Thanks for checking. Before escalating, tell me which router lights are on, whether this affects all devices, and whether you've already tried a safe power restart. I won't ask you to factory-reset the router.";
-  if (/whatsapp|photo|picture|human|agent/.test(text)) return "I can help with the router lights and safe checks first. If those fail, please record the issue through MyConnect Report Issue. After troubleshooting and the support case path have been tried, WhatsApp is available for sending router-light photos. Never share passwords, payment PINs or unnecessary personal documents.";
-  if (/bill|payment|renew|balance|invoice|transaction/.test(text)) return "For renewals or missing payments, CanalBox Finance handles payment verification. Please have your payment transaction ID ready as proof of payment and use Report Issue to submit a payment case to Finance. Do not share a PIN, password or full financial account details. I cannot confirm payment receipt from this chat. Is the payment missing or are you asking about renewal?";
-  if (/hello|hi|hey|help/.test(text)) return "I can help with your registered router, previous MyConnect tickets, slow or lost connection, and package information. What issue are you facing?";
-  return "To help with your CanalBox service, tell me: (1) what isn't working, (2) which router lights you see, and (3) whether all devices are affected. I can check your recorded MyConnect tickets, but I can't see live line diagnostics.";
+  const planIntent = /package|\bplans?\b|price|cost|upgrade|bundle/.test(text) || PLANS.some(p => text === p.name.toLowerCase());
+  if (planIntent && !slow && !offline && !website) return reply(state, plan ? planResponse(plan) : PLANS.map(planResponse).join("\n\n") + "\n\nWhich package would you like to discuss?", { step: "packages" });
+  if (/\b(?:human|agent|whatsapp|support person)\b|(?:create|open|report|submit).{0,20}(?:ticket|case|issue)/.test(text)) return escalateCase(state, "You can send this issue to the support team through MyConnect.");
+  if (/\bpayment\b|\bbilling\b|\binvoice\b|\brenew/.test(text) && !website) return escalateCase({ ...state, issue: /missing|not reflected|paid but/.test(text) ? "payment_not_reflected" : "other", symptom: /missing|not reflected|paid but/.test(text) ? "Customer reports a payment not reflected" : "Customer has a billing or renewal question" }, "Finance needs to verify payment or renewal details. I cannot confirm receipt here. Keep your transaction reference for the report form; do not share a PIN or password.");
+
+  if (state.step === "password_kind" && /wi[ -]?fi|wireless|login|myconnect|sign.?in/.test(text)) {
+    if (isWifi) return escalateCase({ ...state, issue: "password_reset", symptom: "Customer needs a Wi-Fi password reset" }, "For a forgotten Wi-Fi password, request a support-assisted reset. Do not press the physical RESET button.");
+    return reply(state, "Use “Forgot password?” on the MyConnect sign-in page. Follow the email instructions and keep the reset link private.", { step: "start" });
+  }
+  if (state.step === "connected" && (yes || no || /^(i am connected|connected)$/.test(text))) {
+    if (no) return escalateCase({ ...state, issue: "password_reset" }, "You need access to your CanalBox connection to use its Wi-Fi settings portal. Support can help you regain access.");
+    return reply(state, "While connected to CanalBox:\n1. Open https://my.canalbox.africa/login.\n2. Enter your router serial number, then choose ☰ → My Box → WiFi.\n3. Follow the portal's requirements for your network name and password, then save.\n4. Reconnect your devices using the new details.\n\nDo not share the password here. Did the change work?", { step: "device", checks: [...state.checks, "Customer was guided to the CanalBox Wi-Fi settings portal."] });
+  }
+  if ((state.step === "restart" || state.step === "device") && yes) return reply(state, "Good—your connection or Wi-Fi settings are working now. You do not need to create a ticket. If the problem returns, tell me what changed.", { step: "resolved", escalate: false, checks: [...state.checks, "Customer confirmed the problem was resolved."] });
+  if ((state.step === "restart" || state.step === "device") && unresolved) return escalateCase({ ...state, checks: [...state.checks, state.step === "restart" ? "Customer says the power restart did not resolve the issue." : "Customer says the suggested device or Wi-Fi check did not resolve the issue."] }, "The problem is still present after that check. Support should investigate next.");
+  if (state.step === "ticket" && (yes || unresolved)) return reply(state, "The report is ready to review. Choose “Review support report” below to check the details and submit it. If you already have a ticket, choose “View my tickets” instead.");
+
+  if (state.step === "scope" && /all|every|one|only|single/.test(text)) {
+    const one = /\bone\b|only|single/.test(text) && !/all|every/.test(text);
+    state = { ...state, scope: one ? "One device" : "All tested devices" };
+    if (one) return reply(state, "Move that device closer to the router and reconnect its Wi-Fi. Leave the router settings unchanged.\n\nDoes that device work normally now?", { step: "device", checks: [...state.checks, "Suggested moving the affected device closer and reconnecting Wi-Fi."] });
+    return reply(state, "Are the affected devices connected by Wi-Fi, Ethernet cable, or both?", { step: "connection" });
+  }
+  if (state.step === "connection" && /wi[ -]?fi|ethernet|wired|cable|both/.test(text)) {
+    const connection = /both/.test(text) ? "Wi-Fi and Ethernet" : /ethernet|wired|cable/.test(text) ? "Ethernet" : "Wi-Fi";
+    return reply(state, "Run a test at https://www.speedtest.net/ with other downloads paused. For Wi-Fi, stay near the router. Enter download, upload and ping in the form below. If you cannot run a test, say “Can't run a test”.", { step: "speed", connection });
+  }
+  if (state.step === "speed" && /can't|cannot|unable|skip|no internet|offline/.test(text)) return reply(state, "We can continue without a speed test.\n\n" + RESTART, { step: "restart", checks: [...state.checks, "Customer could not provide a speed test."] });
+  if (state.step === "website" && (yes || no)) return reply(state, yes ? "That suggests the problem may depend on the connection, but it does not prove an ISP fault. Try a private browser tab and another device.\n\nWhat website domain and error message do you see? Do not send a login link." : "If it also fails on mobile data, the website itself may be unavailable. Try a private browser tab.\n\nWhat website domain and error message do you see? Do not send a login link.", { step: "website_detail", checks: [...state.checks, yes ? "Customer says the website works on mobile data." : "Customer says the website also fails on mobile data."] });
+  if (state.step === "website_detail" && !newIssue) return escalateCase({ ...state, checks: [...state.checks, "Website/error reported: " + reportSafe(raw)] }, "I have added those details. If the website still fails after the browser and device checks, support can investigate.");
+
+  if (/\brestart\b|\breboot\b/.test(text)) return reply({ ...state, symptom: state.symptom || "Customer requested connection troubleshooting", issue: state.issue === "other" ? "no_internet" : state.issue }, RESTART, { step: "restart", checks: [...state.checks, "Suggested a safe power restart; awaiting customer outcome."] });
+  if (unresolved && state.symptom) {
+    if (state.step === "lights") return reply(state, "Please use “Check router lights” below to select the lights currently on. This will help decide the next step. If you cannot check, you can review a support report now.");
+    return reply(state, RESTART, { step: "restart", checks: [...state.checks, "Customer reports the issue is still present."] });
+  }
+  if (website) return reply(state, "Does the affected website open using mobile data when it fails on CanalBox Wi-Fi?", { issue: "other", symptom: state.symptom || reportSafe(raw), step: "website" });
+  if (slow) return reply(state, "Is the connection slow on all devices, or only one device?", { issue: "slow_speed", symptom: state.symptom || reportSafe(raw), step: "scope" });
+  if (offline || missingWifi || /my router.*(?:not working|problem)|wi[ -]?fi.*not working/.test(text)) return reply(state, "Let's check the router indicators first. Open “Check router lights” below, confirm the router model, and select the lights that are on. Do not touch the fibre connector or press RESET.", { issue: missingWifi ? "router_issue" : "no_internet", symptom: state.symptom || reportSafe(raw), step: "lights" });
+  if (yes || no) return reply(state, "I need a little more context. Is your internet slow, completely offline, or are you asking about Wi-Fi settings?");
+  if (/^(hi|hello|hey|help)[!. ]*$/.test(text)) return reply(state, "Tell me what's wrong: slow internet, no connection, a website that won't open, or Wi-Fi settings. You can also ask about packages or your tickets.");
+  if (state.step === "scope") return reply(state, "Is this happening on all devices or only one? You can choose an answer below.");
+  if (state.step === "connection") return reply(state, "Are you using Wi-Fi, an Ethernet cable, or both?");
+  if (state.step === "speed") return reply(state, "Please enter the measured download, upload and ping in the speed-test form, or say “Can't run a test”.");
+  return reply(state, "I haven't understood that yet. Please describe what isn't working in one sentence—for example, “The internet disconnects every evening”. You can also choose a topic below.");
+}
+
+function recordSupportSpeed(state: SupportSession, values: string[], connection: string): SupportSession {
+  const numbers = values.map(v => v.trim() === "" ? NaN : Number(v));
+  if (numbers.length !== 3 || numbers.some(n => !Number.isFinite(n) || n < 0 || n > 100000)) return reply(state, "Enter valid numbers for download, upload and ping. Zero is allowed; leave no field blank.");
+  const speed = `Customer-provided Speedtest.net result (not independently verified): download ${numbers[0]} Mbps, upload ${numbers[1]} Mbps, ping ${numbers[2]} ms, via ${connection === "Ethernet" ? "Ethernet" : "Wi-Fi"}.`;
+  return reply(state, "I've added your results to the report. One test cannot establish the cause.\n\n" + RESTART, { speed, issue: "slow_speed", symptom: state.symptom || "Slow internet", step: "restart" });
+}
+
+function buildSupportReport(state: SupportSession): string {
+  return [
+    "Issue reported through MyConnect guided support",
+    `Category: ${ISSUE_NAMES[state.issue] || ISSUE_NAMES.other}`,
+    `Initial problem: ${reportSafe(state.symptom || "Customer requested support; add the problem description before submitting.")}`,
+    state.scope && `Affected devices: ${state.scope}`,
+    state.connection && `Connection: ${state.connection}`,
+    state.lights && `Router indicators: ${state.lights}`,
+    state.speed,
+    ...state.checks.slice(-8).map(check => `Check: ${reportSafe(check)}`),
+    "The assistant has not performed a live line test. Customer should review these details before submitting.",
+  ].filter(Boolean).join("\n");
+}
+
+function supportChoices(step: Step): string[] {
+  if (step === "scope") return ["All devices", "Only one device"];
+  if (step === "connection") return ["Wi-Fi", "Ethernet", "Both"];
+  if (["connected", "restart", "device", "website"].includes(step)) return ["Yes", "No"];
+  if (step === "password_kind") return ["Wi-Fi password", "MyConnect login"];
+  if (step === "speed") return ["Can't run a test"];
+  if (step === "packages") return PLANS.map(p => p.name);
+  return ["My internet is slow", "No internet", "Some websites won't open", "Change Wi-Fi password", "Packages & prices"];
 }
 
 export function AIChatWidget() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([{ role: "assistant", text: INTRO }]);
+  const [session, setSession] = useState<SupportSession>(newSupportSession);
   const [draft, setDraft] = useState("");
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [tickets, setTickets] = useState<CustomerTicket[]>([]);
-  const [recordStatus, setRecordStatus] = useState("Checking account records…");
-  const [escalation, setEscalation] = useState(false);
-  const [failedChecks, setFailedChecks] = useState(0);
-  const [ticketPathOffered, setTicketPathOffered] = useState(false);
+  const [historyReady, setHistoryReady] = useState(false);
+  const [recordStatus, setRecordStatus] = useState("Loading your account…");
   const [lightsOpen, setLightsOpen] = useState(false);
-  const [routerOverride, setRouterOverride] = useState<RouterType | null>(null);
-  const [selectedLights, setSelectedLights] = useState<string[]>([]);
-  const [issueType, setIssueType] = useState("no_internet");
-  const [speedFormOpen, setSpeedFormOpen] = useState(false);
-  const [download, setDownload] = useState("");
-  const [upload, setUpload] = useState("");
-  const [ping, setPing] = useState("");
-  const [connectionType, setConnectionType] = useState("Wi-Fi");
-  const [speedError, setSpeedError] = useState("");
-  const [speedRecorded, setSpeedRecorded] = useState(false);
-  const [speedSummary, setSpeedSummary] = useState("");
-  const routerType = routerOverride ?? normalizeRouterType(profile?.routerType);
-  const visibleLights = routerLightsFor(routerType);
-  useEffect(() => onAuthStateChanged(auth, async user => {
-    setProfile(null); setTickets([]); setEscalation(false); setFailedChecks(0); setTicketPathOffered(false);
-    if (!user) { setRecordStatus("Sign in to use customer history"); return; }
-    try {
-      const info = await getUserProfile(user.uid);
-      setProfile(info);
-      if (!info) { setRecordStatus("No matching customer profile"); return; }
-      setRecordStatus("Customer profile loaded; checking ticket history…");
-      // A UID-scoped query avoids exposing other customers' records.
-      // Firestore rules must also restrict tickets to the signed-in owner.
-      const result = await getDocs(query(collection(db, "tickets"), where("customerUid", "==", user.uid)));
-      const items = result.docs.map(d => ({ id: d.id, ...d.data() } as CustomerTicket));
-      items.sort((a,b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
-      setTickets(items.slice(0, 15));
-      setRecordStatus(`Account linked · ${items.length} recorded issue${items.length === 1 ? "" : "s"}`);
-    } catch (error) {
-      console.error("Assistant could not access profile or ticket history", error);
-      setRecordStatus("Ticket history unavailable; general help still works");
-    }
-  }), []);
+  const [ticketsOpen, setTicketsOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [speedValues, setSpeedValues] = useState(["", "", ""]);
+  const [speedConnection, setSpeedConnection] = useState("Wi-Fi");
+  const [handoffError, setHandoffError] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const launcherRef = useRef<HTMLButtonElement>(null);
+  const contextRef = useRef<SupportContext>({ profile, tickets, historyReady });
+  contextRef.current = { profile, tickets, historyReady };
+  const routerType = session.router ?? normalizeRouterType(profile?.routerType);
+  const visibleLights = routerLightsFor(routerType);
+  const buttonClass = "rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm font-semibold hover:bg-[var(--color-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]";
+
+  useEffect(() => {
+    setSpeedValues(["", "", ""]); setSpeedConnection("Wi-Fi");
+    setLightsOpen(false); setPreviewOpen(false);
+  }, [session.symptom]);
+  useEffect(() => {
+    if (session.step === "speed") setSpeedConnection(session.connection === "Ethernet" ? "Ethernet" : "Wi-Fi");
+  }, [session.step, session.connection]);
+
+  function resetConversation() {
+    setSession(newSupportSession());
+    setDraft(""); setSpeedValues(["", "", ""]); setSpeedConnection("Wi-Fi");
+    setLightsOpen(false); setTicketsOpen(false); setPreviewOpen(false); setHandoffError("");
+  }
+
+  useEffect(() => {
+    let generation = 0;
+    const stop = onAuthStateChanged(auth, async user => {
+      const current = ++generation;
+      resetConversation(); setProfile(null); setTickets([]); setHistoryReady(false);
+      contextRef.current = { profile: null, tickets: [], historyReady: false };
+      if (!user) { setRecordStatus("Sign in to read your account records"); return; }
+      setRecordStatus("Loading your account…");
+      try {
+        const info = await getUserProfile(user.uid);
+        if (generation !== current) return;
+        setProfile(info);
+        setRecordStatus(info ? "Account loaded; checking tickets…" : "Customer profile unavailable; general guidance available");
+        const result = await getDocs(query(collection(db, "tickets"), where("customerUid", "==", user.uid)));
+        if (generation !== current) return;
+        const items = result.docs.map(d => ({ ...d.data(), id: d.id } as CustomerTicket));
+        items.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+        setTickets(items); setHistoryReady(true);
+        setRecordStatus(`${info ? "Account linked" : "Profile unavailable"} · ${items.length} recorded ticket${items.length === 1 ? "" : "s"}`);
+      } catch {
+        if (generation === current) setRecordStatus("Some account records are unavailable; general guidance still works");
+      }
+    });
+    return () => { generation++; stop(); };
+  }, []);
+
   useEffect(() => {
     function onOpen(event: Event) {
-      const detail = (event as AIEvent).detail;
-      event.preventDefault();
+      const detail = (event as CustomEvent<{ prompt?: string }>).detail;
       setOpen(true);
-      if (detail?.prompt) setMessages(m => [...m, { role: "user", text: detail.prompt! }, { role: "assistant", text: answer(detail.prompt!, profile, tickets, messages.length) }]);
+      if (detail?.prompt) setSession(current => supportTurn(current, detail.prompt!, contextRef.current));
     }
     window.addEventListener("myconnect:open-ai", onOpen);
     return () => window.removeEventListener("myconnect:open-ai", onOpen);
-  }, [profile, tickets, messages.length]);
-  useEffect(() => { if (open) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [open, messages]);
+  }, []);
+
+  useEffect(() => {
+    if (open) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [open, session.messages.length, lightsOpen, ticketsOpen, previewOpen]);
+
+  useEffect(() => {
+    if (!open) return;
+    inputRef.current?.focus();
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") { event.preventDefault(); setOpen(false); }
+      if (event.key !== "Tab") return;
+      const elements = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select, a[href], [tabindex="0"]') || []).filter(el => el.getClientRects().length > 0);
+      const first = elements[0], last = elements[elements.length - 1];
+      if (!first) return;
+      if (event.shiftKey && (document.activeElement === first || !dialogRef.current?.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || !dialogRef.current?.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("keydown", onKey); launcherRef.current?.focus(); };
+  }, [open]);
+
   function send(value = draft) {
-    const text = value.trim().slice(0, 500);
-    if (!text) return;
-    setMessages(m => [...m, { role: "user", text }, { role: "assistant", text: answer(text, profile, tickets, messages.length) }]);
-    if (/still|didn.t work|did not work|not better|unresolved|still slow|still offline|didn.t help|no change/.test(text.toLowerCase())) {
-      setFailedChecks(n => n + 1);
-      setTicketPathOffered(true);
-    }
-    if (/slow|buffer|lag|speed/.test(text.toLowerCase())) { setIssueType("slow_speed"); setSpeedFormOpen(true); }
-    if (/some websites|certain websites|specific websites|some sites|not accessing.*websites|websites?.*(open|load|work|access)|site not opening|website blocked/.test(text.toLowerCase())) setIssueType("other");
-    if (/missing payment|payment not reflected|paid but/.test(text.toLowerCase())) setIssueType("payment_not_reflected");
-    if (/los|red light|fibre cut/.test(text.toLowerCase())) setIssueType("los_light");
-    if (/forgot|reset.{0,30}password|password.{0,30}reset/.test(text.toLowerCase())) setIssueType("password_reset");
-    else if (/wifi|wi-fi|wlan|network name/.test(text.toLowerCase())) setIssueType("router_issue");
-    setDraft("");
+    if (!value.trim()) return;
+    setSession(current => supportTurn(current, value, contextRef.current));
+    setDraft(""); setPreviewOpen(false); setHandoffError("");
   }
-  function recordSpeed() {
-    const values = [download, upload, ping].map(x => x.trim() === "" ? NaN : Number(x));
-    if (values.some(x => !Number.isFinite(x) || x < 0 || x > 100000)) {
-      setSpeedError("Enter valid non-negative numbers from your Speedtest.net result for download, upload and ping.");
-      return;
-    }
-    const summary = `Customer-provided Speedtest.net result (not independently verified): Download ${values[0]} Mbps, Upload ${values[1]} Mbps, Ping ${values[2]} ms. Test connection: ${connectionType}.`;
-    setSpeedSummary(summary);
-    setSpeedError("");
-    setSpeedRecorded(true);
-    setIssueType("slow_speed");
-    setMessages(m => [...m, {role:"user", text:summary}, {role:"assistant", text:"Thanks. I've prepared these results for a slow-speed support case. They will be included in the report description when you review and submit the ticket. We cannot confirm the cause from one test alone; please also say whether other devices have the same problem."}]);
-  }
-  function openSupportTicket() {
-    // Transfer customer-reported evidence and the current symptom to the ticket form.
-    // Never transfer passwords or secret values.
-    const lastUser = [...messages].reverse().find(m => m.role === "user")?.text ?? "";
-    const safeSymptom = lastUser.slice(0, 350);
-    const lightsNote = selectedLights.length ? `\nRouter indicators selected: ${visibleLights.filter(light => selectedLights.includes(light.id)).map(light => light.label).join(", ")}.` : "";
-    const report = issueType === "slow_speed" && speedRecorded
-      ? speedSummary + "\nCustomer statement: " + safeSymptom + lightsNote
-      : "Issue reported through MyConnect assistant: " + safeSymptom + lightsNote;
-    sessionStorage.setItem("myconnect:assistant-ticket-description", report);
-    setTicketPathOffered(true);
-    setOpen(false);
-    navigate(`/report-issue?mode=ticket&type=${encodeURIComponent(issueType)}&source=assistant`);
-  }
+
   function checkLights() {
-    const pattern = diagnoseRouterLights(routerType, selectedLights, issueType);
-    const label = routerPatternLabel(pattern);
-    const wifiDisabled = pattern === "zte_wifi_disabled" || pattern === "alc_wifi_disabled";
-    const loss = pattern === "zte_los_red" || pattern === "alc_link_issue" || pattern === "zte_fiber_unclear";
-    const noPower = pattern === "zte_no_power" || pattern === "alc_no_power";
-    const guidance = wifiDisabled
-      ? routerType === "zte_white"
-        ? "The Wi-Fi indicator appears OFF. On a WHITE ZTE router, briefly press the Wi-Fi button on the WIDE SIDE. Wait for the light and network name; do not press RESET. Did your network reappear?"
-        : "Both WLAN indicators appear OFF. On a BLACK router, briefly press the WLAN button on the BACK. Wait for the Wi-Fi lights/network name. Do not press RESET. Did Wi-Fi come back?"
-      : loss
-      ? "This may indicate a fibre signal problem, including a possible fibre cut, but it cannot be confirmed here. Do not handle the fibre connector. Please submit a support case with this light pattern."
-      : noPower
-      ? "The POWER indicator is not selected. Check the wall socket and power adapter safely. If it remains off, report a router power issue. Do not press RESET."
-      : "Thank you for selecting the lights. If the issue persists, use CanalBox's approved restart: power OFF for 5 minutes, then ON; never factory-reset. If the lights remain abnormal, open a support case.";
-    setMessages(m => [...m, {role:"user", text:`${routerName(routerType)} indicators: ${visibleLights.filter(l => selectedLights.includes(l.id)).map(l => l.label).join(", ") || "none selected"}`}, {role:"assistant", text:`Light check: ${label}. ${guidance}`}]);
-    setIssueType(ticketTypeFromRouterPattern(issueType, pattern));
-    setLightsOpen(false);
-    if (loss || noPower) setTicketPathOffered(true);
+    const pattern = diagnoseRouterLights(routerType, session.selectedLights, session.issue);
+    const lights = `${routerName(routerType)}: ${visibleLights.filter(light => session.selectedLights.includes(light.id)).map(light => light.label).join(", ") || "no indicators selected"}`;
+    const next = { ...session, lights, issue: ticketTypeFromRouterPattern(session.issue, pattern), symptom: session.symptom || "Customer requested router-light troubleshooting" };
+    const signalProblem = ["zte_los_red", "zte_fiber_unclear", "zte_internet_off_noc", "alc_link_issue", "alc_auth_issue", "alc_internet_down"].includes(pattern);
+    if (signalProblem) setSession(escalateCase(next, "The selected indicators may need a network-team check. I cannot confirm a line fault remotely. Do not handle the fibre connector."));
+    else if (pattern.endsWith("no_power")) setSession(reply(next, "Check the wall socket and power adapter safely. Do not open the router.\n\nAre the power light and connection working now?", { step: "device", checks: [...next.checks, "Suggested checking the router power supply."] }));
+    else if (pattern.endsWith("wifi_disabled")) setSession(reply(next, `The selected lights suggest Wi-Fi may be off. Briefly press the ${routerType === "zte_white" ? "Wi-Fi button on the wide side" : "WLAN button on the back"}. Do not press RESET or hold buttons down.\n\nHas the Wi-Fi network returned?`, { step: "device", checks: [...next.checks, "Suggested enabling Wi-Fi using the Wi-Fi/WLAN button."] }));
+    else setSession(reply(next, "I've recorded the selected indicators. Lights alone cannot confirm the connection is healthy.\n\n" + RESTART, { step: "restart", checks: [...next.checks, "Suggested a power restart after recording router indicators."] }));
+    setLightsOpen(false); setPreviewOpen(false);
   }
+
+  function continueToReport() {
+    const user = auth.currentUser;
+    if (!user) { setHandoffError("Please sign in before preparing a support ticket."); return; }
+    try {
+      // This envelope is checked against the signed-in UID by ReportIssue.
+      sessionStorage.setItem("myconnect:assistant-ticket-description", JSON.stringify({ version: 1, uid: user.uid, createdAt: Date.now(), description: buildSupportReport(session) }));
+    } catch { setHandoffError("Your browser could not prepare the report. Please allow session storage and try again."); return; }
+    setOpen(false);
+    navigate(`/report-issue?mode=ticket&type=${encodeURIComponent(session.issue)}&source=assistant`);
+  }
+
   return <>
-    {!open && <button type="button" aria-label="Open MyConnect support assistant" onClick={() => setOpen(true)} className="fixed z-[10000] bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 flex items-center gap-2 rounded-full bg-[var(--color-primary)] px-3.5 py-3 text-sm font-bold text-white shadow-xl transition hover:bg-[var(--color-primary-dark)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)] lg:bottom-7 lg:right-7 lg:px-5"><Bot size={20}/><span className="lg:hidden">Ask AI</span><span className="hidden lg:inline">Ask MyConnect</span></button>}
-    {open && <div className="fixed inset-0 z-[10060] flex items-end justify-center bg-[var(--color-overlay)]/55 lg:pointer-events-none lg:items-end lg:justify-end lg:bg-transparent lg:p-7" onMouseDown={e => { if (e.target === e.currentTarget) setOpen(false); }}>
-      <section role="dialog" aria-modal="true" aria-label="MyConnect support assistant" className="pointer-events-auto flex h-[min(82dvh,680px)] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-[var(--color-surface)] text-[var(--color-text)] shadow-2xl sm:mx-4 sm:mb-4 sm:rounded-3xl lg:mx-0 lg:mb-0 lg:h-[min(78dvh,690px)] lg:w-[440px] lg:max-w-[calc(100vw-3rem)] lg:border lg:border-[var(--color-border)]">
-        <header className="bg-[var(--color-primary)] text-white flex items-center gap-2 p-4 shrink-0"><Bot size={22}/><div className="flex-1"><div className="font-bold">MyConnect Assistant</div><div className="text-[11px] opacity-90">CanalBox guided support · Preview</div></div><button type="button" aria-label="Start new conversation" onClick={() => setMessages([{ role: "assistant", text: INTRO }])} className="p-2"><RotateCcw size={17}/></button><button type="button" aria-label="Close assistant" onClick={() => setOpen(false)} className="p-2"><X size={19}/></button></header>
-        <div className="border-b border-[var(--color-border)] px-4 py-2 text-[11px] bg-[var(--color-surface)] text-[var(--color-muted)]">{recordStatus}{profile ? ` · ${profile.packageName || "Package unknown"}` : ""}</div>
-        <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto bg-[var(--color-bg)] px-4 py-4 space-y-3" aria-live="polite">{messages.map((m,i) => <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}><p className={`max-w-[88%] whitespace-pre-line rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${m.role === "user" ? "bg-[var(--color-primary)] text-white" : "bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)]"}`}>{m.text}</p></div>)}</div>
-        <div className="bg-[var(--color-surface)] border-t border-[var(--color-border)] px-4 pt-3 shrink-0">
-          {profile?.routerSerial && <button type="button" onClick={() => navigator.clipboard.writeText(profile.routerSerial).catch(() => {})} className="mb-2 w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-primary-dark)]">Copy my router serial number</button>}
-          <button type="button" onClick={() => setLightsOpen(v => !v)} className="w-full flex justify-center items-center gap-2 rounded-xl bg-[var(--color-surface-soft)] py-2.5 mb-2 text-xs font-semibold text-[var(--color-primary-text)]"><Router size={16}/> {lightsOpen ? "Hide router light selector" : "Check router lights (visual guide)"}</button>
-          {lightsOpen && <div className="max-h-48 overflow-y-auto border border-[var(--color-border)] rounded-xl p-2 mb-2 text-xs">
-            <div className="flex gap-2 items-center mb-2"><span className="font-semibold">Router:</span><select aria-label="Router model" value={routerType} onChange={e => {setRouterOverride(e.target.value as RouterType); setSelectedLights([]);}} className="border rounded px-1 py-1"><option value="zte_white">White ZTE</option><option value="alcl_black">Black ALCL</option></select></div>
-            <p className="text-[var(--color-muted)] mb-2">Tap the lights currently ON (including red LOS if lit). This simplified router illustration represents the indicators, not a photograph.</p>
-            <div className={`rounded-xl border-2 px-2 py-4 flex flex-wrap gap-2 justify-center ${routerType === "zte_white" ? "bg-slate-100 border-slate-400" : "bg-slate-900 border-slate-700"}`}>
-              {visibleLights.map(light => { const selected = selectedLights.includes(light.id); return <button type="button" key={light.id} aria-pressed={selected} title={light.description} onClick={() => setSelectedLights(current => selected ? current.filter(i=>i!==light.id) : [...current, light.id])} className={`flex flex-col items-center gap-1 px-1 ${routerType === "zte_white" ? "text-[var(--color-text)]" : "text-white"}`}><span className={`w-3.5 h-3.5 rounded-full border ${selected ? (light.color === "red" ? "bg-red-600 border-red-800" : "bg-green-500 border-green-700") : "bg-slate-500 border-slate-400"}`}/><span className="text-[9px]">{light.label}</span></button>})}
-            </div>
-            <button type="button" onClick={checkLights} className="mt-2 bg-[var(--color-primary)] text-white rounded-lg px-3 py-2 font-semibold w-full">Diagnose selected lights</button>
-          </div>}{speedFormOpen && <div className="mb-3 max-h-[30vh] overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-3 text-xs text-[var(--color-text)]">
-            <div className="font-semibold mb-1">Speedtest.net — customer results</div>
-            <p className="mb-2">Open <a href="https://www.speedtest.net/" target="_blank" rel="noopener noreferrer" className="underline font-bold text-[var(--color-primary-text)]">speedtest.net</a>, run a test on CanalBox, then enter the measured figures below.</p>
-            <div className="grid grid-cols-3 gap-1 mb-2">{[["Download Mbps",download,setDownload],["Upload Mbps",upload,setUpload],["Ping ms",ping,setPing]].map(([label,value,setter],idx) => <label key={idx} className="text-[10px]">{label as string}<input type="number" min="0" step="any" value={value as string} onChange={e => (setter as (x:string)=>void)(e.target.value)} className="w-full rounded border border-[var(--color-border)] px-1 py-1 mt-1"/></label>)}</div>
-            <label className="block mb-2">Tested using <select value={connectionType} onChange={e=>setConnectionType(e.target.value)} className="ml-1 border rounded px-1 py-1"><option>Wi-Fi</option><option>Ethernet</option></select></label>
-            {speedError && <p className="text-[var(--color-danger-text)] mb-2" role="alert">{speedError}</p>}
-            <button type="button" onClick={recordSpeed} className="bg-[var(--color-primary)] text-white rounded-lg px-3 py-2 w-full font-semibold">Use these results in my report</button>
-          </div>}<div className="flex gap-2 overflow-x-auto pb-2">{["Packages & prices", "My internet is slow", "Some websites won't open", "Change Wi-Fi password", "Restart router"].map(q => <button key={q} type="button" onClick={() => send(q)} className="shrink-0 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-soft)] text-[var(--color-primary-text)] text-xs font-semibold px-3 py-2 hover:bg-[var(--color-hover)]">{q}</button>)}</div><button type="button" className="mb-2 w-full rounded-lg border border-[var(--color-primary)] text-[var(--color-primary-text)] flex justify-center items-center gap-2 py-2 text-xs font-semibold" onClick={openSupportTicket}><Headphones size={15}/> Create / View support ticket</button>{ticketPathOffered && <div className="mb-2 text-xs text-[var(--color-muted)]">The checks have not resolved the issue. Please create or follow up on a support ticket first.</div>}{failedChecks >= 2 && ticketPathOffered && <div className="mb-2 text-xs text-[var(--color-muted)]">Still unresolved after guided checks and the ticket route? {whatsapp ? <a className="font-bold text-[var(--color-primary-text)] underline" target="_blank" rel="noopener noreferrer" href={`https://wa.me/${whatsapp}?text=${encodeURIComponent("Hello CanalBox support, I need help with an unresolved MyConnect issue. I can share router photos if needed.")}`}>Escalate to WhatsApp for photos</a> : "A WhatsApp support number has not been configured yet. Please use Report Issue."}</div>}<form onSubmit={e => { e.preventDefault(); send(); }} className="flex gap-2 pb-3"><input aria-label="Message" value={draft} maxLength={500} onChange={e => setDraft(e.target.value)} placeholder="Ask a question..." className="min-w-0 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-[var(--color-text)] px-3 py-2.5 text-sm"/><button type="submit" disabled={!draft.trim()} aria-label="Send message" className="bg-[var(--color-primary)] disabled:opacity-50 text-white px-3 rounded-xl hover:bg-[var(--color-primary-dark)]"><Send size={18}/></button></form></div>
+    {!open && <button ref={launcherRef} type="button" aria-label="Open MyConnect support assistant" onClick={() => setOpen(true)} className="fixed z-[10000] bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 flex items-center gap-2 rounded-full bg-[var(--color-primary)] px-4 py-3 text-sm font-bold text-white shadow-xl lg:bottom-7 lg:right-7"><Bot size={20}/>Ask MyConnect</button>}
+    {open && <div className="fixed inset-0 z-[10060] flex items-end justify-center bg-black/40 sm:items-center lg:items-end lg:justify-end lg:p-6" onMouseDown={event => { if (event.target === event.currentTarget) setOpen(false); }}>
+      <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="myconnect-assistant-title" className="flex h-[min(90dvh,740px)] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-[var(--color-surface)] text-[var(--color-text)] shadow-2xl sm:rounded-3xl">
+        <header className="flex shrink-0 items-center gap-2 bg-[var(--color-primary)] p-4 text-white">
+          <Bot size={22}/><div className="flex-1"><h2 id="myconnect-assistant-title" className="font-bold">MyConnect Assistant</h2><p className="text-xs">Guided CanalBox support</p></div>
+          <button type="button" aria-label="Start new conversation" onClick={resetConversation} className="rounded p-2"><RotateCcw size={18}/></button>
+          <button type="button" aria-label="Close assistant" onClick={() => setOpen(false)} className="rounded p-2"><X size={20}/></button>
+        </header>
+        <p className="shrink-0 border-b border-[var(--color-border)] px-4 py-2 text-xs text-[var(--color-muted)]">{recordStatus}</p>
+        <div ref={scrollRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[var(--color-bg)] p-4">
+          <div role="log" aria-label="Support conversation" aria-live="polite" aria-relevant="additions" className="space-y-3">
+            {session.messages.map((message, index) => <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}><p className={`max-w-[92%] whitespace-pre-line break-words rounded-2xl px-3 py-3 text-sm leading-relaxed ${message.role === "user" ? "bg-[var(--color-primary)] text-white" : "border border-[var(--color-border)] bg-[var(--color-surface)]"}`}>{message.text}</p></div>)}
+          </div>
+          {session.step === "connected" || (session.issue === "router_issue" && session.step === "device") ? <div className="flex flex-wrap gap-2">
+            <a href="https://my.canalbox.africa/login" target="_blank" rel="noopener noreferrer" className={buttonClass}>Open CanalBox Wi-Fi settings ↗</a>
+            {profile?.routerSerial && <button type="button" className={buttonClass} onClick={() => navigator.clipboard.writeText(profile.routerSerial).then(() => setSession(current => reply(current, "Router serial number copied."))).catch(() => setSession(current => reply(current, "Could not copy the serial number. You can find it in your account details.")))}>Copy router serial number</button>}
+          </div> : null}
+          {session.step === "speed" && <div className="space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+            <a href="https://www.speedtest.net/" target="_blank" rel="noopener noreferrer" className="text-sm font-bold underline">Open Speedtest.net ↗</a>
+            <p className="text-xs text-[var(--color-muted)]">Enter your measured results. MyConnect cannot verify this test.</p>
+            <div className="grid grid-cols-3 gap-2">{["Download Mbps", "Upload Mbps", "Ping ms"].map((label, index) => <label key={label} className="text-xs">{label}<input type="number" min="0" max="100000" step="any" value={speedValues[index]} onChange={event => setSpeedValues(current => current.map((value, i) => i === index ? event.target.value : value))} className="mt-1 w-full rounded border border-[var(--color-border)] bg-[var(--color-input)] p-2"/></label>)}</div>
+            <label className="block text-sm">Test connection <select value={speedConnection} onChange={event => setSpeedConnection(event.target.value)} className="ml-2 rounded border bg-[var(--color-input)] p-1"><option>Wi-Fi</option><option>Ethernet</option></select></label>
+            <button type="button" className={buttonClass} onClick={() => setSession(current => recordSupportSpeed(current, speedValues, speedConnection))}>Use these test results</button>
+          </div>}
+          <div className="flex flex-wrap gap-2">{supportChoices(session.step).map(choice => <button type="button" key={choice} className={buttonClass} onClick={() => send(choice)}>{choice}</button>)}</div>
+          <button type="button" className={buttonClass + " flex w-full items-center justify-center gap-2"} aria-expanded={lightsOpen} onClick={() => setLightsOpen(value => !value)}><Router size={16}/>{lightsOpen ? "Hide router lights" : "Check router lights"}</button>
+          {lightsOpen && <div className="space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+            <label className="text-sm">Router model <select value={routerType === "alc_black" ? "alcl_black" : routerType} onChange={event => setSession(current => ({ ...current, router: event.target.value as RouterType, selectedLights: [], lights: "" }))} className="rounded border bg-[var(--color-input)] p-1"><option value="zte_white">White ZTE</option><option value="alcl_black">Black ALCL</option></select></label>
+            <p className="text-xs">Confirm the model, then select every light that is currently on. Include LOS if it is red. Leave all unselected only if all lights are off.</p>
+            <div className="flex flex-wrap gap-2">{visibleLights.map(light => <button key={light.id} type="button" aria-pressed={session.selectedLights.includes(light.id)} onClick={() => setSession(current => ({ ...current, selectedLights: current.selectedLights.includes(light.id) ? current.selectedLights.filter(id => id !== light.id) : [...current.selectedLights, light.id] }))} className={buttonClass + (session.selectedLights.includes(light.id) ? " bg-[var(--color-primary)] text-white" : "")}>{light.label}{session.selectedLights.includes(light.id) ? " ✓" : ""}</button>)}</div>
+            <button type="button" className={buttonClass} onClick={checkLights}>Use selected lights</button>
+          </div>}
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className={buttonClass} onClick={() => { setPreviewOpen(value => !value); setHandoffError(""); }}>Review support report</button>
+            <button type="button" className={buttonClass} onClick={() => setTicketsOpen(value => !value)}>View my tickets</button>
+          </div>
+          {ticketsOpen && <div className="space-y-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3"><h3 className="font-semibold">Your recorded tickets</h3>{!historyReady ? <p className="text-sm">Ticket records are unavailable or still loading.</p> : !tickets.length ? <p className="text-sm">No tickets found for your account.</p> : tickets.slice(0, 15).map(ticket => <button key={ticket.id} type="button" className={buttonClass + " block w-full text-left"} onClick={() => { setOpen(false); navigate(`/ticket/${encodeURIComponent(ticket.id)}`); }}>{ticket.title || "Support request"} · {String(ticket.status || "unknown").replace(/_/g, " ")}</button>)}{tickets.length > 15 && <p className="text-xs">Showing your 15 most recent tickets.</p>}</div>}
+          {previewOpen && <div className="space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3"><h3 className="font-semibold">Report preview</h3><p className="whitespace-pre-line break-words text-sm">{buildSupportReport(session)}</p><p className="text-xs">No ticket has been submitted. On the next page you can edit this description and add any missing details. Remove passwords or codes before submitting.</p>{handoffError && <p role="alert" className="text-sm text-[var(--color-danger-text)]">{handoffError}</p>}<button type="button" className={buttonClass} onClick={continueToReport}>Continue to report form</button></div>}
+        </div>
+        <form onSubmit={event => { event.preventDefault(); send(); }} className="shrink-0 border-t border-[var(--color-border)] bg-[var(--color-surface)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <p className="mb-2 text-xs text-[var(--color-muted)]">Keep passwords, PINs and verification codes private.</p>
+          <div className="flex gap-2"><input ref={inputRef} aria-label="Message" autoComplete="off" value={draft} maxLength={500} onChange={event => setDraft(event.target.value)} placeholder="Describe the problem…" className="min-w-0 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 py-2 text-sm"/><button type="submit" aria-label="Send message" disabled={!draft.trim()} className="rounded-xl bg-[var(--color-primary)] px-3 text-white disabled:opacity-50"><Send size={18}/></button></div>
+        </form>
       </section>
     </div>}
   </>;
 }
+
