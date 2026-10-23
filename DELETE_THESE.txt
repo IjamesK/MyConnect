@@ -1,0 +1,5 @@
+Delete these two files in GitHub (open the file, trash icon, commit):
+  src/lib/users.ts
+  src/lib/seed.ts
+
+Then upload the rest of this zip (drag the extracted folders into GitHub "Add file > Upload files").

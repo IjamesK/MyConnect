@@ -6,6 +6,7 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { auth, db } from "../../../lib/firebase";
 import { getUserProfile, type CustomerProfile } from "../../../lib/auth";
 import type { CustomerTicket } from "../../../lib/tickets";
+import { RE, classifyIssueType, redactSecrets } from "../../../lib/assistantRules";
 import { diagnoseRouterLights, normalizeRouterType, routerLightsFor, routerName, routerPatternLabel, ticketTypeFromRouterPattern, type RouterType } from "../../../lib/routerTypes";
 
 type Message = { role: "assistant" | "user"; text: string };
@@ -18,7 +19,7 @@ const PLANS = [
   { name: "PREMIUM", speed: 300, price: 200000, devices: "12–20", use: "many connected devices and heavy household or workspace use" },
 ];
 // Guided CanalBox support for demonstration: no model API, no unverified network diagnostics.
-const whatsapp = "256758073035"; // Company-confirmed support WhatsApp; show only after guided checks and ticket escalation.
+const whatsapp: string = (import.meta.env.VITE_SUPPORT_WHATSAPP as string | undefined) || "256758073035"; // Company-confirmed support WhatsApp; show only after guided checks and ticket escalation.
 function answer(input: string, profile: CustomerProfile | null, tickets: CustomerTicket[], turns: number): string {
   const text = input.toLowerCase();
   const recent = tickets[0];
@@ -41,19 +42,19 @@ function answer(input: string, profile: CustomerProfile | null, tickets: Custome
   }
   const plan = PLANS.find(p => new RegExp(`\\b${p.name.toLowerCase()}\\b`).test(text));
   if (plan) return `${plan.name}: ${plan.speed} Mbps, UGX ${plan.price.toLocaleString("en-UG")}/month. Suggested use: ${plan.use}. Roughly ${plan.devices} devices with mixed usage (not an official guaranteed limit). Staff must confirm eligibility and changes.`;
-  if (/package|plan|price|cost|subscribe|upgrade|bundle/.test(text)) return PLANS.map(p => `${p.name} — ${p.speed} Mbps — UGX ${p.price.toLocaleString("en-UG")}/month`).join("\n") + "\nWhich plan would you like to know more about?";
+  if (/\b(package|plan|price|cost|subscribe|upgrade|bundle)s?\b/.test(text)) return PLANS.map(p => `${p.name} — ${p.speed} Mbps — UGX ${p.price.toLocaleString("en-UG")}/month`).join("\n") + "\nWhich plan would you like to know more about?";
   if (/some websites|certain websites|specific websites|some sites|websites? (won.t|will not|not|isn.t|is not|cannot|can.t) (open|load|work|accessible)|can.t (open|access|reach) (some|certain|a) (websites?|sites?)|not accessing (some|certain) websites?|site not opening|website blocked/.test(text)) return "Let's isolate the website problem without changing your router settings. 1) Is it just one website or several? 2) Does it work on another device or using mobile data (not CanalBox Wi-Fi)? 3) What error do you see (timeout, DNS error, access denied, or blank page)? 4) Do other websites open normally on CanalBox? Try a private/incognito tab and another browser. Please don't change DNS settings or factory-reset the router yet. Tell me what you find and I can guide the next check or help report the issue.";
   if (/dns|site can.t be reached|name not resolved|err_name_not_resolved|connection timed out|connection reset|access denied|403|website still/.test(text)) return "Thanks. Does this website open on mobile data but fail on your CanalBox connection, or does it fail on both? Tell me the website domain (never share a login link or password) and exact error. If other sites work, this alone doesn't prove a CanalBox outage. Try another browser and device, then report the website-access issue with those details if it persists.";
   if (/red los|los red|los light|red light|fibre cut|fiber cut/.test(text)) return "A RED LOS light on a white ZTE may mean loss of fibre signal, possibly from a fibre fault or cut; I cannot confirm a cut remotely. Do not disconnect, bend, or look into the fibre cable, and do not press RESET. Please open the light selector so I can record what is lit, then report the issue if LOS remains red.";
-  if (/restart|reboot|not yet/.test(text)) return "CanalBox restart procedure: turn the router OFF with its power switch or unplug its POWER ADAPTER. Wait 5 full minutes, reconnect power, and allow the indicator lights to settle. Do NOT press the small RESET button or touch the fibre connector. Did the service return?";
-  if (/slow|buffer|lag|speed/.test(text)) return `Let's investigate slow speeds on your ${profile?.routerModel || "router"}. Is it slow on ALL devices or only one? Is it over Wi-Fi, wired connection, or both? Use https://www.speedtest.net/ while connected to CanalBox Wi-Fi near your router, with other downloads paused. Share the download Mbps, upload Mbps, ping ms, and whether you tested over Wi-Fi or Ethernet. Use the router-light selector if any lights seem abnormal. ${recent?.category === "slow_speed" ? "There is an earlier slow-speed issue in your accessible ticket history." : ""} If it persists, we can open a slow-speed support case.`;
+  if (RE.restart.test(text)) return "CanalBox restart procedure: turn the router OFF with its power switch or unplug its POWER ADAPTER. Wait 5 full minutes, reconnect power, and allow the indicator lights to settle. Do NOT press the small RESET button or touch the fibre connector. Did the service return?";
+  if (RE.slow.test(text)) return `Let's investigate slow speeds on your ${profile?.routerModel || "router"}. Is it slow on ALL devices or only one? Is it over Wi-Fi, wired connection, or both? Use https://www.speedtest.net/ while connected to CanalBox Wi-Fi near your router, with other downloads paused. Share the download Mbps, upload Mbps, ping ms, and whether you tested over Wi-Fi or Ethernet. Use the router-light selector if any lights seem abnormal. ${recent?.category === "slow_speed" ? "There is an earlier slow-speed issue in your accessible ticket history." : ""} If it persists, we can open a slow-speed support case.`;
   if (/offline|no internet|disconnected|not working|can't connect|cannot connect/.test(text)) return `Let's check your ${profile?.routerModel || "router"} first. Is the power light on? For a white ZTE router, is PON on and LOS red? For a black ALCL device, are LINK and AUTH lit? Please tell me the lights you see. Don't touch the fiber connector or press RESET.`;
   if (/wi-?fi (name|network|ssid) (is )?(missing|gone|not showing)|can.t see (the )?wi-?fi|wifi light off|wlan light off/.test(text)) return "If your Wi-Fi name has disappeared and the Wi-Fi/WLAN light is off: on a WHITE ZTE router, briefly press the Wi-Fi button on the WIDE SIDE; on a BLACK router, briefly press the WLAN button on the BACK. Wait for the Wi-Fi light and network name to appear. Do not press RESET or hold buttons down. Is the network name visible now?";
   if (/one device|only one|wifi only|wi-fi only/.test(text)) return "That may be a device or Wi-Fi issue rather than the full CanalBox line. Try moving closer to the router and reconnecting Wi-Fi on that device. Does another device work normally in the same place?";
   if (/all devices|every device|still slow|still offline|didn't work|did not work|same problem|not better|unresolved|still not/.test(text)) return turns >= 3 ? "The earlier checks haven't resolved this. Please open a MyConnect support ticket so the team can follow your steps and recorded issues. If the issue needs photos and standard support cannot resolve it, use the final-escalation WhatsApp option if the company has configured it." : "Thanks for checking. Before escalating, tell me which router lights are on, whether this affects all devices, and whether you've already tried a safe power restart. I won't ask you to factory-reset the router.";
   if (/whatsapp|photo|picture|human|agent/.test(text)) return "I can help with the router lights and safe checks first. If those fail, please record the issue through MyConnect Report Issue. After troubleshooting and the support case path have been tried, WhatsApp is available for sending router-light photos. Never share passwords, payment PINs or unnecessary personal documents.";
   if (/bill|payment|renew|balance|invoice|transaction/.test(text)) return "For renewals or missing payments, CanalBox Finance handles payment verification. Please have your payment transaction ID ready as proof of payment and use Report Issue to submit a payment case to Finance. Do not share a PIN, password or full financial account details. I cannot confirm payment receipt from this chat. Is the payment missing or are you asking about renewal?";
-  if (/hello|hi|hey|help/.test(text)) return "I can help with your registered router, previous MyConnect tickets, slow or lost connection, and package information. What issue are you facing?";
+  if (RE.greeting.test(text)) return "I can help with your registered router, previous MyConnect tickets, slow or lost connection, and package information. What issue are you facing?";
   return "To help with your CanalBox service, tell me: (1) what isn't working, (2) which router lights you see, and (3) whether all devices are affected. I can check your recorded MyConnect tickets, but I can't see live line diagnostics.";
 }
 
@@ -80,6 +81,7 @@ export function AIChatWidget() {
   const [speedError, setSpeedError] = useState("");
   const [speedRecorded, setSpeedRecorded] = useState(false);
   const [speedSummary, setSpeedSummary] = useState("");
+  const userTurns = messages.filter(m => m.role === "user").length;
   const routerType = routerOverride ?? normalizeRouterType(profile?.routerType);
   const visibleLights = routerLightsFor(routerType);
   useEffect(() => onAuthStateChanged(auth, async user => {
@@ -108,26 +110,22 @@ export function AIChatWidget() {
       const detail = (event as AIEvent).detail;
       event.preventDefault();
       setOpen(true);
-      if (detail?.prompt) setMessages(m => [...m, { role: "user", text: detail.prompt! }, { role: "assistant", text: answer(detail.prompt!, profile, tickets, messages.length) }]);
+      if (detail?.prompt) setMessages(m => [...m, { role: "user", text: detail.prompt! }, { role: "assistant", text: answer(detail.prompt!, profile, tickets, userTurns) }]);
     }
     window.addEventListener("myconnect:open-ai", onOpen);
     return () => window.removeEventListener("myconnect:open-ai", onOpen);
-  }, [profile, tickets, messages.length]);
+  }, [profile, tickets, userTurns]);
   useEffect(() => { if (open) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [open, messages]);
   function send(value = draft) {
     const text = value.trim().slice(0, 500);
     if (!text) return;
-    setMessages(m => [...m, { role: "user", text }, { role: "assistant", text: answer(text, profile, tickets, messages.length) }]);
+    setMessages(m => [...m, { role: "user", text }, { role: "assistant", text: answer(text, profile, tickets, userTurns) }]);
     if (/still|didn.t work|did not work|not better|unresolved|still slow|still offline|didn.t help|no change/.test(text.toLowerCase())) {
       setFailedChecks(n => n + 1);
       setTicketPathOffered(true);
     }
-    if (/slow|buffer|lag|speed/.test(text.toLowerCase())) { setIssueType("slow_speed"); setSpeedFormOpen(true); }
-    if (/some websites|certain websites|specific websites|some sites|not accessing.*websites|websites?.*(open|load|work|access)|site not opening|website blocked/.test(text.toLowerCase())) setIssueType("other");
-    if (/missing payment|payment not reflected|paid but/.test(text.toLowerCase())) setIssueType("payment_not_reflected");
-    if (/los|red light|fibre cut/.test(text.toLowerCase())) setIssueType("los_light");
-    if (/forgot|reset.{0,30}password|password.{0,30}reset/.test(text.toLowerCase())) setIssueType("password_reset");
-    else if (/wifi|wi-fi|wlan|network name/.test(text.toLowerCase())) setIssueType("router_issue");
+    setIssueType(t => classifyIssueType(text, t));
+    if (RE.slow.test(text.toLowerCase())) setSpeedFormOpen(true);
     setDraft("");
   }
   function recordSpeed() {
@@ -146,7 +144,7 @@ export function AIChatWidget() {
   function openSupportTicket() {
     // Transfer customer-reported evidence and the current symptom to the ticket form.
     // Never transfer passwords or secret values.
-    const lastUser = [...messages].reverse().find(m => m.role === "user")?.text ?? "";
+    const lastUser = redactSecrets([...messages].reverse().find(m => m.role === "user")?.text ?? "");
     const safeSymptom = lastUser.slice(0, 350);
     const lightsNote = selectedLights.length ? `\nRouter indicators selected: ${visibleLights.filter(light => selectedLights.includes(light.id)).map(light => light.label).join(", ")}.` : "";
     const report = issueType === "slow_speed" && speedRecorded

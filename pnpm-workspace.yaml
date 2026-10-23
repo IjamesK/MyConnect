@@ -8,3 +8,18 @@ supportedArchitectures:
     - arm64
   libc:
     - glibc
+overrides:
+  '@grpc/grpc-js': '>=1.13.6'
+  baseline-browser-mapping: '2.11.29'
+  electron-to-chromium: '1.5.458'
+onlyBuiltDependencies:
+  - esbuild
+  - protobufjs
+minimumReleaseAgeExclude:
+  - '@pnpm/exe@10.34.8'
+  - '@pnpm/linux-arm64@10.34.8'
+  - '@pnpm/linux-x64@10.34.8'
+  - '@pnpm/macos-arm64@10.34.8'
+  - '@pnpm/macos-x64@10.34.8'
+  - '@pnpm/win-arm64@10.34.8'
+  - '@pnpm/win-x64@10.34.8'
