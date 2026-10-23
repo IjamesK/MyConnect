@@ -337,14 +337,6 @@ export function ReportIssue() {
     const typeParam = searchParams.get("type");
     const source = searchParams.get("source");
 
-    if (source === "assistant") {
-      const fromAssistant = sessionStorage.getItem("myconnect:assistant-ticket-description");
-      if (fromAssistant) {
-        setDescription(current => current || fromAssistant);
-        sessionStorage.removeItem("myconnect:assistant-ticket-description");
-      }
-    }
-
     if (modeParam === "ticket") {
       setMode("ticket");
     }
@@ -368,6 +360,26 @@ export function ReportIssue() {
         const prefilledText = getPrefilledDescription(typeParam);
         if (prefilledText) setDescription((current) => current || prefilledText);
       }
+    }
+    if (source === "assistant") {
+      return onAuthStateChanged(auth, user => {
+        if (!user) return;
+        try {
+          const key = "myconnect:assistant-ticket-description";
+          const raw = sessionStorage.getItem(key);
+          sessionStorage.removeItem(key);
+          if (!raw) return;
+          const envelope = JSON.parse(raw);
+          // Never import another customer's report or an old browser-session draft.
+          if (envelope?.version !== 1 || envelope.uid !== user.uid ||
+              typeof envelope.createdAt !== "number" || !Number.isFinite(envelope.createdAt) ||
+              Date.now() - envelope.createdAt < 0 || Date.now() - envelope.createdAt > 30 * 60 * 1000 ||
+              typeof envelope.description !== "string" || envelope.description.length > 10000) return;
+          setDescription(current => current || envelope.description);
+        } catch {
+          setError("The assistant report could not be loaded. Please describe the issue below.");
+        }
+      });
     }
   }, [searchParams]);
 
