@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { Bot, X, Send, Headphones, RotateCcw, Router } from "lucide-react";
+import { Bot, X, Send, RotateCcw, Router } from "lucide-react";
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { auth, db } from "../../../lib/firebase";
 import { getUserProfile, type CustomerProfile } from "../../../lib/auth";
 import type { CustomerTicket } from "../../../lib/tickets";
 import { RE, classifyIssueType, maskPersonalData, redactSecrets } from "../../../lib/assistantRules";
+import { advanceSupport, initialSupportFlow } from "../../../lib/assistantFlow";
 import { askAssistant } from "../../../lib/assistantClient";
 import { INTERNET_PACKAGES } from "../../../lib/packages";
 import { diagnoseRouterLights, normalizeRouterType, routerLightsFor, routerName, routerPatternLabel, ticketTypeFromRouterPattern, type RouterType } from "../../../lib/routerTypes";
@@ -77,6 +78,16 @@ function answer(input: string, profile: CustomerProfile | null, tickets: Custome
 
 export function AIChatWidget() {
   const navigate = useNavigate();
+  const [flow, setFlow] = useState(initialSupportFlow);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const generation = useRef(0);
+  function resetConversation() {
+    generation.current += 1;
+    setThinking(false); setAiActive(false); setMessages([{ role: "assistant", text: INTRO }]);
+    setFlow(initialSupportFlow()); setLightsOpen(false); setToolsOpen(false); setSpeedFormOpen(false);
+    setSelectedLights([]); setAllLightsOff(false); setRouterOverride(null); setFailedChecks(0); setTicketPathOffered(false);
+    setSpeedRecorded(false); setSpeedSummary(""); setDownload(""); setUpload(""); setPing(""); setSpeedError(""); setDraft(""); setIssueType("no_internet");
+  }
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([{ role: "assistant", text: INTRO }]);
   const [draft, setDraft] = useState("");
@@ -88,6 +99,7 @@ export function AIChatWidget() {
   const [ticketPathOffered, setTicketPathOffered] = useState(false);
   const [lightsOpen, setLightsOpen] = useState(false);
   const [routerOverride, setRouterOverride] = useState<RouterType | null>(null);
+  const [allLightsOff, setAllLightsOff] = useState(false);
   const [selectedLights, setSelectedLights] = useState<string[]>([]);
   const [issueType, setIssueType] = useState("no_internet");
   const [thinking, setThinking] = useState(false);
@@ -104,6 +116,7 @@ export function AIChatWidget() {
   const routerType = routerOverride ?? normalizeRouterType(profile?.routerType);
   const visibleLights = routerLightsFor(routerType);
   useEffect(() => onAuthStateChanged(auth, async user => {
+    resetConversation();
     setProfile(null); setTickets([]); setEscalation(false); setFailedChecks(0); setTicketPathOffered(false);
     if (!user) { setRecordStatus("Sign in to use customer history"); return; }
     try {
@@ -129,11 +142,11 @@ export function AIChatWidget() {
       const detail = (event as AIEvent).detail;
       event.preventDefault();
       setOpen(true);
-      if (detail?.prompt) setMessages(m => [...m, { role: "user", text: detail.prompt! }, { role: "assistant", text: answer(detail.prompt!, profile, tickets, userTurns) }]);
+      if (detail?.prompt) void send(detail.prompt);
     }
     window.addEventListener("myconnect:open-ai", onOpen);
     return () => window.removeEventListener("myconnect:open-ai", onOpen);
-  }, [profile, tickets, userTurns]);
+  }, [profile, tickets, messages, thinking, flow]);
   useEffect(() => { if (open) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [open, messages]);
   function aiContext() {
     return {
@@ -164,12 +177,22 @@ export function AIChatWidget() {
     const local = answerLocal(text, profile, tickets, lastAssistant);
     if (local) { setMessages(m => [...m, { role: "assistant", text: local }]); return; }
 
+    const guided = advanceSupport(text, flow, lastAssistant);
+    if (guided) {
+      setFlow(guided.flow);
+      setMessages(m => [...m, { role: "assistant", text: guided.text, chips: guided.chips }]);
+      setLightsOpen(false); setToolsOpen(false);
+      if (guided.ticket) setTicketPathOffered(true);
+      return;
+    }
     // 2) Troubleshooting goes to the AI (personal data masked); 3) any failure falls back to the rules.
+    const requestGeneration = generation.current;
     setThinking(true);
     const ai = await askAssistant(
       history.slice(-8).map(m => ({ role: m.role, text: maskPersonalData(redactSecrets(m.text)) })),
       aiContext(),
     );
+    if (requestGeneration !== generation.current) return;
     setThinking(false);
     if (!ai) {
       setMessages(m => [...m, { role: "assistant", text: answerGuided(text, profile, tickets, userTurns) }]);
@@ -178,7 +201,7 @@ export function AIChatWidget() {
     setAiActive(true);
     setMessages(m => [...m, { role: "assistant", text: ai.reply, chips: ai.quickReplies }]);
     if (ai.issueType) setIssueType(ai.issueType);
-    if (ai.askLights) setLightsOpen(true);
+    // Keep optional tools collapsed so they cannot obscure the reply.
     if (ai.suggestTicket) setTicketPathOffered(true);
   }
   function recordSpeed() {
@@ -191,6 +214,7 @@ export function AIChatWidget() {
     setSpeedSummary(summary);
     setSpeedError("");
     setSpeedRecorded(true);
+    setSpeedFormOpen(false); setToolsOpen(false);
     setIssueType("slow_speed");
     setMessages(m => [...m, {role:"user", text:summary}, {role:"assistant", text:"Thanks. I've prepared these results for a slow-speed support case. They will be included in the report description when you review and submit the ticket. We cannot confirm the cause from one test alone; please also say whether other devices have the same problem."}]);
   }
@@ -200,15 +224,18 @@ export function AIChatWidget() {
     const lastUser = redactSecrets([...messages].reverse().find(m => m.role === "user")?.text ?? "");
     const safeSymptom = lastUser.slice(0, 350);
     const lightsNote = selectedLights.length ? `\nRouter indicators selected: ${visibleLights.filter(light => selectedLights.includes(light.id)).map(light => light.label).join(", ")}.` : "";
+    const checkSummary = flow.checks.length ? "\nChecks reported by customer:\n- " + flow.checks.join("\n- ") : "";
+    const symptom = messages.filter(m => m.role === "user").slice(-8).map(m => redactSecrets(m.text)).join("; ").slice(0, 1600);
     const report = issueType === "slow_speed" && speedRecorded
       ? speedSummary + "\nCustomer statement: " + safeSymptom + lightsNote
       : "Issue reported through MyConnect assistant: " + safeSymptom + lightsNote;
-    sessionStorage.setItem("myconnect:assistant-ticket-description", report);
+    sessionStorage.setItem("myconnect:assistant-ticket-description", report + "\nConversation symptoms: " + symptom + checkSummary);
     setTicketPathOffered(true);
     setOpen(false);
     navigate(`/report-issue?mode=ticket&type=${encodeURIComponent(issueType)}&source=assistant`);
   }
   function checkLights() {
+    if (!selectedLights.length && !allLightsOff) return;
     const pattern = diagnoseRouterLights(routerType, selectedLights, issueType);
     const label = routerPatternLabel(pattern);
     const wifiDisabled = pattern === "zte_wifi_disabled" || pattern === "alc_wifi_disabled";
@@ -225,34 +252,36 @@ export function AIChatWidget() {
       : "Thank you for selecting the lights. If the issue persists, use CanalBox's approved restart: power OFF for 5 minutes, then ON; never factory-reset. If the lights remain abnormal, open a support case.";
     setMessages(m => [...m, {role:"user", text:`${routerName(routerType)} indicators: ${visibleLights.filter(l => selectedLights.includes(l.id)).map(l => l.label).join(", ") || "none selected"}`}, {role:"assistant", text:`Light check: ${label}. ${guidance}`}]);
     setIssueType(ticketTypeFromRouterPattern(issueType, pattern));
-    setLightsOpen(false);
+    setLightsOpen(false); setToolsOpen(false);
+    setFlow(current => ({ step: loss || noPower ? "ticket" : "restart", checks: [...current.checks, `Router light check: ${label}`] }));
     if (loss || noPower) setTicketPathOffered(true);
   }
   return <>
     {!open && <button type="button" aria-label="Open MyConnect support assistant" onClick={() => setOpen(true)} className="fixed z-[10000] bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 flex items-center gap-2 rounded-full bg-[var(--color-primary)] px-3.5 py-3 text-sm font-bold text-white shadow-xl transition hover:bg-[var(--color-primary-dark)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)] lg:bottom-7 lg:right-7 lg:px-5"><Bot size={20}/><span className="lg:hidden">Ask AI</span><span className="hidden lg:inline">Ask MyConnect</span></button>}
     {open && <div className="fixed inset-0 z-[10060] flex items-end justify-center bg-[var(--color-overlay)]/55 lg:pointer-events-none lg:items-end lg:justify-end lg:bg-transparent lg:p-7" onMouseDown={e => { if (e.target === e.currentTarget) setOpen(false); }}>
-      <section role="dialog" aria-modal="true" aria-label="MyConnect support assistant" className="pointer-events-auto flex h-[min(82dvh,680px)] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-[var(--color-surface)] text-[var(--color-text)] shadow-2xl sm:mx-4 sm:mb-4 sm:rounded-3xl lg:mx-0 lg:mb-0 lg:h-[min(78dvh,690px)] lg:w-[440px] lg:max-w-[calc(100vw-3rem)] lg:border lg:border-[var(--color-border)]">
-        <header className="bg-[var(--color-primary)] text-white flex items-center gap-2 p-4 shrink-0"><Bot size={22}/><div className="flex-1"><div className="font-bold">MyConnect Assistant</div><div className="text-[11px] opacity-90">{aiActive ? "CanalBox support · AI-assisted, can make mistakes" : "CanalBox guided support"}</div></div><button type="button" aria-label="Start new conversation" onClick={() => setMessages([{ role: "assistant", text: INTRO }])} className="p-2"><RotateCcw size={17}/></button><button type="button" aria-label="Close assistant" onClick={() => setOpen(false)} className="p-2"><X size={19}/></button></header>
-        <div className="border-b border-[var(--color-border)] px-4 py-2 text-[11px] bg-[var(--color-surface)] text-[var(--color-muted)]">{recordStatus}{aiActive ? " · never share passwords in chat" : ""}{profile ? ` · ${profile.packageName || "Package unknown"}` : ""}</div>
-        <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto bg-[var(--color-bg)] px-4 py-4 space-y-3" aria-live="polite">{messages.map((m,i) => <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}><p className={`max-w-[88%] whitespace-pre-line rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${m.role === "user" ? "bg-[var(--color-primary)] text-white" : "bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)]"}`}>{m.text}</p></div>)}{thinking && <div className="flex justify-start"><p className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5 text-sm text-[var(--color-muted)]" role="status">Checking…</p></div>}{!thinking && messages[messages.length - 1]?.role === "assistant" && (messages[messages.length - 1]?.chips?.length ?? 0) > 0 && <div className="flex flex-wrap gap-2 pl-1">{messages[messages.length - 1].chips!.map(c => <button type="button" key={c} onClick={() => send(c)} className="rounded-full border border-[var(--color-primary)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-primary-text)]">{c}</button>)}</div>}</div>
-        <div className="bg-[var(--color-surface)] border-t border-[var(--color-border)] px-4 pt-3 shrink-0">
+      <section role="dialog" aria-modal="true" aria-label="MyConnect support assistant" className="pointer-events-auto flex h-[min(94dvh,780px)] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-[var(--color-surface)] text-[var(--color-text)] shadow-2xl sm:mx-4 sm:mb-4 sm:rounded-3xl lg:mx-0 lg:mb-0 lg:h-[min(88dvh,780px)] lg:w-[480px] lg:max-w-[calc(100vw-3rem)] lg:border lg:border-[var(--color-border)]">
+        <header className="bg-[var(--color-primary)] text-white flex items-center gap-2 p-4 shrink-0"><Bot size={22}/><div className="flex-1"><div className="font-bold">MyConnect Assistant</div><div className="text-[11px] opacity-90">{aiActive ? "CanalBox support · AI-assisted, can make mistakes" : "CanalBox guided support"}</div></div><button type="button" aria-label="Start new conversation" onClick={resetConversation} className="p-2"><RotateCcw size={17}/></button><button type="button" aria-label="Close assistant" onClick={() => setOpen(false)} className="p-2"><X size={19}/></button></header>
+        <details className="shrink-0 border-b border-[var(--color-border)] px-4 py-1 text-xs text-[var(--color-muted)]"><summary className="cursor-pointer py-1">Account connection</summary><p className="pb-2">{recordStatus}. Never share passwords in chat.</p></details>
+        {flow.step !== "idle" && <details className="shrink-0 border-b border-[var(--color-border)] px-4 py-2 text-xs"><summary className="cursor-pointer font-semibold">{flow.step === "resolved" ? "Resolved by your report" : flow.step === "ticket" ? "Ready for support" : "Troubleshooting in progress"} · {flow.checks.length} recorded checks</summary><ul className="max-h-24 overflow-y-auto list-disc pl-4 pt-2 space-y-1">{flow.checks.map((check, i) => <li key={i}>{check}</li>)}</ul></details>}
+        <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto bg-[var(--color-bg)] px-4 py-4 space-y-3" aria-live="polite">{messages.map((m,i) => <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}><p className={`max-w-[88%] whitespace-pre-line rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${m.role === "user" ? "bg-[var(--color-primary)] text-white" : "bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)]"}`}>{m.text}</p></div>)}{thinking && <div className="flex justify-start"><p className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5 text-sm text-[var(--color-muted)]" role="status">Checking…</p></div>}{!thinking && messages[messages.length - 1]?.role === "assistant" && (messages[messages.length - 1]?.chips?.length ?? 0) > 0 && <div className="flex flex-wrap gap-2 pl-1">{messages[messages.length - 1].chips!.map(c => <button type="button" key={c} onClick={() => send(c)} className="rounded-full border border-[var(--color-primary)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-primary-text)]">{c}</button>)}</div>}
+        <details open={toolsOpen} onToggle={e => setToolsOpen(e.currentTarget.open)} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3"><summary className="cursor-pointer text-xs font-semibold">Options · router lights, speed test & quick help</summary><div className="pt-3">
           {profile?.routerSerial && <button type="button" onClick={() => navigator.clipboard.writeText(profile.routerSerial).catch(() => {})} className="mb-2 w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-primary-dark)]">Copy my router serial number</button>}
           <button type="button" onClick={() => setLightsOpen(v => !v)} className="w-full flex justify-center items-center gap-2 rounded-xl bg-[var(--color-surface-soft)] py-2.5 mb-2 text-xs font-semibold text-[var(--color-primary-text)]"><Router size={16}/> {lightsOpen ? "Hide router light selector" : "Check router lights (visual guide)"}</button>
-          {lightsOpen && <div className="max-h-48 overflow-y-auto border border-[var(--color-border)] rounded-xl p-2 mb-2 text-xs">
-            <div className="flex gap-2 items-center mb-2"><span className="font-semibold">Router:</span><select aria-label="Router model" value={routerType} onChange={e => {setRouterOverride(e.target.value as RouterType); setSelectedLights([]);}} className="border rounded px-1 py-1"><option value="zte_white">White ZTE</option><option value="alcl_black">Black ALCL</option></select></div>
+          {lightsOpen && <div className="border border-[var(--color-border)] rounded-xl p-2 mb-2 text-xs">
+            <div className="flex gap-2 items-center mb-2"><span className="font-semibold">Router:</span><select aria-label="Router model" value={routerType} onChange={e => {setRouterOverride(e.target.value as RouterType); setSelectedLights([]); setAllLightsOff(false);}} className="border rounded px-1 py-1"><option value="zte_white">White ZTE</option><option value="alcl_black">Black ALCL</option></select></div>
             <p className="text-[var(--color-muted)] mb-2">Tap the lights currently ON (including red LOS if lit). This simplified router illustration represents the indicators, not a photograph.</p>
             <div className={`rounded-xl border-2 px-2 py-4 flex flex-wrap gap-2 justify-center ${routerType === "zte_white" ? "bg-slate-100 border-slate-400" : "bg-slate-900 border-slate-700"}`}>
-              {visibleLights.map(light => { const selected = selectedLights.includes(light.id); return <button type="button" key={light.id} aria-pressed={selected} title={light.description} onClick={() => setSelectedLights(current => selected ? current.filter(i=>i!==light.id) : [...current, light.id])} className={`flex flex-col items-center gap-1 px-1 ${routerType === "zte_white" ? "text-[var(--color-text)]" : "text-white"}`}><span className={`w-3.5 h-3.5 rounded-full border ${selected ? (light.color === "red" ? "bg-red-600 border-red-800" : "bg-green-500 border-green-700") : "bg-slate-500 border-slate-400"}`}/><span className="text-[9px]">{light.label}</span></button>})}
+              {visibleLights.map(light => { const selected = selectedLights.includes(light.id); return <button type="button" key={light.id} aria-pressed={selected} title={light.description} onClick={() => { setAllLightsOff(false); setSelectedLights(current => selected ? current.filter(i=>i!==light.id) : [...current, light.id]); }} className={`flex flex-col items-center gap-1 px-1 ${routerType === "zte_white" ? "text-[var(--color-text)]" : "text-white"}`}><span className={`w-3.5 h-3.5 rounded-full border ${selected ? (light.color === "red" ? "bg-red-600 border-red-800" : "bg-green-500 border-green-700") : "bg-slate-500 border-slate-400"}`}/><span className="text-[9px]">{light.label}</span></button>})}
             </div>
-            <button type="button" onClick={checkLights} className="mt-2 bg-[var(--color-primary)] text-white rounded-lg px-3 py-2 font-semibold w-full">Diagnose selected lights</button>
-          </div>}{speedFormOpen && <div className="mb-3 max-h-[30vh] overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-3 text-xs text-[var(--color-text)]">
+            <label className="mt-2 flex items-center gap-2"><input type="checkbox" checked={allLightsOff} onChange={e => { setAllLightsOff(e.target.checked); if (e.target.checked) setSelectedLights([]); }}/>I checked: all indicators are off</label><button type="button" disabled={!selectedLights.length && !allLightsOff} onClick={checkLights} className="disabled:opacity-50 mt-2 bg-[var(--color-primary)] text-white rounded-lg px-3 py-2 font-semibold w-full">Diagnose selected lights</button>
+          </div>}<button type="button" onClick={() => setSpeedFormOpen(v => !v)} className="mb-2 w-full rounded-lg border px-3 py-2 text-xs">{speedFormOpen ? "Hide speed test results" : "Enter speed test results"}</button>{speedFormOpen && <div className="mb-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-3 text-xs text-[var(--color-text)]">
             <div className="font-semibold mb-1">Speedtest.net — customer results</div>
             <p className="mb-2">Open <a href="https://www.speedtest.net/" target="_blank" rel="noopener noreferrer" className="underline font-bold text-[var(--color-primary-text)]">speedtest.net</a>, run a test on CanalBox, then enter the measured figures below.</p>
             <div className="grid grid-cols-3 gap-1 mb-2">{[["Download Mbps",download,setDownload],["Upload Mbps",upload,setUpload],["Ping ms",ping,setPing]].map(([label,value,setter],idx) => <label key={idx} className="text-[10px]">{label as string}<input type="number" min="0" step="any" value={value as string} onChange={e => (setter as (x:string)=>void)(e.target.value)} className="w-full rounded border border-[var(--color-border)] px-1 py-1 mt-1"/></label>)}</div>
             <label className="block mb-2">Tested using <select value={connectionType} onChange={e=>setConnectionType(e.target.value)} className="ml-1 border rounded px-1 py-1"><option>Wi-Fi</option><option>Ethernet</option></select></label>
             {speedError && <p className="text-[var(--color-danger-text)] mb-2" role="alert">{speedError}</p>}
             <button type="button" onClick={recordSpeed} className="bg-[var(--color-primary)] text-white rounded-lg px-3 py-2 w-full font-semibold">Use these results in my report</button>
-          </div>}<div className="flex gap-2 overflow-x-auto pb-2">{["Packages & prices", "My internet is slow", "Some websites won't open", "Change Wi-Fi password", "Restart router"].map(q => <button key={q} type="button" onClick={() => send(q)} className="shrink-0 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-soft)] text-[var(--color-primary-text)] text-xs font-semibold px-3 py-2 hover:bg-[var(--color-hover)]">{q}</button>)}</div><button type="button" className="mb-2 w-full rounded-lg border border-[var(--color-primary)] text-[var(--color-primary-text)] flex justify-center items-center gap-2 py-2 text-xs font-semibold" onClick={openSupportTicket}><Headphones size={15}/> Create / View support ticket</button>{ticketPathOffered && <div className="mb-2 text-xs text-[var(--color-muted)]">The checks have not resolved the issue. Please create or follow up on a support ticket first.</div>}{failedChecks >= 2 && ticketPathOffered && <div className="mb-2 text-xs text-[var(--color-muted)]">Still unresolved after guided checks and the ticket route? {whatsapp ? <a className="font-bold text-[var(--color-primary-text)] underline" target="_blank" rel="noopener noreferrer" href={`https://wa.me/${whatsapp}?text=${encodeURIComponent("Hello CanalBox support, I need help with an unresolved MyConnect issue. I can share router photos if needed.")}`}>Escalate to WhatsApp for photos</a> : "A WhatsApp support number has not been configured yet. Please use Report Issue."}</div>}<form onSubmit={e => { e.preventDefault(); send(); }} className="flex gap-2 pb-3"><input aria-label="Message" value={draft} maxLength={500} onChange={e => setDraft(e.target.value)} placeholder="Ask a question..." className="min-w-0 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-[var(--color-text)] px-3 py-2.5 text-sm"/><button type="submit" disabled={!draft.trim()} aria-label="Send message" className="bg-[var(--color-primary)] disabled:opacity-50 text-white px-3 rounded-xl hover:bg-[var(--color-primary-dark)]"><Send size={18}/></button></form></div>
+          </div>}<div className="flex gap-2 overflow-x-auto pb-2">{["Packages & prices", "My internet is slow", "Some websites won't open", "Change Wi-Fi password", "Restart router"].map(q => <button key={q} type="button" onClick={() => send(q)} className="shrink-0 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-soft)] text-[var(--color-primary-text)] text-xs font-semibold px-3 py-2 hover:bg-[var(--color-hover)]">{q}</button>)}</div>{failedChecks >= 2 && ticketPathOffered && <div className="mb-2 text-xs text-[var(--color-muted)]">Still unresolved after guided checks and the ticket route? {whatsapp ? <a className="font-bold text-[var(--color-primary-text)] underline" target="_blank" rel="noopener noreferrer" href={`https://wa.me/${whatsapp}?text=${encodeURIComponent("Hello CanalBox support, I need help with an unresolved MyConnect issue. I can share router photos if needed.")}`}>Escalate to WhatsApp for photos</a> : "A WhatsApp support number has not been configured yet. Please use Report Issue."}</div>}</div></details></div><div className="shrink-0 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 pt-2">{ticketPathOffered && <button type="button" onClick={openSupportTicket} className="mb-2 w-full rounded-lg border border-[var(--color-primary)] py-2 text-sm font-semibold text-[var(--color-primary-text)]">Review support report</button>}{!ticketPathOffered && <button type="button" onClick={openSupportTicket} className="mb-2 text-xs underline text-[var(--color-primary-text)]">Report issue to support</button>}<form onSubmit={e => { e.preventDefault(); send(); }} className="flex gap-2 pb-3"><input aria-label="Message" value={draft} maxLength={500} onChange={e => setDraft(e.target.value)} placeholder="Ask a question..." className="min-w-0 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-[var(--color-text)] px-3 py-2.5 text-sm"/><button type="submit" disabled={!draft.trim() || thinking} aria-label="Send message" className="bg-[var(--color-primary)] disabled:opacity-50 text-white px-3 rounded-xl hover:bg-[var(--color-primary-dark)]"><Send size={18}/></button></form></div>
       </section>
     </div>}
   </>;
