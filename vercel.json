@@ -1,7 +1,10 @@
 {
+  "functions": {
+    "api/assistant.ts": { "maxDuration": 15 }
+  },
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/"
     }
   ]

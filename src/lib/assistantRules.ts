@@ -10,6 +10,15 @@ export const RE = {
   wifi: /\b(wifi|wi-fi|wlan|network name)\b/,
   greeting: /\b(hello|hi|hey|help)\b/,
   restart: /\b(restart|reboot)\b|^not yet\b/,
+  // "I am not seeing my WiFi", "can't find the CanalBox network", "wifi name is missing", "no wifi", "wifi light is off"
+  wifiMissing: new RegExp(
+    [
+      String.raw`\b(?:can.?t|cannot|can not|couldn.?t|unable to|don.?t|do not|not|no longer|never|fail(?:s|ed)? to)\s+(?:be\s+)?(?:see|seeing|find|finding|detect|detecting|show|showing|appear|appearing|pick up|picking up)(?:\s+(?:my|the|any|our|a|canalbox|home|internet))*\s+(?:wi-?fi|wlan|wireless|ssid|network)\b`,
+      String.raw`\b(?:wi-?fi|wlan|wireless|ssid|network)(?:\s+(?:name|network|signal))?\s+(?:is\s+|has\s+|was\s+)?(?:missing|gone|disappeared|vanished|not\s+(?:showing|appearing|visible|available|there|detected)|(?:doesn.?t|isn.?t)\s+(?:show|showing|appear|visible|there))`,
+      String.raw`\bno\s+(?:wi-?fi|wlan)\b`,
+      String.raw`\b(?:wi-?fi|wlan)\s+light\s+(?:is\s+)?(?:off|out)\b`,
+    ].join("|"),
+  ),
 };
 
 /** Pick the ticket category from what the customer typed. Most specific signal wins. */
@@ -34,4 +43,11 @@ export function redactSecrets(input: string): string {
   // short numeric codes when the message talks about a pin/otp/code
   if (/\b(pin|otp|code)\b/i.test(out)) out = out.replace(/\b\d{4,8}\b/g, "[removed]");
   return out;
+}
+
+/** Mask phone numbers and e-mail addresses before text is sent to an external AI provider. */
+export function maskPersonalData(input: string): string {
+  return input
+    .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, "[email]")
+    .replace(/\+?\d[\d\s-]{8,}\d/g, "[number]");
 }

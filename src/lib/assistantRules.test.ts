@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RE, classifyIssueType, redactSecrets } from "./assistantRules";
+import { RE, classifyIssueType, maskPersonalData, redactSecrets } from "./assistantRules";
 
 const cls = (s: string, cur = "no_internet") => classifyIssueType(s, cur);
 
@@ -61,5 +61,24 @@ describe("redactSecrets", () => {
   it("leaves normal text alone", () => {
     expect(redactSecrets("router lights: power on, LOS red")).toBe("router lights: power on, LOS red");
     expect(redactSecrets("I paid 90000 yesterday")).toBe("I paid 90000 yesterday");
+  });
+});
+
+describe("RE.wifiMissing", () => {
+  it.each([
+    "I am not seeing my WiFi", "i can't see my wifi", "cannot find the CanalBox network", "my wifi is missing",
+    "wifi name is missing", "WiFi not showing", "wifi disappeared", "no wifi", "wifi light is off", "I don't see my network",
+    "the wi-fi isn't showing",
+  ])("matches: %s", s => expect(RE.wifiMissing.test(s.toLowerCase())).toBe(true));
+  it.each([
+    "I can't see my payment", "the website is not showing", "I paid but not seeing it", "my wifi password is forgotten",
+    "wifi is slow", "internet not working", "how do I change wifi name",
+  ])("does not match: %s", s => expect(RE.wifiMissing.test(s.toLowerCase())).toBe(false));
+});
+
+describe("maskPersonalData", () => {
+  it("masks phone numbers and e-mail addresses only", () => {
+    expect(maskPersonalData("call me on 0772 123 456 or a.b@mail.com")).toBe("call me on [number] or [email]");
+    expect(maskPersonalData("the light blinks every 5 seconds")).toBe("the light blinks every 5 seconds");
   });
 });
