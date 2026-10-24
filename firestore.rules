@@ -3,12 +3,15 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function owner(uid) { return signedIn() && request.auth.uid == uid; }
+    // Custom claims MUST be issued by a trusted Firebase Admin SDK process.
+    // A "role" stored in users/{uid} is not an authorization source.
+    function staff() { return signedIn() && (request.auth.token.admin == true || request.auth.token.staff == true); }
     match /users/{uid} {
       allow get: if owner(uid);
       allow list, create, update, delete: if false;
     }
     match /tickets/{ticketId} {
-      allow get, list: if signedIn() && resource.data.customerUid == request.auth.uid;
+      allow get, list: if staff() || (signedIn() && resource.data.customerUid == request.auth.uid);
       allow create: if signedIn()
         && request.resource.data.customerUid == request.auth.uid
         && request.resource.data.keys().hasAll(['customerUid','category','title','description','status','priority','createdAt','updatedAt'])
@@ -19,6 +22,8 @@ service cloud.firestore {
         && request.resource.data.description.size() <= 10000
         && request.resource.data.priority in ['low','medium','high']
         && request.resource.data.assignedTo == null;
+      // Staff can update tickets after their Firebase custom claim is verified.
+      allow update: if staff();
       // A customer may append a comment but not edit ownership, assignment, or status.
       allow update: if signedIn() && resource.data.customerUid == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updates','updatedAt'])
@@ -30,10 +35,23 @@ service cloud.firestore {
       allow delete: if false;
     }
     match /notifications/{notificationId} {
-      allow get, list: if signedIn() && resource.data.customerUid == request.auth.uid;
-      allow create: if signedIn() && request.resource.data.customerUid == request.auth.uid
+      allow get, list: if staff() || (signedIn() && resource.data.customerUid == request.auth.uid);
+      // Staff-only notifications are trusted; customer-created ticket confirmations
+      // are constrained to an existing owned ticket with a matching link.
+      allow create: if staff() || (
+        signedIn() && request.resource.data.customerUid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['customerUid','type','title','body','action','relatedId','unread','createdAt'])
         && request.resource.data.type == 'ticket'
-        && request.resource.data.unread == true;
+        && request.resource.data.unread == true
+        && request.resource.data.relatedId is string
+        && exists(/databases/$(database)/documents/tickets/$(request.resource.data.relatedId))
+        && get(/databases/$(database)/documents/tickets/$(request.resource.data.relatedId)).data.customerUid == request.auth.uid
+        && request.resource.data.action == '/ticket/' + request.resource.data.relatedId
+        && request.resource.data.title in ['Ticket Created','Move Request Created']
+        && request.resource.data.body is string
+        && request.resource.data.body.size() <= 300
+        && request.resource.data.createdAt == request.time
+      );
       allow update: if signedIn() && resource.data.customerUid == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['unread'])
         && request.resource.data.unread == false;
