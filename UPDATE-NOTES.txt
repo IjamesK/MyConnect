@@ -1,6 +1,8 @@
-MyConnect support cases and staff contact update (v2)
+MyConnect support cases and staff contact update (v3)
 
 This is a cumulative update based on the ZIP you supplied, including the earlier chat layout and uncertainty fixes. Copy these files to their matching paths in your repository. Keep other repository files and Vercel environment values. If you changed any of these files after that ZIP, merge those changes rather than replacing them blindly.
+
+Move policy correction: CanalBox moves are free. Active account required; inactive clients must resubscribe first. GPS capture requires confirmation that the client is at the new premises; exact Google Maps destination coordinates can be entered as an alternative. Client form submission checks account status and destination coordinates. Staff still confirm service availability. These are client-side checks; no server or Firestore permission changes were made.
 
 Included behavior
 - Recognizes all nine personal report categories and six network incident categories, with a collapsed case picker.
@@ -18,7 +20,7 @@ Included behavior
 - Retains Firebase Authentication and current Firestore rules; no credentials, dependency changes or environment secrets included.
 
 Validation
-32 Node tests passed, covering the prior Wi-Fi flow, every report case, specific routing, placement vs relocation, login vs Wi-Fi reset, and direct staff contact.
+36 Node tests passed, covering the prior Wi-Fi flow, every report case, specific routing, placement vs relocation, login vs Wi-Fi reset, and direct staff contact.
 Run on Node 24: node --test tests/assistantFlow.test.mjs tests/supportCases.test.mjs
 The full Vite build, existing Vitest suite and visual checks remain unverified because this workspace could not download the project dependencies. No GitHub push or deployment was performed.
 

@@ -1,3 +1,4 @@
+import { canInitiateMove } from "../../../lib/movePolicy";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { Bot, X, Send, RotateCcw, Router } from "lucide-react";
@@ -235,11 +236,12 @@ export function AIChatWidget() {
         const login = /myconnect|login|log in|sign in/.test(lower) && /password|login|log in|sign in/.test(lower);
         const issue = login ? "other" : recognized.id;
         const label = login ? "MyConnect login / account issue" : recognized.label;
+        const moveAccountNote = recognized.id === "move_eligibility" ? (canInitiateMove(profile?.accountStatus) ? " Your recorded account is active. Capture the destination in the move form." : " Your active account status is not confirmed here. If inactive, resubscribe first; if you already renewed, contact staff to verify it before initiating a move.") : "";
         const guide = login ? SUPPORT_CASES.find(c => c.mode === "ticket" && c.id === "other")!.advice : recognized.advice;
         setIssueType(issue); setCaseLabel(label); setPlacementCheck(false);
         setFlow({ step: "ticket", checks: [label + " reported; staff review required"] });
         setLightsOpen(false); setToolsOpen(false); setTicketPathOffered(true);
-        setMessages(m => [...m, { role: "assistant", text: guide + "\n\n" + (recognized.mode === "incident" ? "Review a network incident report when you are ready; nothing is submitted automatically." : "Review a support ticket when you are ready; nothing is submitted automatically."), chips: ["Review report", "Start over"] }]);
+        setMessages(m => [...m, { role: "assistant", text: guide + moveAccountNote + "\n\n" + (recognized.mode === "incident" ? "Review a network incident report when you are ready; nothing is submitted automatically." : "Review a support ticket when you are ready; nothing is submitted automatically."), chips: ["Review report", "Start over"] }]);
         return;
       }
     }

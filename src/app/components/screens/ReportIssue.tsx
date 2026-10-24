@@ -1,3 +1,4 @@
+import { canInitiateMove, parseMoveCoordinates, hasMoveCoordinates } from "../../../lib/movePolicy";
 import { SUPPORT_CASES } from "../../../lib/supportCases";
 import {
   useEffect,
@@ -232,6 +233,8 @@ export function ReportIssue() {
   const cameFromRouterLights = sourceParam === "router_lights";
 
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
+  const [atNewPremises, setAtNewPremises] = useState(false);
+  const [googleCoordinates, setGoogleCoordinates] = useState("");
   const [mode, setMode] = useState<ReportMode>("ticket");
   const [personalIssueType, setPersonalIssueType] = useState("");
   const [networkIssueType, setNetworkIssueType] = useState<NetworkIssueValue>("");
@@ -452,7 +455,20 @@ export function ReportIssue() {
     setPhotos((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  const saveGoogleCoordinates = async () => {
+    setError("");
+    if (!canInitiateMove(profile?.accountStatus)) { setError("An active account is required to initiate a free move. Please resubscribe first, or contact staff if your renewal is not reflected."); return; }
+    const coordinates = parseMoveCoordinates(googleCoordinates);
+    if (!coordinates) { setError("Enter Google Maps coordinates as latitude, longitude, for example 0.3476, 32.5825. A link alone is not coordinates."); return; }
+    if (!newMoveAddress.trim() && !newMoveLandmark.trim()) { setError("Add the new premises or a nearby landmark."); return; }
+    const captured = await runMoveEligibilityCheck({ ...coordinates, newAddress: newMoveAddress.trim(), landmark: newMoveLandmark.trim() });
+    setEligibilityCheck({ ...captured, source: "manual_review", locationSource: "manual", statusLabel: "Google Maps destination recorded", summary: "The destination coordinates you supplied are ready for staff to review. Availability is not confirmed." });
+    setShowPinAdjuster(false);
+  };
+
   const handleRunEligibilityCheck = async () => {
+    if (!canInitiateMove(profile?.accountStatus)) { setError("Moves are free, but your account must be active. Resubscribe first or ask staff to verify your status."); return; }
+    if (!atNewPremises) { setError("Go to the new premises before capturing GPS, or use the Google Maps coordinate alternative below."); return; }
     setError("");
     setEligibilityCheck(null);
     setShowPinAdjuster(false);
@@ -609,13 +625,15 @@ export function ReportIssue() {
     }
 
     if (mode === "ticket" && personalIssueType === "move_eligibility") {
+      if (!canInitiateMove(profile?.accountStatus)) { setError("An active account is required to initiate a free move. Resubscribe first; contact staff if the account status needs correcting."); return; }
+      if (eligibilityCheck?.source === "browser_geolocation" && !atNewPremises) { setError("Confirm you are at the new premises before submitting GPS coordinates, or enter its Google Maps coordinates instead."); return; }
       if (!newMoveAddress.trim() && !newMoveLandmark.trim()) {
         setError("Please add the new location, building name, or nearby landmark.");
         return;
       }
 
-      if (!eligibilityCheck?.currentLatitude || !eligibilityCheck?.currentLongitude) {
-        setError("Please capture your GPS coordinates while you are standing at the new location before submitting.");
+      if (!hasMoveCoordinates(eligibilityCheck)) {
+        setError("Capture your location at the new premises, or enter its exact Google Maps coordinates, before submitting.");
         return;
       }
     }
@@ -1257,7 +1275,7 @@ export function ReportIssue() {
                   Capture new-location coordinates
                 </p>
                 <p className="text-[var(--color-muted)] text-xs mt-0.5 leading-relaxed">
-                  Stand at the place you are moving to. We’ll capture the coordinates and staff will confirm availability.
+                  Moves are free. Your account must be active; resubscribe first if inactive. At the new premises, capture your location automatically. Alternatively, enter exact destination coordinates from Google Maps below. Staff will confirm availability.
                 </p>
               </div>
             </div>
@@ -1296,10 +1314,12 @@ export function ReportIssue() {
               />
             </label>
 
+            <label className="mt-4 flex items-start gap-2 text-xs text-[var(--color-text)]"><input type="checkbox" checked={atNewPremises} onChange={e => { setAtNewPremises(e.target.checked); if (!e.target.checked && eligibilityCheck?.locationSource !== "manual") setEligibilityCheck(null); }}/>I am at the new premises and want to capture this location.</label>
+            {!canInitiateMove(profile?.accountStatus) && <p className="mt-2 text-sm text-[var(--color-danger-text)]" role="status">An active account is required. Resubscribe first or contact staff to confirm your account status.</p>}
             <button
               type="button"
               onClick={handleRunEligibilityCheck}
-              disabled={checkingEligibility}
+              disabled={checkingEligibility || !atNewPremises || !canInitiateMove(profile?.accountStatus)}
               className="mt-4 w-full py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] disabled:bg-[var(--color-primary)]/60 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
             >
               {checkingEligibility ? (
@@ -1307,8 +1327,10 @@ export function ReportIssue() {
               ) : (
                 <LocateFixed size={15} />
               )}
-              {checkingEligibility ? "Capturing location..." : "Capture my location"}
+              {checkingEligibility ? "Capturing location..." : "Capture new-premises location"}
             </button>
+
+            <details className="mt-4 rounded-xl border border-[var(--color-border)] p-3 text-xs"><summary className="cursor-pointer font-semibold">Alternative: use coordinates from Google Maps</summary><p className="mt-2">Find the exact new premises in Google Maps. On a phone, press and hold the destination to drop a pin; on a computer, right-click it. Copy latitude and longitude, then paste the pair below. Use the destination, not your current home.</p><label className="mt-3 block">Destination latitude, longitude<input type="text" value={googleCoordinates} placeholder="0.3476, 32.5825" onChange={e => { setGoogleCoordinates(e.target.value); setEligibilityCheck(null); }} className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-input)] px-3 py-2"/></label><button type="button" onClick={saveGoogleCoordinates} disabled={!canInitiateMove(profile?.accountStatus)} className="mt-2 rounded-lg bg-[var(--color-primary)] px-3 py-2 text-white disabled:opacity-50">Use destination coordinates</button></details>
 
             {eligibilityCheck && (
               <div className={`mt-4 rounded-xl border px-3 py-3 text-xs ${eligibilityToneClass(eligibilityCheck.status)}`}>
