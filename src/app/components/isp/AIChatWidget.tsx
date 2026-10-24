@@ -8,17 +8,19 @@ import { getUserProfile, type CustomerProfile } from "../../../lib/auth";
 import type { CustomerTicket } from "../../../lib/tickets";
 import { RE, classifyIssueType, maskPersonalData, redactSecrets } from "../../../lib/assistantRules";
 import { askAssistant } from "../../../lib/assistantClient";
+import { INTERNET_PACKAGES } from "../../../lib/packages";
 import { diagnoseRouterLights, normalizeRouterType, routerLightsFor, routerName, routerPatternLabel, ticketTypeFromRouterPattern, type RouterType } from "../../../lib/routerTypes";
 
 type Message = { role: "assistant" | "user"; text: string; chips?: string[] };
 type AIEvent = CustomEvent<{ prompt?: string; packageName?: string }>;
 const INTRO = "Welcome to MyConnect CanalBox support. I can check your recorded account and issues, guide you using the lights on your router, explain packages, and help you report an unresolved fault. What seems wrong?";
-const PLANS = [
-  { name: "GO", speed: 50, price: 69000, devices: "3–5", use: "everyday browsing, messaging and HD streaming" },
-  { name: "FIT", speed: 100, price: 90000, devices: "5–8", use: "families, video calls and multiple HD streams" },
-  { name: "START", speed: 200, price: 110000, devices: "8–12", use: "4K streaming, gaming and busy households" },
-  { name: "PREMIUM", speed: 300, price: 200000, devices: "12–20", use: "many connected devices and heavy household or workspace use" },
-];
+const PLANS = INTERNET_PACKAGES.map((plan) => ({
+  name: plan.name,
+  speed: plan.speedMbps,
+  price: plan.monthlyPriceUGX,
+  devices: plan.deviceRange,
+  use: plan.assistantUse,
+}));
 // Guided CanalBox support for demonstration: no model API, no unverified network diagnostics.
 const whatsapp: string = (import.meta.env.VITE_SUPPORT_WHATSAPP as string | undefined) || "256758073035"; // Company-confirmed support WhatsApp; show only after guided checks and ticket escalation.
 function answerLocal(input: string, profile: CustomerProfile | null, tickets: CustomerTicket[], lastAssistant: string): string | null {
