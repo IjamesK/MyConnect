@@ -7,6 +7,7 @@ import { auth, db } from "../../../lib/firebase";
 import { getUserProfile, type CustomerProfile } from "../../../lib/auth";
 import type { CustomerTicket } from "../../../lib/tickets";
 import { RE, classifyIssueType, maskPersonalData, redactSecrets } from "../../../lib/assistantRules";
+import { SUPPORT_CASES, wantsStaffContact, staffContactReply, recognizeSupportCase, isRouterPlacement, PLACEMENT_GUIDANCE } from "../../../lib/supportCases";
 import { advanceSupport, initialSupportFlow } from "../../../lib/assistantFlow";
 import { askAssistant } from "../../../lib/assistantClient";
 import { INTERNET_PACKAGES } from "../../../lib/packages";
@@ -23,10 +24,15 @@ const PLANS = INTERNET_PACKAGES.map((plan) => ({
   use: plan.assistantUse,
 }));
 // Guided CanalBox support for demonstration: no model API, no unverified network diagnostics.
-const whatsapp: string = (import.meta.env.VITE_SUPPORT_WHATSAPP as string | undefined) || "256758073035"; // Company-confirmed support WhatsApp; show only after guided checks and ticket escalation.
+const whatsapp: string = (import.meta.env.VITE_SUPPORT_WHATSAPP as string | undefined) || "256758073035"; // Existing company support WhatsApp; direct staff requests do not require a ticket.
+const supportPhone = (import.meta.env.VITE_SUPPORT_PHONE as string | undefined)?.trim() || "032 610 6800"; // Helpline supplied by the user.
+const whatsappDigits = whatsapp.replace(/\D/g, "");
+const supportPhoneHref = `tel:${supportPhone.replace(/[^+\d]/g, "")}`;
+const whatsappHref = `https://wa.me/${whatsappDigits}`;
 function answerLocal(input: string, profile: CustomerProfile | null, tickets: CustomerTicket[], lastAssistant: string): string | null {
   // Account-bound answers (profile, tickets, packages, Wi-Fi password steps). These never go to the AI provider.
   const text = input.toLowerCase();
+  if (wantsStaffContact(input)) return staffContactReply(supportPhone, whatsappDigits);
   const recent = tickets[0];
   // Verified CanalBox self-service procedure. Ask about connectivity before giving portal steps.
   if (/(forgot|forgotten|lost|don't know|do not know|reset).{0,45}(wi.?fi|wifi|wireless|network).{0,30}(password|passphrase|key)|(?:wi.?fi|wifi).{0,25}(password|passphrase).{0,25}(forgot|reset|lost)/.test(text)) {
@@ -53,6 +59,7 @@ function answerLocal(input: string, profile: CustomerProfile | null, tickets: Cu
 function answerGuided(input: string, profile: CustomerProfile | null, tickets: CustomerTicket[], turns: number): string {
   // Rule-based troubleshooting. Used when the AI is off, slow or rate-limited.
   const text = input.toLowerCase();
+  if (wantsStaffContact(input)) return staffContactReply(supportPhone, whatsappDigits);
   const recent = tickets[0];
   if (/some websites|certain websites|specific websites|some sites|websites? (won.t|will not|not|isn.t|is not|cannot|can.t) (open|load|work|accessible)|can.t (open|access|reach) (some|certain|a) (websites?|sites?)|not accessing (some|certain) websites?|site not opening|website blocked/.test(text)) return "Let's isolate the website problem without changing your router settings. 1) Is it just one website or several? 2) Does it work on another device or using mobile data (not CanalBox Wi-Fi)? 3) What error do you see (timeout, DNS error, access denied, or blank page)? 4) Do other websites open normally on CanalBox? Try a private/incognito tab and another browser. Please don't change DNS settings or factory-reset the router yet. Tell me what you find and I can guide the next check or help report the issue.";
   if (/dns|site can.t be reached|name not resolved|err_name_not_resolved|connection timed out|connection reset|access denied|403|website still/.test(text)) return "Thanks. Does this website open on mobile data but fail on your CanalBox connection, or does it fail on both? Tell me the website domain (never share a login link or password) and exact error. If other sites work, this alone doesn't prove a CanalBox outage. Try another browser and device, then report the website-access issue with those details if it persists.";
@@ -66,8 +73,8 @@ function answerGuided(input: string, profile: CustomerProfile | null, tickets: C
   if (RE.slow.test(text)) return `Let's investigate slow speeds on your ${profile?.routerModel || "router"}. Is it slow on ALL devices or only one? Is it over Wi-Fi, wired connection, or both? Use https://www.speedtest.net/ while connected to CanalBox Wi-Fi near your router, with other downloads paused. Share the download Mbps, upload Mbps, ping ms, and whether you tested over Wi-Fi or Ethernet. Use the router-light selector if any lights seem abnormal. ${recent?.category === "slow_speed" ? "There is an earlier slow-speed issue in your accessible ticket history." : ""} If it persists, we can open a slow-speed support case.`;
   if (/offline|no internet|disconnected|not working|can't connect|cannot connect/.test(text)) return `Let's check your ${profile?.routerModel || "router"} first. Is the power light on? For a white ZTE router, is PON on and LOS red? For a black ALCL device, are LINK and AUTH lit? Please tell me the lights you see. Don't touch the fiber connector or press RESET.`;
   if (/one device|only one|wifi only|wi-fi only/.test(text)) return "That may be a device or Wi-Fi issue rather than the full CanalBox line. Try moving closer to the router and reconnecting Wi-Fi on that device. Does another device work normally in the same place?";
-  if (/all devices|every device|still slow|still offline|didn't work|did not work|same problem|not better|unresolved|still not/.test(text)) return turns >= 3 ? "The earlier checks haven't resolved this. Please open a MyConnect support ticket so the team can follow your steps and recorded issues. If the issue needs photos and standard support cannot resolve it, use the final-escalation WhatsApp option if the company has configured it." : "Thanks for checking. Before escalating, tell me which router lights are on, whether this affects all devices, and whether you've already tried a safe power restart. I won't ask you to factory-reset the router.";
-  if (/whatsapp|photo|picture|human|agent/.test(text)) return "I can help with the router lights and safe checks first. If those fail, please record the issue through MyConnect Report Issue. After troubleshooting and the support case path have been tried, WhatsApp is available for sending router-light photos. Never share passwords, payment PINs or unnecessary personal documents.";
+  if (/all devices|every device|still slow|still offline|didn't work|did not work|same problem|not better|unresolved|still not/.test(text)) return turns >= 3 ? "The earlier checks haven't resolved this. Please open a MyConnect support ticket so the team can follow your steps and recorded issues. You can also contact staff directly using WhatsApp or Call support below." : "Thanks for checking. Before escalating, tell me which router lights are on, whether this affects all devices, and whether you've already tried a safe power restart. I won't ask you to factory-reset the router.";
+  if (/whatsapp|photo|picture|human|agent/.test(text)) return "I can help with the router lights and safe checks first. If those fail, please record the issue through MyConnect Report Issue. WhatsApp support is available directly using the link below. Never share passwords, payment PINs or unnecessary personal documents.";
   if (/bill|payment|renew|balance|invoice|transaction/.test(text)) return "For renewals or missing payments, CanalBox Finance handles payment verification. Please have your payment transaction ID ready as proof of payment and use Report Issue to submit a payment case to Finance. Do not share a PIN, password or full financial account details. I cannot confirm payment receipt from this chat. Is the payment missing or are you asking about renewal?";
   if (RE.greeting.test(text)) return "I can help with your registered router, previous MyConnect tickets, slow or lost connection, and package information. What issue are you facing?";
   return "To help with your CanalBox service, tell me: (1) what isn't working, (2) which router lights you see, and (3) whether all devices are affected. I can check your recorded MyConnect tickets, but I can't see live line diagnostics.";
@@ -78,12 +85,16 @@ function answer(input: string, profile: CustomerProfile | null, tickets: Custome
 
 export function AIChatWidget() {
   const navigate = useNavigate();
+  const [reportMode, setReportMode] = useState<"ticket" | "incident">("ticket");
+  const [caseLabel, setCaseLabel] = useState("");
+  const [placementCheck, setPlacementCheck] = useState(false);
   const [flow, setFlow] = useState(initialSupportFlow);
   const [toolsOpen, setToolsOpen] = useState(false);
   const generation = useRef(0);
   function resetConversation() {
     generation.current += 1;
     setThinking(false); setAiActive(false); setMessages([{ role: "assistant", text: INTRO }]);
+    setReportMode("ticket"); setCaseLabel(""); setPlacementCheck(false);
     setFlow(initialSupportFlow()); setLightsOpen(false); setToolsOpen(false); setSpeedFormOpen(false);
     setSelectedLights([]); setAllLightsOff(false); setRouterOverride(null); setFailedChecks(0); setTicketPathOffered(false);
     setSpeedRecorded(false); setSpeedSummary(""); setDownload(""); setUpload(""); setPing(""); setSpeedError(""); setDraft(""); setIssueType("no_internet");
@@ -173,11 +184,75 @@ export function AIChatWidget() {
     setIssueType(t => classifyIssueType(text, t));
     if (RE.slow.test(lower)) setSpeedFormOpen(true);
 
+    if (wantsStaffContact(text)) {
+      setMessages(m => [...m, { role: "assistant", text: staffContactReply(supportPhone, whatsappDigits) }]);
+      setToolsOpen(false); setLightsOpen(false);
+      return;
+    }
+    if (/^(review report|create ticket|report issue|report incident)$/i.test(text)) {
+      openSupportTicket();
+      return;
+    }
+    const recognized = recognizeSupportCase(text);
+    let nextFlow = flow;
+    if (recognized && recognized.label !== caseLabel) {
+      nextFlow = initialSupportFlow();
+      setFlow(nextFlow); setPlacementCheck(false); setTicketPathOffered(false);
+    }
+    if (/^(?:(?:i want to|can i|how do i) )?move (?:my |the )?router[? .]*$/i.test(text)) {
+      setTicketPathOffered(false);
+      setMessages(m => [...m, { role: "assistant", text: "Do you mean repositioning it within the same home, or moving service to a new address? These need different checks. Do not disconnect the fibre.", chips: ["Within same home", "To new address"] }]);
+      return;
+    }
+    const placement = isRouterPlacement(text);
+    if (placement) {
+      setReportMode("ticket"); setIssueType("router_issue"); setCaseLabel("Router placement / Wi-Fi coverage");
+      setPlacementCheck(true); setTicketPathOffered(true);
+      setFlow({ step: "idle", checks: ["Router placement / coverage concern reported"] });
+      setMessages(m => [...m, { role: "assistant", text: PLACEMENT_GUIDANCE, chips: ["Better near router", "Still weak nearby", "Not sure", "Review report"] }]);
+      return;
+    }
+    if (placementCheck && /^(better near router|still weak nearby|not sure|yes|no|i can.t check)[.! ]*$/i.test(text)) {
+      const better = /better|yes/.test(lower);
+      setPlacementCheck(false); setTicketPathOffered(true);
+      setFlow(f => ({ step: "ticket", checks: [...f.checks, better ? "Connection better near router; coverage concern" : "Near-router check not improved or not confirmed"] }));
+      setMessages(m => [...m, { role: "assistant", text: better
+        ? "That suggests Wi-Fi coverage may be contributing; it does not prove a router fault. Support can review placement or coverage options. Do not extend or move the fibre yourself. Review a Router / Wi-Fi Issue report with this result."
+        : "We cannot confirm placement as the cause. Support can investigate the connection and safe positioning options. Review the Router / Wi-Fi Issue report; the checks will be included.", chips: ["Review report", "Start over"] }]);
+      return;
+    }
+    if (/^(start over|new issue)$/i.test(text)) {
+      resetConversation(); return;
+    }
+    if (recognized) {
+      setReportMode(recognized.mode); setCaseLabel(recognized.label);
+      setIssueType(recognized.id);
+      // Connection symptoms retain the step-by-step flow below.
+      const needsCaseGuidance = recognized.mode === "incident" || ["move_eligibility", "wrong_router_payment", "payment_not_reflected", "password_reset", "other", "los_light"].includes(recognized.id);
+      // Preserve the existing connected-customer password-change instructions.
+      const changingWifi = recognized.id === "password_reset" && /change|update|rename|modify/.test(lower) && !/forgot|reset|lost|can.t connect/.test(lower);
+      if (needsCaseGuidance && !changingWifi) {
+        const login = /myconnect|login|log in|sign in/.test(lower) && /password|login|log in|sign in/.test(lower);
+        const issue = login ? "other" : recognized.id;
+        const label = login ? "MyConnect login / account issue" : recognized.label;
+        const guide = login ? SUPPORT_CASES.find(c => c.mode === "ticket" && c.id === "other")!.advice : recognized.advice;
+        setIssueType(issue); setCaseLabel(label); setPlacementCheck(false);
+        setFlow({ step: "ticket", checks: [label + " reported; staff review required"] });
+        setLightsOpen(false); setToolsOpen(false); setTicketPathOffered(true);
+        setMessages(m => [...m, { role: "assistant", text: guide + "\n\n" + (recognized.mode === "incident" ? "Review a network incident report when you are ready; nothing is submitted automatically." : "Review a support ticket when you are ready; nothing is submitted automatically."), chips: ["Review report", "Start over"] }]);
+        return;
+      }
+    }
+    if (!recognized && caseLabel && flow.step === "ticket" && /^(not sure|i don.t know|i can.t check)$/i.test(text)) {
+      setMessages(m => [...m, { role: "assistant", text: `That's okay. You don't need to repeat technical checks for ${caseLabel}. Review the report and describe what you know; staff can help with the missing details. Nothing has been submitted yet.`, chips: ["Review report", "Start over"] }]);
+      return;
+    }
+
     // 1) Account-bound questions are answered locally and never leave the browser.
     const local = answerLocal(text, profile, tickets, lastAssistant);
     if (local) { setMessages(m => [...m, { role: "assistant", text: local }]); return; }
 
-    const guided = advanceSupport(text, flow, lastAssistant);
+    const guided = advanceSupport(text, nextFlow, lastAssistant);
     if (guided) {
       setFlow(guided.flow);
       setMessages(m => [...m, { role: "assistant", text: guided.text, chips: guided.chips }]);
@@ -226,13 +301,14 @@ export function AIChatWidget() {
     const lightsNote = selectedLights.length ? `\nRouter indicators selected: ${visibleLights.filter(light => selectedLights.includes(light.id)).map(light => light.label).join(", ")}.` : "";
     const checkSummary = flow.checks.length ? "\nChecks reported by customer:\n- " + flow.checks.join("\n- ") : "";
     const symptom = messages.filter(m => m.role === "user").slice(-8).map(m => redactSecrets(m.text)).join("; ").slice(0, 1600);
+    const caseNote = caseLabel ? "Recognized case: " + caseLabel + "\n" : "";
     const report = issueType === "slow_speed" && speedRecorded
       ? speedSummary + "\nCustomer statement: " + safeSymptom + lightsNote
       : "Issue reported through MyConnect assistant: " + safeSymptom + lightsNote;
-    sessionStorage.setItem("myconnect:assistant-ticket-description", report + "\nConversation symptoms: " + symptom + checkSummary);
+    sessionStorage.setItem("myconnect:assistant-ticket-description", caseNote + report + "\nConversation symptoms: " + symptom + checkSummary);
     setTicketPathOffered(true);
     setOpen(false);
-    navigate(`/report-issue?mode=ticket&type=${encodeURIComponent(issueType)}&source=assistant`);
+    navigate(`/report-issue?mode=${reportMode}&type=${encodeURIComponent(issueType)}&source=assistant`);
   }
   function checkLights() {
     if (!selectedLights.length && !allLightsOff) return;
@@ -262,8 +338,9 @@ export function AIChatWidget() {
       <section role="dialog" aria-modal="true" aria-label="MyConnect support assistant" className="pointer-events-auto flex h-[min(94dvh,780px)] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-[var(--color-surface)] text-[var(--color-text)] shadow-2xl sm:mx-4 sm:mb-4 sm:rounded-3xl lg:mx-0 lg:mb-0 lg:h-[min(88dvh,780px)] lg:w-[480px] lg:max-w-[calc(100vw-3rem)] lg:border lg:border-[var(--color-border)]">
         <header className="bg-[var(--color-primary)] text-white flex items-center gap-2 p-4 shrink-0"><Bot size={22}/><div className="flex-1"><div className="font-bold">MyConnect Assistant</div><div className="text-[11px] opacity-90">{aiActive ? "CanalBox support · AI-assisted, can make mistakes" : "CanalBox guided support"}</div></div><button type="button" aria-label="Start new conversation" onClick={resetConversation} className="p-2"><RotateCcw size={17}/></button><button type="button" aria-label="Close assistant" onClick={() => setOpen(false)} className="p-2"><X size={19}/></button></header>
         <details className="shrink-0 border-b border-[var(--color-border)] px-4 py-1 text-xs text-[var(--color-muted)]"><summary className="cursor-pointer py-1">Account connection</summary><p className="pb-2">{recordStatus}. Never share passwords in chat.</p></details>
-        {flow.step !== "idle" && <details className="shrink-0 border-b border-[var(--color-border)] px-4 py-2 text-xs"><summary className="cursor-pointer font-semibold">{flow.step === "resolved" ? "Resolved by your report" : flow.step === "ticket" ? "Ready for support" : "Troubleshooting in progress"} · {flow.checks.length} recorded checks</summary><ul className="max-h-24 overflow-y-auto list-disc pl-4 pt-2 space-y-1">{flow.checks.map((check, i) => <li key={i}>{check}</li>)}</ul></details>}
+        {flow.step !== "idle" && <details className="shrink-0 border-b border-[var(--color-border)] px-4 py-2 text-xs"><summary className="cursor-pointer font-semibold">{flow.step === "resolved" ? "Resolved by your report" : flow.step === "ticket" ? "Ready for support" : "Troubleshooting in progress"}{caseLabel ? ` · ${caseLabel}` : ""} · {flow.checks.length} recorded checks</summary><ul className="max-h-24 overflow-y-auto list-disc pl-4 pt-2 space-y-1">{flow.checks.map((check, i) => <li key={i}>{check}</li>)}</ul></details>}
         <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto bg-[var(--color-bg)] px-4 py-4 space-y-3" aria-live="polite">{messages.map((m,i) => <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}><p className={`max-w-[88%] whitespace-pre-line rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${m.role === "user" ? "bg-[var(--color-primary)] text-white" : "bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)]"}`}>{m.text}</p></div>)}{thinking && <div className="flex justify-start"><p className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5 text-sm text-[var(--color-muted)]" role="status">Checking…</p></div>}{!thinking && messages[messages.length - 1]?.role === "assistant" && (messages[messages.length - 1]?.chips?.length ?? 0) > 0 && <div className="flex flex-wrap gap-2 pl-1">{messages[messages.length - 1].chips!.map(c => <button type="button" key={c} onClick={() => send(c)} className="rounded-full border border-[var(--color-primary)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-primary-text)]">{c}</button>)}</div>}
+        <details className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3"><summary className="cursor-pointer text-xs font-semibold">Help with another problem</summary><div className="mt-2 grid gap-1">{SUPPORT_CASES.map(c => <button type="button" key={`${c.mode}:${c.id}`} disabled={thinking} onClick={() => send(c.label)} className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-left text-xs">{c.label}{c.mode === "incident" ? " · network incident" : ""}</button>)}<button type="button" disabled={thinking} onClick={() => send("Router placement")} className="rounded-lg border px-3 py-2 text-left text-xs">Router placement / weak Wi-Fi coverage</button></div></details>
         <details open={toolsOpen} onToggle={e => setToolsOpen(e.currentTarget.open)} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3"><summary className="cursor-pointer text-xs font-semibold">Options · router lights, speed test & quick help</summary><div className="pt-3">
           {profile?.routerSerial && <button type="button" onClick={() => navigator.clipboard.writeText(profile.routerSerial).catch(() => {})} className="mb-2 w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-primary-dark)]">Copy my router serial number</button>}
           <button type="button" onClick={() => setLightsOpen(v => !v)} className="w-full flex justify-center items-center gap-2 rounded-xl bg-[var(--color-surface-soft)] py-2.5 mb-2 text-xs font-semibold text-[var(--color-primary-text)]"><Router size={16}/> {lightsOpen ? "Hide router light selector" : "Check router lights (visual guide)"}</button>
@@ -281,7 +358,7 @@ export function AIChatWidget() {
             <label className="block mb-2">Tested using <select value={connectionType} onChange={e=>setConnectionType(e.target.value)} className="ml-1 border rounded px-1 py-1"><option>Wi-Fi</option><option>Ethernet</option></select></label>
             {speedError && <p className="text-[var(--color-danger-text)] mb-2" role="alert">{speedError}</p>}
             <button type="button" onClick={recordSpeed} className="bg-[var(--color-primary)] text-white rounded-lg px-3 py-2 w-full font-semibold">Use these results in my report</button>
-          </div>}<div className="flex gap-2 overflow-x-auto pb-2">{["Packages & prices", "My internet is slow", "Some websites won't open", "Change Wi-Fi password", "Restart router"].map(q => <button key={q} type="button" onClick={() => send(q)} className="shrink-0 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-soft)] text-[var(--color-primary-text)] text-xs font-semibold px-3 py-2 hover:bg-[var(--color-hover)]">{q}</button>)}</div>{failedChecks >= 2 && ticketPathOffered && <div className="mb-2 text-xs text-[var(--color-muted)]">Still unresolved after guided checks and the ticket route? {whatsapp ? <a className="font-bold text-[var(--color-primary-text)] underline" target="_blank" rel="noopener noreferrer" href={`https://wa.me/${whatsapp}?text=${encodeURIComponent("Hello CanalBox support, I need help with an unresolved MyConnect issue. I can share router photos if needed.")}`}>Escalate to WhatsApp for photos</a> : "A WhatsApp support number has not been configured yet. Please use Report Issue."}</div>}</div></details></div><div className="shrink-0 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 pt-2">{ticketPathOffered && <button type="button" onClick={openSupportTicket} className="mb-2 w-full rounded-lg border border-[var(--color-primary)] py-2 text-sm font-semibold text-[var(--color-primary-text)]">Review support report</button>}{!ticketPathOffered && <button type="button" onClick={openSupportTicket} className="mb-2 text-xs underline text-[var(--color-primary-text)]">Report issue to support</button>}<form onSubmit={e => { e.preventDefault(); send(); }} className="flex gap-2 pb-3"><input aria-label="Message" value={draft} maxLength={500} onChange={e => setDraft(e.target.value)} placeholder="Ask a question..." className="min-w-0 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-[var(--color-text)] px-3 py-2.5 text-sm"/><button type="submit" disabled={!draft.trim() || thinking} aria-label="Send message" className="bg-[var(--color-primary)] disabled:opacity-50 text-white px-3 rounded-xl hover:bg-[var(--color-primary-dark)]"><Send size={18}/></button></form></div>
+          </div>}<div className="flex gap-2 overflow-x-auto pb-2">{["Packages & prices", "My internet is slow", "Some websites won't open", "Change Wi-Fi password", "Restart router"].map(q => <button key={q} type="button" onClick={() => send(q)} className="shrink-0 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-soft)] text-[var(--color-primary-text)] text-xs font-semibold px-3 py-2 hover:bg-[var(--color-hover)]">{q}</button>)}</div></div></details></div><div className="shrink-0 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 pt-2"><div className="mb-2 flex flex-wrap gap-4 text-xs font-semibold text-[var(--color-primary-text)]">{whatsappDigits && <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="underline">WhatsApp staff</a>}<a href={supportPhoneHref} className="underline">Call support · {supportPhone}</a></div>{ticketPathOffered && <button type="button" onClick={openSupportTicket} className="mb-2 w-full rounded-lg border border-[var(--color-primary)] py-2 text-sm font-semibold text-[var(--color-primary-text)]">{reportMode === "incident" ? "Review network incident" : "Review support ticket"}</button>}{!ticketPathOffered && <button type="button" onClick={openSupportTicket} className="mb-2 text-xs underline text-[var(--color-primary-text)]">Report issue to support</button>}<form onSubmit={e => { e.preventDefault(); send(); }} className="flex gap-2 pb-3"><input aria-label="Message" value={draft} maxLength={500} onChange={e => setDraft(e.target.value)} placeholder="Ask a question..." className="min-w-0 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-[var(--color-text)] px-3 py-2.5 text-sm"/><button type="submit" disabled={!draft.trim() || thinking} aria-label="Send message" className="bg-[var(--color-primary)] disabled:opacity-50 text-white px-3 rounded-xl hover:bg-[var(--color-primary-dark)]"><Send size={18}/></button></form></div>
       </section>
     </div>}
   </>;

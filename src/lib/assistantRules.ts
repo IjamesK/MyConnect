@@ -1,3 +1,4 @@
+import { recognizeSupportCase, isRouterPlacement } from "./supportCases";
 // Pure helpers for the support assistant, kept separate so they can be unit-tested.
 
 /** Whole-word matchers. Plain substring regexes caused "close" -> LOS, "this" -> greeting, etc. */
@@ -24,6 +25,9 @@ export const RE = {
 /** Pick the ticket category from what the customer typed. Most specific signal wins. */
 export function classifyIssueType(input: string, current: string): string {
   const t = input.toLowerCase();
+  const reportCase = recognizeSupportCase(t);
+  if (isRouterPlacement(t)) return "router_issue";
+  if (reportCase && (reportCase.mode === "incident" || ["move_eligibility", "wrong_router_payment", "payment_not_reflected", "password_reset", "other"].includes(reportCase.id))) return reportCase.id;
   if (RE.password.test(t)) return "password_reset";
   if (RE.payment.test(t)) return "payment_not_reflected";
   if (RE.los.test(t)) return "los_light";

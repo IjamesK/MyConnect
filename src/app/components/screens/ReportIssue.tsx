@@ -1,3 +1,4 @@
+import { SUPPORT_CASES } from "../../../lib/supportCases";
 import {
   useEffect,
   useRef,
@@ -208,6 +209,8 @@ function SectionCard({ children }: { children: ReactNode }) {
 }
 
 function issueLabel(mode: ReportMode, value: string) {
+  const sharedCase = SUPPORT_CASES.find(c => c.mode === mode && c.id === value);
+  if (sharedCase) return sharedCase.label;
   if (mode === "ticket") {
     return personalIssueTypes.find((item) => item.value === value)?.label ?? "Customer Issue";
   }
@@ -353,13 +356,13 @@ export function ReportIssue() {
       setMode("incident");
     }
 
-    if (typeParam && networkIssueTypes.some((item) => item.value === typeParam)) {
+    if (modeParam !== "ticket" && typeParam && networkIssueTypes.some((item) => item.value === typeParam)) {
       setMode("incident");
       setNetworkIssueType(typeParam as IncidentType);
       setPersonalIssueType("");
     }
 
-    if (typeParam && isPersonalIssueType(typeParam)) {
+    if (modeParam !== "incident" && typeParam && isPersonalIssueType(typeParam)) {
       setMode("ticket");
       setPersonalIssueType(typeParam);
       setNetworkIssueType("");

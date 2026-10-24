@@ -12,7 +12,7 @@ describe("classifyIssueType", () => {
   it("detects real LOS wording", () => {
     expect(cls("LOS light is red")).toBe("los_light");
     expect(cls("red LOS on my router")).toBe("los_light");
-    expect(cls("I think the fibre cut happened")).toBe("los_light");
+    expect(cls("I think the fibre cut happened")).toBe("fiber_cut");
   });
   it("does not treat 'I forgot to pay' as a password reset", () => {
     expect(cls("I forgot to pay")).toBe("no_internet");

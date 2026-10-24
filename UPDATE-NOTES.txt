@@ -1,25 +1,26 @@
-MyConnect assistant update — review before deployment
+MyConnect support cases and staff contact update (v2)
 
-Changed files
-- src/app/components/isp/AIChatWidget.tsx
-- src/lib/assistantFlow.ts (new)
-- api/_lib/core.ts
-- tests/assistantFlow.test.mjs (new)
+This is a cumulative update based on the ZIP you supplied, including the earlier chat layout and uncertainty fixes. Copy these files to their matching paths in your repository. Keep other repository files and Vercel environment values. If you changed any of these files after that ZIP, merge those changes rather than replacing them blindly.
 
-Behavior
-- Messages get the main space; optional router, serial, speed and quick-help tools are collapsed inside the conversation scroll area.
-- The input stays in a compact fixed footer. Account details and check history expand on demand.
-- A Wi-Fi flow records answers and supports uncertainty, alternative checks, recovery and support handoff without depending on the LLM.
-- Completed checks and recent symptoms are carried into the support form for review. Nothing submits automatically.
-- New conversation clears diagnostic state and ignores an older model response still in flight.
-- Empty light selection is not diagnosed as no power unless the user explicitly confirms all lights are off.
-- The model instructions also require alternative checks after uncertainty.
+Included behavior
+- Recognizes all nine personal report categories and six network incident categories, with a collapsed case picker.
+- Covers relocation through the existing move eligibility report form, without claiming approval, coverage, fees or timing.
+- Distinguishes same-home router placement from a new-address move; ambiguous move-router requests ask which one.
+- Offers safe router-placement advice, near-router comparison and report handoff.
+- Wi-Fi reset and MyConnect login recovery are different cases.
+- Recognizes Paid on Wrong Router separately from Payment Not Reflected; Finance must verify outcomes.
+- Preselects report category and mode and carries redacted symptoms/checks into the existing review form. No ticket/incident submits automatically. Existing form validation and duplicate-ticket handling remain in place.
+- Fixes the overlapping 'other' category so an explicitly selected network incident stays a network incident.
+- Staff contact is answered locally using the configured contacts, without an AI call, portal referral or ticket prerequisite.
+- Direct links: WhatsApp staff and Call support.
+- Helpline supplied by the user: 032 610 6800. Optional public setting VITE_SUPPORT_PHONE overrides it.
+- WhatsApp uses existing VITE_SUPPORT_WHATSAPP, otherwise the existing fallback +256 758 073 035. Verify your deployed setting if you use another WhatsApp number.
+- Retains Firebase Authentication and current Firestore rules; no credentials, dependency changes or environment secrets included.
 
 Validation
-- Six new Node regression tests passed: node --test tests/assistantFlow.test.mjs (Node 24).
-- Full Vite build, existing Vitest suite and visual/browser verification could not run: dependency downloads were denied by this environment. These checks are still required before publishing.
-- Firebase authentication, Firestore rules, dependencies, lockfile and Vercel environment settings are unchanged.
-- This update is NOT deployed and has not been pushed to GitHub.
+32 Node tests passed, covering the prior Wi-Fi flow, every report case, specific routing, placement vs relocation, login vs Wi-Fi reset, and direct staff contact.
+Run on Node 24: node --test tests/assistantFlow.test.mjs tests/supportCases.test.mjs
+The full Vite build, existing Vitest suite and visual checks remain unverified because this workspace could not download the project dependencies. No GitHub push or deployment was performed.
 
-Apply the four files at the same paths in the repository. Do not replace the entire repository with only this update folder.
-Then install the locked dependencies, run pnpm test, the Node test above, and pnpm build. Preview at mobile widths and short desktop heights. Test Wi-Fi -> I can't check -> I can't check -> Not sure, another-device recovery, red LOS, already-restarted failure, reset during an AI request, and the report review form.
+Before publishing
+Install the existing locked dependencies, run pnpm test and pnpm build, then check the Preview deployment on mobile and desktop. Test relocation and its eligibility form, password reset, wrong-router payment, placement answers, Other Network Issue, direct staff contact and the report description before submission. Phone and WhatsApp links require the customer's own compatible apps; opening a link does not send a message or complete a call automatically.
