@@ -1,0 +1,9 @@
+MyConnect: Black & Pink alternative theme
+
+Copy the two included files into matching repository paths, preserving any newer edits to those files. This package changes only the theme palette and Settings theme list; it does not replace the support-case update.
+
+After deploying, open Settings, Theme, Black & Pink. The existing per-device preference saves the selection. Existing themes remain available and the default is unchanged.
+
+Verified: full palette token coverage, saved selection, dark/light mode switching, and five main text contrast pairs at 4.5:1 or above. Full app build and visual preview remain unverified because project dependencies were unavailable in this workspace. Run pnpm build and check a Preview deployment before publishing.
+
+Not deployed or pushed to GitHub.

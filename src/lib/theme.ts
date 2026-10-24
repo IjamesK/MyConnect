@@ -1,5 +1,5 @@
 /** One palette drives every customer screen, staff view, modal and support assistant. */
-export type ThemeName = "canalbox" | "slate" | "dark" | "emerald" | "sunset";
+export type ThemeName = "canalbox" | "slate" | "dark" | "emerald" | "sunset" | "blackpink";
 
 type ThemeColors = {
   primary: string;
@@ -76,6 +76,19 @@ export const themes: Record<ThemeName, ThemeColors> = {
     sidebarBg: "#161E2B", sidebarText: "#F0F4FA", sidebarMuted: "#B1BDD0",
     sidebarHover: "#273346", overlay: "#020617",
   },
+  blackpink: {
+    primary: "#C00069", primaryText: "#FF85BE", primaryDark: "#990052", background: "#0B0B0F",
+    surface: "#171319", surfaceSoft: "#2B1724", text: "#F8F3F7", muted: "#BDAFBA",
+    subtleText: "#B0A1AC", border: "#4B3945", raised: "#211A23", hover: "#352030",
+    input: "#1D1720", primaryContrast: "#FFFFFF", success: "#4ADE80", danger: "#FB7185",
+    warning: "#FBBF24", successText: "#86EFAC", dangerText: "#FDA4AF", warningText: "#FCD34D",
+    successAction: "#166534", dangerAction: "#BE123C", warningAction: "#A16207",
+    successSoft: "#14372C", successBorder: "#235844", successStrong: "#86EFAC",
+    dangerSoft: "#49252E", dangerBorder: "#75404C", dangerStrong: "#FDA4AF",
+    warningSoft: "#463518", warningBorder: "#785B30", warningStrong: "#FCD34D",
+    sidebarBg: "#100D12", sidebarText: "#F8F3F7", sidebarMuted: "#BDAFBA",
+    sidebarHover: "#2B1724", overlay: "#000000",
+  },
   emerald: {
     ...lightTokens, primary: "#047857", primaryText: "#047857", primaryDark: "#065F46", background: "#F4F9F7",
     surfaceSoft: "#E5F6EE", hover: "#EAF7F0", border: "#DAE7DF",
@@ -141,8 +154,9 @@ export function applyTheme(themeName: ThemeName) {
   };
   for (const [property, value] of Object.entries(properties)) root.style.setProperty(property, value);
   root.setAttribute("data-theme", themeName);
-  root.classList.toggle("dark", themeName === "dark");
-  root.style.colorScheme = themeName === "dark" ? "dark" : "light";
+  const isDark = themeName === "dark" || themeName === "blackpink";
+  root.classList.toggle("dark", isDark);
+  root.style.colorScheme = isDark ? "dark" : "light";
   try { window.localStorage.setItem("appTheme", themeName); } catch { /* Optional persistence. */ }
   window.dispatchEvent(new CustomEvent("myconnect:theme-changed", { detail: { theme: themeName } }));
 }

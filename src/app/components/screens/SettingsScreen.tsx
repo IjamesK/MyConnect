@@ -19,6 +19,7 @@ const themeLabels: Record<ThemeName, string> = {
   canalbox: "CanalBox Rose",
   slate: "Mist Grey",
   dark: "Midnight",
+  blackpink: "Black & Pink",
   emerald: "Emerald",
   sunset: "Sunset",
 };
@@ -27,6 +28,7 @@ const themeDescriptions: Record<ThemeName, string> = {
   canalbox: "Signature CanalBox accents on calm neutral surfaces.",
   slate: "Soft grey backgrounds, crisp cards and minimal color.",
   dark: "Balanced dark surfaces for low-light use.",
+  blackpink: "Deep black surfaces with CanalBox pink accents and soft white text.",
   emerald: "A clean green theme for a softer look.",
   sunset: "A warm orange theme with bright highlights.",
 };
