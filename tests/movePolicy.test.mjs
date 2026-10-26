@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MOVE_POLICY, canInitiateMove, parseMoveCoordinates, hasMoveCoordinates } from '../src/lib/movePolicy.ts';
-test('move policy states free relocation, active account, resubscription and both coordinate methods', () => {
-  assert.match(MOVE_POLICY, /does not charge/);
+test('move policy avoids unverified fees, requires active account, and supports coordinate methods', () => {
+  assert.match(MOVE_POLICY, /staff to confirm whether a relocation fee applies/);
   assert.match(MOVE_POLICY, /account must be active/);
   assert.match(MOVE_POLICY, /resubscribe first/);
   assert.match(MOVE_POLICY, /At the new premises/);

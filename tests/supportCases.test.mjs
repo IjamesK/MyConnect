@@ -48,3 +48,15 @@ test('staff answer contains the supplied contact and no portal or ticket prerequ
   assert.doesNotMatch(reply, /canalbox\.africa|Report Issue/);
   assert.equal(wantsStaffContact('I want to create a support ticket'), false);
 });
+
+for (const question of ['How do I renew my subscription?', 'What speed is my package?', 'Can I see my invoice?', 'What is my balance?']) {
+  test(`informational question is not classified as a fault: ${question}`, () => {
+    assert.equal(recognizeSupportCase(question)?.id === 'payment_not_reflected' || recognizeSupportCase(question)?.id === 'slow_speed', false);
+  });
+}
+test('genuine payment fault still recognized', () => {
+  assert.equal(recognizeSupportCase('I paid but the payment is not reflected')?.id, 'payment_not_reflected');
+});
+test('genuine speed issue still recognized', () => {
+  assert.equal(recognizeSupportCase('My internet is slow')?.id, 'slow_speed');
+});

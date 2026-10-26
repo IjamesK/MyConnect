@@ -48,3 +48,9 @@ test('new issue clears previous checks; unrelated requests can use the model', (
   assert.deepEqual(advanceSupport('New issue', {step:'ticket',checks:['old']}).flow, initialSupportFlow());
   assert.equal(advanceSupport('Some websites do not open', initialSupportFlow()), null);
 });
+
+test('missing Wi-Fi starts the network visibility flow', () => {
+  const result = advanceSupport('I am not seeing my WiFi', initialSupportFlow());
+  assert.equal(result?.flow.step, 'network');
+  assert.ok(result?.chips.includes('Network is missing'));
+});

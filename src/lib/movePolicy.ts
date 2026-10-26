@@ -1,4 +1,4 @@
-export const MOVE_POLICY = "CanalBox does not charge for a move. Your account must be active to initiate one; if inactive, resubscribe first. At the new premises, open Moving / Location Check and capture your location so you do not need to pick coordinates. Alternatively, copy the exact destination coordinates from Google Maps and enter them in the move form. Staff will confirm service availability; do not disconnect or move fibre equipment yourself.";
+export const MOVE_POLICY = "Ask CanalBox staff to confirm whether a relocation fee applies. Your account must be active to initiate one; if inactive, resubscribe first. At the new premises, open Moving / Location Check and capture your location so you do not need to pick coordinates. Alternatively, copy the exact destination coordinates from Google Maps and enter them in the move form. Staff will confirm service availability; do not disconnect or move fibre equipment yourself.";
 export function canInitiateMove(status?: string | null) {
   return status?.trim().toLowerCase() === 'active';
 }

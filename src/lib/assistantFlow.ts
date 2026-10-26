@@ -1,3 +1,4 @@
+import { RE } from "./assistantRules.ts";
 export type SupportStep = "idle" | "network" | "otherDevice" | "power" | "signal" | "restart" | "restartResult" | "ticket" | "resolved";
 export type SupportFlow = { step: SupportStep; checks: string[] };
 export const initialSupportFlow = (): SupportFlow => ({ step: "idle", checks: [] });
@@ -44,6 +45,6 @@ export function advanceSupport(input: string, flow: SupportFlow, previous = ""):
   }
   if (flow.step === "restartResult" && yes) return result("resolved", "Good, you reported that the connection is working again. Start a new check if the problem returns.", ["New issue"], "Customer reports service restored");
   if (flow.step === "restartResult" && (no || unsure)) return result("ticket", "The checks haven't confirmed a fix. Use Report issue to pass the symptoms and completed checks to support. You won't need to repeat them here.", ["Report issue"], no ? "Connection still not working" : "Result could not be checked", true);
-  if (/wi.?fi.*(not working|missing|not showing)|can.?t see.*(wi.?fi|network)|no internet|internet.*not working/.test(text)) return result("network", "Let's check one thing at a time. Open Wi-Fi settings on your phone near the router. Can you see your usual CanalBox network name?", ["Network is visible", "Network is missing", "I can't check"], "Wi-Fi / internet problem reported");
+  if (RE.wifiMissing.test(text) || /wi.?fi.*(not working|missing|not showing)|can.?t see.*(wi.?fi|network)|no internet|internet.*not working/.test(text)) return result("network", "Let's check one thing at a time. Open Wi-Fi settings on your phone near the router. Can you see your usual CanalBox network name?", ["Network is visible", "Network is missing", "I can't check"], "Wi-Fi / internet problem reported");
   return null;
 }

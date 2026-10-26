@@ -1,3 +1,4 @@
+import { SUPPORT_PHONE, SUPPORT_PHONE_HREF } from "../../../lib/supportContacts";
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
 import { Wifi, Eye, EyeOff, Lock, Mail } from "lucide-react";
@@ -202,12 +203,7 @@ export function LoginScreen() {
 
         <div className="text-center text-xs text-[var(--color-subtle-text)]">
           Need help?{" "}
-          <button
-            type="button"
-            className="text-[var(--color-primary-text)] font-medium hover:underline"
-          >
-            Call 032 6106800
-          </button>
+          <a href={SUPPORT_PHONE_HREF} className="text-[var(--color-primary-text)] font-medium hover:underline">Call {SUPPORT_PHONE}</a>
         </div>
       </form>
 

@@ -1,4 +1,4 @@
-import { recognizeSupportCase, isRouterPlacement } from "./supportCases";
+import { recognizeSupportCase, isRouterPlacement } from "./supportCases.ts";
 // Pure helpers for the support assistant, kept separate so they can be unit-tested.
 
 /** Whole-word matchers. Plain substring regexes caused "close" -> LOS, "this" -> greeting, etc. */

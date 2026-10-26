@@ -457,7 +457,7 @@ export function ReportIssue() {
 
   const saveGoogleCoordinates = async () => {
     setError("");
-    if (!canInitiateMove(profile?.accountStatus)) { setError("An active account is required to initiate a free move. Please resubscribe first, or contact staff if your renewal is not reflected."); return; }
+    if (!canInitiateMove(profile?.accountStatus)) { setError("An active account is required to initiate a move. Please resubscribe first, or contact staff if your renewal is not reflected."); return; }
     const coordinates = parseMoveCoordinates(googleCoordinates);
     if (!coordinates) { setError("Enter Google Maps coordinates as latitude, longitude, for example 0.3476, 32.5825. A link alone is not coordinates."); return; }
     if (!newMoveAddress.trim() && !newMoveLandmark.trim()) { setError("Add the new premises or a nearby landmark."); return; }
@@ -467,7 +467,7 @@ export function ReportIssue() {
   };
 
   const handleRunEligibilityCheck = async () => {
-    if (!canInitiateMove(profile?.accountStatus)) { setError("Moves are free, but your account must be active. Resubscribe first or ask staff to verify your status."); return; }
+    if (!canInitiateMove(profile?.accountStatus)) { setError("Your account must be active to initiate a move; staff will confirm any charges. Resubscribe first or ask staff to verify your status."); return; }
     if (!atNewPremises) { setError("Go to the new premises before capturing GPS, or use the Google Maps coordinate alternative below."); return; }
     setError("");
     setEligibilityCheck(null);
@@ -625,7 +625,7 @@ export function ReportIssue() {
     }
 
     if (mode === "ticket" && personalIssueType === "move_eligibility") {
-      if (!canInitiateMove(profile?.accountStatus)) { setError("An active account is required to initiate a free move. Resubscribe first; contact staff if the account status needs correcting."); return; }
+      if (!canInitiateMove(profile?.accountStatus)) { setError("An active account is required to initiate a move. Resubscribe first; contact staff if the account status needs correcting."); return; }
       if (eligibilityCheck?.source === "browser_geolocation" && !atNewPremises) { setError("Confirm you are at the new premises before submitting GPS coordinates, or enter its Google Maps coordinates instead."); return; }
       if (!newMoveAddress.trim() && !newMoveLandmark.trim()) {
         setError("Please add the new location, building name, or nearby landmark.");
@@ -1275,7 +1275,7 @@ export function ReportIssue() {
                   Capture new-location coordinates
                 </p>
                 <p className="text-[var(--color-muted)] text-xs mt-0.5 leading-relaxed">
-                  Moves are free. Your account must be active; resubscribe first if inactive. At the new premises, capture your location automatically. Alternatively, enter exact destination coordinates from Google Maps below. Staff will confirm availability.
+                  Staff will confirm any relocation charges. Your account must be active; resubscribe first if inactive. At the new premises, capture your location automatically. Alternatively, enter exact destination coordinates from Google Maps below. Staff will confirm availability.
                 </p>
               </div>
             </div>

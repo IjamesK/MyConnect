@@ -1,3 +1,4 @@
+import { SUPPORT_PHONE as supportPhone, SUPPORT_WHATSAPP_DIGITS as whatsappDigits, SUPPORT_PHONE_HREF as supportPhoneHref, SUPPORT_WHATSAPP_HREF as whatsappHref } from "../../../lib/supportContacts";
 import { canInitiateMove } from "../../../lib/movePolicy";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
@@ -25,11 +26,6 @@ const PLANS = INTERNET_PACKAGES.map((plan) => ({
   use: plan.assistantUse,
 }));
 // Guided CanalBox support for demonstration: no model API, no unverified network diagnostics.
-const whatsapp: string = (import.meta.env.VITE_SUPPORT_WHATSAPP as string | undefined) || "256758073035"; // Existing company support WhatsApp; direct staff requests do not require a ticket.
-const supportPhone = (import.meta.env.VITE_SUPPORT_PHONE as string | undefined)?.trim() || "032 610 6800"; // Helpline supplied by the user.
-const whatsappDigits = whatsapp.replace(/\D/g, "");
-const supportPhoneHref = `tel:${supportPhone.replace(/[^+\d]/g, "")}`;
-const whatsappHref = `https://wa.me/${whatsappDigits}`;
 function answerLocal(input: string, profile: CustomerProfile | null, tickets: CustomerTicket[], lastAssistant: string): string | null {
   // Account-bound answers (profile, tickets, packages, Wi-Fi password steps). These never go to the AI provider.
   const text = input.toLowerCase();
@@ -48,7 +44,8 @@ function answerLocal(input: string, profile: CustomerProfile | null, tickets: Cu
     if (!tickets.length) return "I can't see a previous support ticket in your accessible MyConnect records. If you've reported an issue elsewhere, it may not yet be recorded in this database. What happened?";
     return `Your latest recorded issue is “${recent.title}” (${recent.status.replace(/_/g, " ")}). ${tickets.length > 1 ? `I can see ${tickets.length} recorded support issues.` : ""} Is this problem happening again, or is it a new issue?`;
   }
-  if (/my account|my package|my plan|my subscription|expiry|expire|my router/.test(text)) {
+  if (/\b(how (?:do|can) i |where (?:do|can) i |steps? to |want to )?(?:renew|renewal|pay for|resubscribe)\b/.test(text) && !/\b(failed|not reflected|missing|paid but|wrong|error|problem|issue)\b/.test(text)) return "To renew your subscription, open MyConnect → Renewal for the available payment methods and steps. The app cannot verify a payment from this chat. If you have already paid and the renewal is missing, tell me and I can guide a payment report. Never share a payment PIN or OTP.";
+  if (/my account|my package|my plan|my subscription|expiry|expire|my router (?:model|serial|details|information)/.test(text)) {
     if (!profile) return "Your account details aren't available at the moment. I can still guide troubleshooting, but I won't guess your subscription or router.";
     return `Your MyConnect profile lists ${profile.packageName || "an unspecified package"}, ${profile.accountStatus || "unknown"} account status, expiry ${profile.expiryDate || "not listed"}, and router ${profile.routerModel || "not recorded"}. If these details look incorrect, please report them to support. What would you like help with?`;
   }

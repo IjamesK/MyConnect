@@ -57,6 +57,28 @@ service cloud.firestore {
         && request.resource.data.unread == false;
       allow delete: if false;
     }
+    // Published incident records are currently read by a collection-wide query.
+    // All signed-in customers may view published incident details; do not store private reporter data here.
+    match /incidents/{incidentId} {
+      allow get, list: if signedIn();
+      allow create, update: if staff();
+      allow delete: if false;
+    }
+    match /incidentReports/{reportId} {
+      allow get: if staff() || (signedIn() && resource.data.reporterUid == request.auth.uid);
+      allow list: if staff();
+      allow create: if signedIn()
+        && request.resource.data.reporterUid == request.auth.uid
+        && request.resource.data.status == 'pending_review'
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 180
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 10000
+        && request.resource.data.type in ['outage','fiber_cut','knocked_pole','damaged_cabinet','maintenance','upgrade','area_outage','other']
+        && request.resource.data.createdAt == request.time;
+      allow update: if staff();
+      allow delete: if false;
+    }
     match /{document=**} { allow read, write: if false; }
   }
 }
