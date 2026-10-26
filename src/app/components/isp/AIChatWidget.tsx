@@ -1,5 +1,6 @@
 import { SUPPORT_PHONE as supportPhone, SUPPORT_WHATSAPP_DIGITS as whatsappDigits, SUPPORT_PHONE_HREF as supportPhoneHref, SUPPORT_WHATSAPP_HREF as whatsappHref } from "../../../lib/supportContacts";
 import { canInitiateMove } from "../../../lib/movePolicy";
+import { isHomeRouterRelocation, startRelocation, advanceRelocation, type RelocationState } from "../../../lib/assistantRelocation";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { Bot, X, Send, RotateCcw, Router } from "lucide-react";
@@ -86,13 +87,14 @@ export function AIChatWidget() {
   const [reportMode, setReportMode] = useState<"ticket" | "incident">("ticket");
   const [caseLabel, setCaseLabel] = useState("");
   const [placementCheck, setPlacementCheck] = useState(false);
+  const [relocation, setRelocation] = useState<RelocationState | null>(null);
   const [flow, setFlow] = useState(initialSupportFlow);
   const [toolsOpen, setToolsOpen] = useState(false);
   const generation = useRef(0);
   function resetConversation() {
     generation.current += 1;
     setThinking(false); setAiActive(false); setMessages([{ role: "assistant", text: INTRO }]);
-    setReportMode("ticket"); setCaseLabel(""); setPlacementCheck(false);
+    setReportMode("ticket"); setCaseLabel(""); setPlacementCheck(false); setRelocation(null);
     setFlow(initialSupportFlow()); setLightsOpen(false); setToolsOpen(false); setSpeedFormOpen(false);
     setSelectedLights([]); setAllLightsOff(false); setRouterOverride(null); setFailedChecks(0); setTicketPathOffered(false);
     setSpeedRecorded(false); setSpeedSummary(""); setDownload(""); setUpload(""); setPing(""); setSpeedError(""); setDraft(""); setIssueType("no_internet");
@@ -182,6 +184,26 @@ export function AIChatWidget() {
     setIssueType(t => classifyIssueType(text, t));
     if (RE.slow.test(lower)) setSpeedFormOpen(true);
 
+    // An ongoing action takes priority over keyword classification or account/history lookup.
+    // This prevents "Yes, request ticket" being misread as a ticket-history question.
+    if (/^(start over|new issue)$/i.test(text)) { resetConversation(); return; }
+    if (relocation) {
+      const next = advanceRelocation(relocation, text);
+      if (next.reviewTicket) { openSupportTicket(); return; }
+      setRelocation(next.state);
+      setMessages(m => [...m, { role: "assistant", text: next.text, chips: next.chips }]);
+      return;
+    }
+    if (isHomeRouterRelocation(text)) {
+      const next = startRelocation();
+      setRelocation(next.state);
+      setReportMode("ticket"); setIssueType("router_issue");
+      setCaseLabel("Router relocation within home");
+      setPlacementCheck(false); setTicketPathOffered(false);
+      setFlow(initialSupportFlow());
+      setMessages(m => [...m, { role: "assistant", text: next.text, chips: next.chips }]);
+      return;
+    }
     if (wantsStaffContact(text)) {
       setMessages(m => [...m, { role: "assistant", text: staffContactReply(supportPhone, whatsappDigits) }]);
       setToolsOpen(false); setLightsOpen(false);
@@ -300,7 +322,10 @@ export function AIChatWidget() {
     const lightsNote = selectedLights.length ? `\nRouter indicators selected: ${visibleLights.filter(light => selectedLights.includes(light.id)).map(light => light.label).join(", ")}.` : "";
     const checkSummary = flow.checks.length ? "\nChecks reported by customer:\n- " + flow.checks.join("\n- ") : "";
     const symptom = messages.filter(m => m.role === "user").slice(-8).map(m => redactSecrets(m.text)).join("; ").slice(0, 1600);
-    const caseNote = caseLabel ? "Recognized case: " + caseLabel + "\n" : "";
+    const relocationNote = relocation
+      ? `Router relocation within same home\nDestination room: ${relocation.destination || "Not provided"}\nCable extension: ${relocation.extensionRequired ? "Customer reports required; technician assessment needed" : "Not reported as required"}\nStaff must confirm feasibility and any charges.\n`
+      : "";
+    const caseNote = relocationNote + (caseLabel ? "Recognized case: " + caseLabel + "\n" : "");
     const report = issueType === "slow_speed" && speedRecorded
       ? speedSummary + "\nCustomer statement: " + safeSymptom + lightsNote
       : "Issue reported through MyConnect assistant: " + safeSymptom + lightsNote;
